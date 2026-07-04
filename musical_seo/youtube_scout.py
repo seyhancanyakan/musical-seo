@@ -38,6 +38,7 @@ _CHANNELS_URL = "https://www.googleapis.com/youtube/v3/channels"
 _TIMEOUT = 15
 _SLEEP = 0.2
 _PER_SEED = 15  # tohum basina kanal
+_MIN_SUBS = 10000  # bu abonenin altini alma (dusuk-erisim = degersiz)
 
 DEFAULT_SEEDS = [
     "türkçe pop playlist", "türkçe rap mix", "türkçe rock mix",
@@ -133,6 +134,11 @@ def _import_channel(ch: dict) -> str:
         videos = int(stats.get("videoCount") or 0)
     except (TypeError, ValueError):
         videos = 0
+
+    # Kalite filtresi: dusuk-erisim ve YouTube oto-sanatci kanallari ('- Topic')
+    # curator degil — atla.
+    if subs < _MIN_SUBS or name.endswith("- Topic"):
+        return "lowquality"
 
     contact = extract_contact(f"{name} {desc} {custom}")
     email, source = "", None
