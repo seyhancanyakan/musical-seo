@@ -45,6 +45,21 @@ class Finding:
 
 
 @dataclass
+class PlaylistMatch:
+    """Benzer-sanatci analiziyle bulunan aday playlist."""
+
+    source: str                      # "deezer"
+    playlist_id: str
+    title: str
+    url: str
+    fans: int = 0
+    track_count: int = 0
+    matched_artists: list[str] = field(default_factory=list)  # havuzdan eslesenler
+    contains_track: bool = False     # denetlenen sarki zaten listede mi
+    score: float = 0.0
+
+
+@dataclass
 class AuditResult:
     """Tam denetim ciktisi."""
 

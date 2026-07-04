@@ -36,6 +36,9 @@ python cli.py snapshot --list tracks.txt
 
 # Zaman serisi
 python cli.py history "Duman - Senden Daha Guzel"
+
+# Playlist eslestirme (pitch aday listesi, Deezer benzer-sanatci analizi)
+python cli.py playlists "Duman - Senden Daha Guzel" --limit 10
 ```
 
 ## Gecelik otomasyon (bedava)

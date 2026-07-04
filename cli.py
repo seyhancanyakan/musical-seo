@@ -8,9 +8,11 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
-from musical_seo import audit, db, report
+from musical_seo import audit, db, playlists, report
+from musical_seo.sources import deezer
 
 _SEVERITY_LABELS = {
     "critical": "[KRITIK]",
@@ -137,6 +139,38 @@ def _cmd_history(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_playlists(args: argparse.Namespace) -> int:
+    parsed = _parse_artist_title(args.query)
+    if parsed is None:
+        info = deezer.search(args.query)
+        if not info.found or not info.artist or not info.title:
+            print(f"Hata: sarki bulunamadi: {args.query}", file=sys.stderr)
+            return 1
+        artist, title = info.artist, info.title
+    else:
+        artist, title = parsed
+
+    results = playlists.find_playlists(artist, title, limit=args.limit)
+
+    if args.json:
+        print(json.dumps([asdict(m) for m in results], ensure_ascii=False, indent=2))
+        return 0
+
+    if not results:
+        print("Uygun playlist bulunamadi.")
+        return 0
+
+    print(f"Pitch aday listesi: {artist} - {title} ({len(results)} playlist)\n")
+    for i, m in enumerate(results, start=1):
+        inside = "  [SARKI ZATEN ICINDE]" if m.contains_track else ""
+        print(f"{i:>2}. [skor {m.score:5.1f}] {m.title}  "
+              f"({m.fans} fan, {m.track_count} parca){inside}")
+        if m.matched_artists:
+            print(f"      Eslesen sanatcilar: {', '.join(m.matched_artists)}")
+        print(f"      {m.url}")
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="musical-seo", description="musical-seo CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -153,6 +187,14 @@ def main() -> None:
         "--list", default="tracks.txt", help="Her satirda bir 'Sanatci - Sarki' sorgusu"
     )
     snapshot_parser.set_defaults(func=_cmd_snapshot)
+
+    playlists_parser = subparsers.add_parser(
+        "playlists", help="Benzer-sanatci playlist eslestirme (pitch listesi)"
+    )
+    playlists_parser.add_argument("query", help="'Sanatci - Sarki' veya serbest metin")
+    playlists_parser.add_argument("--limit", type=int, default=15, help="En fazla sonuc")
+    playlists_parser.add_argument("--json", action="store_true", help="JSON cikti")
+    playlists_parser.set_defaults(func=_cmd_playlists)
 
     history_parser = subparsers.add_parser("history", help="Zaman serisi gecmisi")
     history_parser.add_argument("query", help="'Sanatci - Sarki' formatinda sorgu")
