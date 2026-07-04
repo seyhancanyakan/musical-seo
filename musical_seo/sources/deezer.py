@@ -31,6 +31,10 @@ def _to_track_info(detail: dict) -> TrackInfo:
     artist = detail.get("artist") or {}
     duration = detail.get("duration")
     duration_ms = int(duration) * 1000 if isinstance(duration, (int, float)) else None
+    # Deezer 'rank' 0-1.000.000 arasi kuresel siralama — 0-100'e normalize et ki
+    # Spotify popularity (0-100) ile karsilastirilabilir olsun. Ham rank extra'da.
+    rank = detail.get("rank")
+    popularity = round(min(100.0, rank / 10000)) if isinstance(rank, (int, float)) else None
     return TrackInfo(
         source="deezer",
         found=True,
@@ -40,9 +44,9 @@ def _to_track_info(detail: dict) -> TrackInfo:
         isrc=detail.get("isrc"),
         release_date=detail.get("release_date"),
         duration_ms=duration_ms,
-        popularity=detail.get("rank"),
+        popularity=popularity,
         url=detail.get("link"),
-        extra={"id": detail.get("id")},
+        extra={"id": detail.get("id"), "rank": rank},
     )
 
 
