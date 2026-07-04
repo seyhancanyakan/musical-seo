@@ -134,11 +134,13 @@ def run(batch_size: int = 10, poll_timeout: int = 360) -> dict:
             f.write(prompt)
         sftp.close()
 
+        inner = (
+            f'./venv/bin/python -m hermes_cli.main -z "$(cat {PROMPT_PATH})" '
+            f"--yolo > {OUT_PATH} 2>&1; touch {DONE_PATH}"
+        )
         launch = (
             f"cd {HERMES_DIR} && rm -f {OUT_PATH} {DONE_PATH} && "
-            f"setsid bash -c './venv/bin/python -m hermes_cli.main "
-            f'-z "$(cat {PROMPT_PATH})" --yolo > {OUT_PATH} 2>&1; touch {DONE_PATH}\' "
-            f"</dev/null >/dev/null 2>&1 &"
+            f"setsid bash -c '{inner}' </dev/null >/dev/null 2>&1 &"
         )
         c.exec_command(launch, timeout=20)
 
