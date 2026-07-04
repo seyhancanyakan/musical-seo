@@ -134,10 +134,11 @@ export default function AdminPage() {
     return base;
   }, [curators]);
 
-  const visible = useMemo(
-    () => (filter === "all" ? curators : curators.filter((c) => c.status === filter)),
-    [curators, filter]
-  );
+  const visible = useMemo(() => {
+    const base = filter === "all" ? curators : curators.filter((c) => c.status === filter);
+    // Abone/fan sayisina gore azalan sirala — en cok erisimli curator en ustte.
+    return [...base].sort((a, b) => b.fans - a.fans);
+  }, [curators, filter]);
 
   async function changeStatus(id: number, status: CuratorStatus) {
     setBusyId(id);
