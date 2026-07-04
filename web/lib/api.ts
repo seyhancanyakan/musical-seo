@@ -79,6 +79,10 @@ export type Curator = {
   diversity: number;
   quality_score: number;
   status: CuratorStatus;
+  // İletişim kaynağı — nereden bulundu (manuel doğrulama için).
+  contact_source?: string | null;
+  source_url?: string | null;
+  contact_confidence?: number | null;
 };
 
 export type Submission = {

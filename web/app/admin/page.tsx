@@ -78,6 +78,19 @@ function statusClass(status: CuratorStatus): string {
   return styles.badgePending;
 }
 
+const SOURCE_LABELS: Record<string, string> = {
+  deezer_owner_name: "Deezer görünen adı",
+  deezer_desc_email: "Deezer açıklama (email)",
+  deezer_desc_link: "Deezer açıklama (link)",
+  deezer_desc_instagram: "Deezer açıklama (IG)",
+  hermes_web: "Hermes AI web",
+};
+
+function sourceLabel(source?: string | null): string {
+  if (!source) return "—";
+  return SOURCE_LABELS[source] ?? source;
+}
+
 function formatDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
@@ -187,6 +200,7 @@ export default function AdminPage() {
                 <tr>
                   <th>Küratör</th>
                   <th>İletişim</th>
+                  <th>Kaynak</th>
                   <th>Playlist</th>
                   <th className={styles.num}>Fan</th>
                   <th className={styles.num}>Kalite</th>
@@ -205,9 +219,31 @@ export default function AdminPage() {
                         <div className={styles.sub}>#{c.id}</div>
                       </td>
                       <td>
-                        <a className={styles.email} href={`mailto:${c.email}`}>
-                          {c.email}
-                        </a>
+                        {c.email ? (
+                          <a className={styles.email} href={`mailto:${c.email}`}>
+                            {c.email}
+                          </a>
+                        ) : (
+                          <span className={styles.sub}>iletişim yok</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className={styles.sub}>{sourceLabel(c.contact_source)}</div>
+                        {c.source_url && (
+                          <a
+                            className={styles.link}
+                            href={c.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            kaynağı aç ↗
+                          </a>
+                        )}
+                        {typeof c.contact_confidence === "number" && (
+                          <div className={styles.sub}>
+                            güven %{Math.round(c.contact_confidence * 100)}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <a
