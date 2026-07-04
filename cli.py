@@ -11,7 +11,7 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from musical_seo import audit, db, playlists, report
+from musical_seo import audit, db, pitch, playlists, report
 from musical_seo.sources import deezer
 
 _SEVERITY_LABELS = {
@@ -171,6 +171,92 @@ def _cmd_playlists(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_artist_title(query: str) -> tuple[str, str] | None:
+    parsed = _parse_artist_title(query)
+    if parsed is not None:
+        return parsed
+    info = deezer.search(query)
+    if not info.found or not info.artist or not info.title:
+        return None
+    return info.artist, info.title
+
+
+def _cmd_pitch(args: argparse.Namespace) -> int:
+    if args.list:
+        rows = db.list_pitches()
+        if not rows:
+            print("Pitch kaydi yok.")
+            return 0
+        header = f"{'ID':>4} {'Tarih':<10} {'Durum':<9} {'Sanatci - Sarki':<35} Playlist"
+        print(header)
+        print("-" * len(header))
+        for row in rows:
+            pair = f"{row['artist']} - {row['title']}"
+            print(
+                f"{row['id']:>4} {row['created_at'][:10]:<10} {row['status']:<9} "
+                f"{pair:<35.35} {row['playlist_title']}"
+            )
+        return 0
+
+    if args.set:
+        pitch_id_raw, status = args.set
+        try:
+            pitch_id = int(pitch_id_raw)
+        except ValueError:
+            print(f"Hata: ID sayi olmali: {pitch_id_raw}", file=sys.stderr)
+            return 1
+        try:
+            updated = db.update_pitch_status(pitch_id, status)
+        except ValueError as exc:
+            print(f"Hata: {exc}", file=sys.stderr)
+            return 1
+        if not updated:
+            print(f"Hata: pitch kaydi bulunamadi: {pitch_id}", file=sys.stderr)
+            return 1
+        print(f"Pitch {pitch_id} -> {status}")
+        return 0
+
+    if not args.query:
+        print("Hata: sorgu ver ('Sanatci - Sarki') ya da --list / --set kullan.",
+              file=sys.stderr)
+        return 1
+
+    resolved = _resolve_artist_title(args.query)
+    if resolved is None:
+        print(f"Hata: sarki bulunamadi: {args.query}", file=sys.stderr)
+        return 1
+    artist, title = resolved
+
+    track = deezer.lookup(artist, title)
+    track_url = track.url if track.found else None
+
+    matches = playlists.find_playlists(artist, title, limit=args.limit)
+    if not matches:
+        print("Uygun playlist bulunamadi.")
+        return 0
+
+    blocks: list[str] = []
+    for i, m in enumerate(matches, start=1):
+        message = pitch.build_message(artist, title, m, track_url=track_url)
+        head = (f"=== {i}. {m.title} ({m.fans} fan, {m.track_count} parca) ===\n"
+                f"{m.url}\n")
+        blocks.append(head + "\n" + message + "\n")
+        if args.save:
+            db.save_pitch(artist, title, m.playlist_id, m.title, m.url)
+
+    output = "\n".join(blocks)
+    if args.out:
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(output, encoding="utf-8")
+        print(f"{len(matches)} pitch mesaji yazildi: {out_path}")
+    else:
+        print(output)
+    if args.save:
+        print(f"{len(matches)} pitch kaydi eklendi (takip: python cli.py pitch --list)")
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="musical-seo", description="musical-seo CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -195,6 +281,20 @@ def main() -> None:
     playlists_parser.add_argument("--limit", type=int, default=15, help="En fazla sonuc")
     playlists_parser.add_argument("--json", action="store_true", help="JSON cikti")
     playlists_parser.set_defaults(func=_cmd_playlists)
+
+    pitch_parser = subparsers.add_parser(
+        "pitch", help="Curator pitch mesaji uret + takip et"
+    )
+    pitch_parser.add_argument("query", nargs="?", help="'Sanatci - Sarki' veya serbest metin")
+    pitch_parser.add_argument("--limit", type=int, default=5, help="En fazla playlist")
+    pitch_parser.add_argument("--save", action="store_true", help="Pitch kayitlarini DB'ye ekle")
+    pitch_parser.add_argument("--out", help="Mesajlari dosyaya yaz")
+    pitch_parser.add_argument("--list", action="store_true", help="Kayitli pitch'leri goster")
+    pitch_parser.add_argument(
+        "--set", nargs=2, metavar=("ID", "DURUM"),
+        help="Pitch durumunu guncelle (pitched|accepted|rejected)"
+    )
+    pitch_parser.set_defaults(func=_cmd_pitch)
 
     history_parser = subparsers.add_parser("history", help="Zaman serisi gecmisi")
     history_parser.add_argument("query", help="'Sanatci - Sarki' formatinda sorgu")

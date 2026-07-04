@@ -39,6 +39,11 @@ python cli.py history "Duman - Senden Daha Guzel"
 
 # Playlist eslestirme (pitch aday listesi, Deezer benzer-sanatci analizi)
 python cli.py playlists "Duman - Senden Daha Guzel" --limit 10
+
+# Curator pitch mesajlari uret (+ --save ile takibe al, --out dosya.txt)
+python cli.py pitch "Duman - Senden Daha Guzel" --limit 5 --save
+python cli.py pitch --list                 # takip tablosu
+python cli.py pitch --set 3 accepted      # durum guncelle (pitched|accepted|rejected)
 ```
 
 ## Gecelik otomasyon (bedava)
