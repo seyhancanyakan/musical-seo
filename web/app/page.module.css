@@ -1,0 +1,239 @@
+/* MuzikSEO — ana sayfa (mavi neo-brutal mockup C/p1 birebir port) */
+
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 48px;
+}
+
+/* NAV */
+.nav {
+  border-bottom: 3px solid var(--ink);
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.navWrap {
+  composes: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 88px;
+}
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 26px;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 6px 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+.menu {
+  display: flex;
+  gap: 36px;
+  align-items: center;
+}
+.menuLink {
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 16px;
+  text-transform: uppercase;
+  border-bottom: 3px solid transparent;
+  padding-bottom: 4px;
+}
+.menuLink:hover {
+  border-bottom: 3px solid var(--purple);
+}
+
+/* HERO */
+.hero {
+  padding: 96px 0 80px;
+  position: relative;
+  overflow: hidden;
+}
+.heroBadge {
+  display: inline-block;
+  background: var(--purple);
+  color: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 8px 18px;
+  font-size: 14px;
+  text-transform: uppercase;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  transform: rotate(-2deg);
+  margin-bottom: 32px;
+}
+.heroTitle {
+  font-size: 68px;
+  line-height: 1.02;
+  max-width: 920px;
+  margin-bottom: 28px;
+}
+.heroHighlight {
+  background: var(--blue);
+  color: #fff;
+  padding: 0 8px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  border: 3px solid var(--ink);
+}
+.heroSub {
+  font-size: 19px;
+  max-width: 680px;
+  line-height: 1.5;
+  margin-bottom: 44px;
+  font-weight: 700;
+}
+.ctaRow {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.ctaBtn {
+  font-size: 16px;
+  padding: 18px 28px;
+}
+
+/* FEATURES */
+.features {
+  padding: 80px 0 100px;
+}
+.sectionTag {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--blue);
+  padding: 6px 16px;
+  font-size: 13px;
+  text-transform: uppercase;
+  font-weight: 900;
+  margin-bottom: 16px;
+  transform: rotate(-1deg);
+}
+.featuresTitle {
+  font-size: 38px;
+  margin-bottom: 48px;
+  max-width: 640px;
+}
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.featureCard {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 260px;
+}
+.featureCard:hover {
+  box-shadow: 9px 9px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+.featureCardPurple {
+  background: var(--purple);
+  color: #fff;
+}
+.featureCardBlue {
+  background: var(--blue);
+  color: #fff;
+}
+.featureTitle {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+.featureText {
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+.ring {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 6px solid var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 26px;
+  background: var(--blue);
+  color: #fff;
+  align-self: flex-start;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.ringPurple {
+  background: #fff;
+  color: var(--purple);
+}
+.iconBox {
+  width: 56px;
+  height: 56px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+/* FOOTER */
+.footer {
+  border-top: 3px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  padding: 40px 0;
+}
+.footerWrap {
+  composes: wrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.footerChip {
+  display: inline-block;
+  border: 3px solid var(--ink);
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  transform: rotate(-2deg);
+}
+.trust {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ccc;
+}
+.trust b {
+  color: var(--blue);
+}
+
+@media (max-width: 960px) {
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+  .heroTitle {
+    font-size: 44px;
+  }
+  .menu {
+    gap: 20px;
+  }
+}

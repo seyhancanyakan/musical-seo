@@ -1,0 +1,295 @@
+/* Curator Gelen Kutusu — mavi neo-brutal (onaylanan C/p4.html mockup portu) */
+
+.topbar {
+  border-bottom: 3px solid var(--ink);
+  background: #fff;
+}
+
+.topbarInner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 40px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.userChip {
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 8px 16px;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+
+.pageTitle {
+  font-size: 30px;
+  margin-bottom: 24px;
+}
+
+.apiBanner {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 16px 22px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.apiBanner strong {
+  color: var(--red);
+  text-transform: uppercase;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+}
+
+.loading {
+  font-weight: 700;
+  padding: 20px 0;
+}
+
+.statsBar {
+  display: flex;
+  gap: 24px;
+  background: var(--ink);
+  color: #fff;
+  padding: 20px 28px;
+  margin-bottom: 32px;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.statsBar:hover {
+  box-shadow: 9px 9px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.stat {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.stat b {
+  color: var(--blue);
+  font-size: 18px;
+}
+
+.sep {
+  width: 3px;
+  background: #555;
+}
+
+.rowCard {
+  background: #fff;
+  margin-bottom: 20px;
+  padding: 22px 26px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.rowCard:hover {
+  box-shadow: 9px 9px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.playBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.playTri {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-top: 14px solid transparent;
+  border-bottom: 14px solid transparent;
+  border-left: 22px solid var(--ink);
+}
+
+.trackInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  font-size: 17px;
+  font-weight: 900;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  text-transform: uppercase;
+}
+
+.artist {
+  font-size: 13px;
+  color: #555;
+  font-weight: 700;
+}
+
+.sla {
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.time {
+  font-size: 16px;
+  font-weight: 900;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  margin-bottom: 6px;
+}
+
+.slaTrack {
+  height: 18px;
+  border: 3px solid var(--ink);
+  background: #eee;
+}
+
+.slaFill {
+  height: 100%;
+  background: var(--green);
+}
+
+.slaUrgent .time {
+  color: var(--red);
+}
+
+.slaUrgent .slaFill {
+  background: var(--red);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.btn {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 13px;
+  padding: 12px 18px;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  cursor: pointer;
+  background: #fff;
+  color: var(--ink);
+  white-space: nowrap;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  box-shadow: 7px 7px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnAccept {
+  background: var(--green);
+}
+
+.btnReject {
+  background: #fff;
+}
+
+.statusResult {
+  flex-shrink: 0;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 13px;
+  padding: 12px 18px;
+  border: 3px solid var(--ink);
+}
+
+.statusAccepted {
+  background: var(--green);
+}
+
+.statusRejected {
+  background: var(--red);
+  color: #fff;
+}
+
+.statusExpired {
+  background: #eee;
+}
+
+.expanded {
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-top: none;
+  box-shadow: 6px 6px 0 var(--ink);
+  margin-top: -20px;
+  margin-bottom: 20px;
+  padding: 24px 26px;
+}
+
+.expanded label {
+  display: block;
+  font-size: 13px;
+  text-transform: uppercase;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.expanded textarea {
+  width: 100%;
+  min-height: 90px;
+  border: 3px solid var(--ink);
+  padding: 14px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  resize: vertical;
+  margin-bottom: 16px;
+}
+
+.expanded textarea:focus {
+  outline: none;
+  box-shadow: 4px 4px 0 var(--blue);
+}
+
+.sendRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btnSend {
+  background: var(--purple);
+  color: #fff;
+}

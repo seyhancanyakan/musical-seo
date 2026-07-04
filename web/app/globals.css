@@ -1,0 +1,83 @@
+/* MuzikSEO — mavi neo-brutal tasarim dili (onaylanan C-mavi mockup'lari) */
+:root {
+  --blue: #2d6bff;
+  --lightblue: #d6e4ff;
+  --purple: #7c3aed;
+  --green: #3ddc84;
+  --red: #ff4d4d;
+  --ink: #000;
+  --bg: #f5f5f0;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+h1, h2, h3, .nb-h {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+}
+
+/* Neo-brutal cekirdek siniflar — tum sayfalar bunlari kullanir */
+.nb-card {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.nb-btn {
+  display: inline-block;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: var(--blue);
+  color: #fff;
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  padding: 12px 22px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: box-shadow 0.1s, transform 0.1s;
+}
+.nb-btn:hover { box-shadow: 9px 9px 0 var(--ink); transform: translate(-2px, -2px); }
+.nb-btn--purple { background: var(--purple); }
+.nb-btn--green { background: var(--green); color: var(--ink); }
+.nb-btn--outline { background: #fff; color: var(--ink); }
+
+.nb-pill {
+  display: inline-block;
+  border: 3px solid var(--ink);
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 4px 12px;
+}
+.nb-pill--blue { background: var(--blue); color: #fff; }
+.nb-pill--green { background: var(--green); }
+.nb-pill--red { background: var(--red); color: #fff; }
+.nb-pill--purple { background: var(--purple); color: #fff; }
+
+.nb-chip {
+  display: inline-block;
+  border: 2px solid var(--ink);
+  background: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 3px 10px;
+  transform: rotate(-1deg);
+}
+
+.nb-input {
+  border: 3px solid var(--ink);
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  background: #fff;
+  width: 100%;
+}
+.nb-input:focus { outline: none; box-shadow: 4px 4px 0 var(--blue); }

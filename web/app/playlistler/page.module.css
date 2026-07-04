@@ -1,0 +1,355 @@
+/* Playlistler — mavi neo-brutal app shell (onaylanan C-mavi mockup p3.html'den birebir) */
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.topbar {
+  grid-column: 1 / 3;
+  height: 80px;
+  border-bottom: 3px solid var(--ink);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.userChip {
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.sidebar {
+  border-right: 3px solid var(--ink);
+  background: #fff;
+  padding: 32px 0;
+}
+
+.sidebarLink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 28px;
+  font-weight: 800;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 15px;
+  text-transform: uppercase;
+  border-left: 6px solid transparent;
+}
+
+.sidebarLink:hover {
+  background: #eee;
+}
+
+.sidebarLinkActive,
+.sidebarLinkActive:hover {
+  background: var(--blue);
+  color: #fff;
+  border-left: 6px solid var(--ink);
+}
+
+.main {
+  padding: 40px;
+}
+
+.pageTitle {
+  font-size: 30px;
+  margin-bottom: 24px;
+}
+
+.searchRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  max-width: 640px;
+}
+
+.searchBtn {
+  flex-shrink: 0;
+}
+
+.banner {
+  border: 3px solid var(--ink);
+  background: #fff;
+  border-left: 8px solid var(--red);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 14px 20px;
+  font-weight: 800;
+  font-size: 14px;
+  margin-bottom: 24px;
+  color: var(--red);
+}
+
+.tabs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.wristband {
+  border: 3px solid var(--ink);
+  padding: 10px 22px;
+  font-size: 14px;
+  text-transform: uppercase;
+  font-weight: 900;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  font-family: inherit;
+}
+
+.wristband:hover {
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.wristband:nth-child(2) {
+  transform: rotate(1deg);
+}
+.wristband:nth-child(3) {
+  transform: rotate(-1.5deg);
+}
+.wristband:nth-child(4) {
+  transform: rotate(1.5deg);
+}
+
+.wristbandOn {
+  background: var(--purple);
+  color: #fff;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 460px;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.plCard {
+  background: #fff;
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.plCard:hover {
+  box-shadow: 9px 9px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.plCardSelected {
+  box-shadow: 6px 6px 0 var(--purple);
+}
+
+.plCardSelected:hover {
+  box-shadow: 9px 9px 0 var(--purple);
+}
+
+.plTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.plName {
+  font-size: 20px;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  text-transform: uppercase;
+}
+
+.scoreBadge {
+  border: 3px solid var(--ink);
+  background: var(--blue);
+  color: #fff;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 18px;
+  box-shadow: 3px 3px 0 var(--ink);
+  flex-shrink: 0;
+}
+
+.plMeta {
+  font-size: 13px;
+  color: #555;
+  font-weight: 700;
+}
+
+.stickerRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sticker {
+  border: 2.5px solid var(--ink);
+  background: #fff;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  transform: rotate(-2deg);
+}
+
+.sticker:nth-child(2n) {
+  transform: rotate(2deg);
+}
+.sticker:nth-child(3n) {
+  transform: rotate(-1deg);
+}
+
+.stickerMore {
+  background: #eee;
+}
+
+.statusRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.statusPill {
+  border: 3px solid var(--ink);
+  padding: 6px 18px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.statusPitched {
+  background: var(--blue);
+  color: #fff;
+}
+
+.statusAccepted {
+  background: var(--green);
+}
+
+.statusRejected {
+  background: var(--red);
+  color: #fff;
+}
+
+.emptyState {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 32px;
+  font-weight: 800;
+  font-size: 14px;
+  color: #555;
+}
+
+.pitchPanel {
+  background: #fff;
+  padding: 28px;
+  position: sticky;
+  top: 32px;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.pitchPanel h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+.pitchMeta {
+  font-size: 13px;
+  color: #555;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.pitchBox {
+  border: 3px solid var(--ink);
+  background: #fdfdf8;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 600;
+  margin-bottom: 20px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  white-space: pre-wrap;
+}
+
+.pitchActions {
+  display: flex;
+  gap: 14px;
+}
+
+.actionBtn {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  padding: 14px 20px;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  cursor: pointer;
+  background: #fff;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  flex: 1;
+  text-align: center;
+}
+
+.actionBtn:hover {
+  box-shadow: 8px 8px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.actionPrimary {
+  background: var(--purple);
+  color: #fff;
+}
+
+.sentNote {
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--green-ink, #1a7a45);
+}

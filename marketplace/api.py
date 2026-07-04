@@ -5,15 +5,30 @@ Is kurali ihlalleri (ValueError) HTTP 400, eksik kayit 404 doner.
 """
 from __future__ import annotations
 
+from dataclasses import asdict
+
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from marketplace import db, service
+from musical_seo import audit as seo_audit
+from musical_seo import db as seo_db
+from musical_seo import pitch as seo_pitch
+from musical_seo import playlists as seo_playlists
+from musical_seo.sources import deezer as seo_deezer
 
 app = FastAPI(
     title="musical-seo curator marketplace",
     description="Kendi curator agi: basvuru, dogrulama, gonderim, SLA, yerlesim kaniti",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3100", "http://127.0.0.1:3100"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -37,6 +52,64 @@ class SubmissionRespond(BaseModel):
 @app.get("/health")
 def health() -> dict:
     return {"ok": True}
+
+
+def _resolve(query: str) -> tuple[str, str]:
+    if " - " in query:
+        artist, _, title = query.partition(" - ")
+        if artist.strip() and title.strip():
+            return artist.strip(), title.strip()
+    info = seo_deezer.search(query)
+    if not info.found or not info.artist or not info.title:
+        raise HTTPException(status_code=404, detail=f"Sarki bulunamadi: {query}")
+    return info.artist, info.title
+
+
+@app.get("/audit")
+def audit_run(query: str, save: bool = True) -> dict:
+    """SEO karnesi: tam denetim sonucu (frontend dashboard'u besler)."""
+    try:
+        result = seo_audit.run_audit(query)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    if save:
+        seo_db.save(result)
+    return result.to_dict()
+
+
+@app.get("/audit/history")
+def audit_history(query: str) -> list[dict]:
+    """Zaman serisi (kanit sayfasi)."""
+    artist, title = _resolve(query)
+    return seo_db.history(artist, title)
+
+
+@app.get("/playlists")
+def playlists_find(query: str, limit: int = 10) -> list[dict]:
+    """Benzer-sanatci playlist eslestirme (pitch aday listesi)."""
+    artist, title = _resolve(query)
+    return [asdict(m) for m in seo_playlists.find_playlists(artist, title, limit=limit)]
+
+
+class PitchGenerate(BaseModel):
+    query: str = Field(min_length=3, description="'Sanatci - Sarki'")
+    limit: int = 5
+
+
+@app.post("/pitch/generate")
+def pitch_generate(payload: PitchGenerate) -> list[dict]:
+    """Her aday playlist icin kisisellestirilmis pitch mesaji."""
+    artist, title = _resolve(payload.query)
+    track = seo_deezer.lookup(artist, title)
+    track_url = track.url if track.found else None
+    matches = seo_playlists.find_playlists(artist, title, limit=payload.limit)
+    return [
+        {
+            "playlist": asdict(m),
+            "message": seo_pitch.build_message(artist, title, m, track_url=track_url),
+        }
+        for m in matches
+    ]
 
 
 @app.post("/curators/apply")
