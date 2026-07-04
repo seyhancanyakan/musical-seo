@@ -64,7 +64,7 @@ export type PlaylistMatch = {
   owner_id: string | null;
 };
 
-export type CuratorStatus = "pending" | "approved" | "rejected";
+export type CuratorStatus = "lead" | "pending" | "approved" | "rejected";
 
 export type Curator = {
   id: number;

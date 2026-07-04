@@ -208,6 +208,11 @@
   background: #ffe14d;
 }
 
+.badgeLead {
+  background: #cfe0ff;
+  color: var(--ink);
+}
+
 .actions {
   display: flex;
   gap: 8px;

@@ -58,6 +58,7 @@ type Filter = "all" | CuratorStatus;
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "Tümü" },
+  { key: "lead", label: "Lead" },
   { key: "pending", label: "Bekleyen" },
   { key: "approved", label: "Onaylı" },
   { key: "rejected", label: "Reddedilen" },
@@ -66,12 +67,14 @@ const FILTERS: { key: Filter; label: string }[] = [
 function statusLabel(status: CuratorStatus): string {
   if (status === "approved") return "Onaylı";
   if (status === "rejected") return "Reddedildi";
+  if (status === "lead") return "Lead";
   return "Bekliyor";
 }
 
 function statusClass(status: CuratorStatus): string {
   if (status === "approved") return styles.badgeApproved;
   if (status === "rejected") return styles.badgeRejected;
+  if (status === "lead") return styles.badgeLead;
   return styles.badgePending;
 }
 
@@ -113,7 +116,7 @@ export default function AdminPage() {
   }, []);
 
   const counts = useMemo(() => {
-    const base = { all: curators.length, pending: 0, approved: 0, rejected: 0 };
+    const base = { all: curators.length, lead: 0, pending: 0, approved: 0, rejected: 0 };
     for (const c of curators) base[c.status] += 1;
     return base;
   }, [curators]);
