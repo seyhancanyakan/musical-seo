@@ -17,6 +17,9 @@ export default function HomePage() {
             <Link href="/kanit" className={styles.menuLink}>
               Kanıt
             </Link>
+            <Link href="/admin" className={styles.menuLink}>
+              Admin
+            </Link>
             <a href="#" className={styles.menuLink}>
               Giriş
             </a>

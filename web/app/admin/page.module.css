@@ -1,0 +1,253 @@
+/* Admin küratör paneli — mavi neo-brutal (curator inbox dil ile uyumlu) */
+
+.topbar {
+  border-bottom: 3px solid var(--ink);
+  background: #fff;
+}
+
+.topbarInner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 40px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.userChip {
+  background: var(--ink);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 8px 16px;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+
+.pageTitle {
+  font-size: 30px;
+  margin-bottom: 24px;
+}
+
+.apiBanner {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 16px 22px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.apiBanner strong {
+  color: var(--red);
+  text-transform: uppercase;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+}
+
+.loading,
+.empty {
+  font-weight: 700;
+  padding: 20px 0;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 13px;
+  padding: 10px 16px;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.filterBtn:hover {
+  box-shadow: 7px 7px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.filterActive {
+  background: var(--blue);
+  color: #fff;
+}
+
+.count {
+  display: inline-block;
+  margin-left: 6px;
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.tableWrap {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #fff;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead {
+  background: var(--ink);
+  color: #fff;
+}
+
+.table th {
+  text-align: left;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 14px 16px;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 16px;
+  border-top: 3px solid var(--ink);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background: #f4f6ff;
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.name {
+  font-weight: 900;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+}
+
+.sub {
+  font-size: 12px;
+  color: #555;
+  font-weight: 700;
+}
+
+.email,
+.link {
+  color: var(--blue);
+  font-weight: 800;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.email:hover,
+.link:hover {
+  border-bottom-color: var(--blue);
+}
+
+.score {
+  font-weight: 900;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+}
+
+.badge {
+  display: inline-block;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 6px 12px;
+  border: 3px solid var(--ink);
+  white-space: nowrap;
+}
+
+.badgeApproved {
+  background: var(--green);
+}
+
+.badgeRejected {
+  background: var(--red);
+  color: #fff;
+}
+
+.badgePending {
+  background: #ffe14d;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.act {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 8px 12px;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.act:hover:not(:disabled) {
+  box-shadow: 6px 6px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.act:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actApprove {
+  background: var(--green);
+}
+
+.actReject {
+  background: var(--red);
+  color: #fff;
+}
+
+.actPending {
+  background: #ffe14d;
+}

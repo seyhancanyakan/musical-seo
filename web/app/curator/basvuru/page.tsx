@@ -7,7 +7,10 @@ import styles from "./page.module.css";
 /** Mockup'taki demo sonucu birebir yansitir (API'ye ulasilamadiginda gosterilir). */
 const DEMO_RESULT: Curator = {
   id: 0,
+  created_at: "2026-07-04T10:30:00+00:00",
   name: "Demo Küratör",
+  email: "demo@curator.example",
+  deezer_playlist_id: "7841203955",
   playlist_title: "Türk",
   playlist_url: "https://deezer.com/playlist/7841203955",
   fans: 0,

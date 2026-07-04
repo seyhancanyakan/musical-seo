@@ -64,16 +64,21 @@ export type PlaylistMatch = {
   owner_id: string | null;
 };
 
+export type CuratorStatus = "pending" | "approved" | "rejected";
+
 export type Curator = {
   id: number;
+  created_at: string;
   name: string;
+  email: string;
+  deezer_playlist_id: string;
   playlist_title: string;
   playlist_url: string;
   fans: number;
   track_count: number;
   diversity: number;
   quality_score: number;
-  status: string;
+  status: CuratorStatus;
 };
 
 export type Submission = {
@@ -116,6 +121,16 @@ export const applyCurator = (payload: {
 }) => j<Curator>(`/curators/apply`, { method: "POST", body: JSON.stringify(payload) });
 
 export const listCurators = () => j<Curator[]>(`/curators`);
+
+/** Admin: tüm curator'lar (pending + approved + rejected). status="" → API None → hepsi. */
+export const listAllCurators = () => j<Curator[]>(`/curators?status=`);
+
+/** Admin: bir curator'ın başvuru durumunu değiştir. */
+export const setCuratorStatus = (id: number, status: CuratorStatus) =>
+  j<Curator>(`/curators/${id}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status }),
+  });
 
 export const createSubmission = (payload: {
   artist: string;

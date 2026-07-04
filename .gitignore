@@ -10,3 +10,4 @@ web/.next/
 # TypeScript build cache
 web/tsconfig.tsbuildinfo
 *.tsbuildinfo
+.gstack/
