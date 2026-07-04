@@ -6,3 +6,7 @@ reports/
 data/marketplace.db
 web/node_modules/
 web/.next/
+
+# TypeScript build cache
+web/tsconfig.tsbuildinfo
+*.tsbuildinfo
