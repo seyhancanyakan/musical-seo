@@ -64,6 +64,22 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "rejected", label: "Reddedilen" },
 ];
 
+type SourceKey = "all" | "youtube" | "spotify" | "deezer";
+
+const SOURCE_FILTERS: { key: SourceKey; label: string }[] = [
+  { key: "all", label: "Tüm Kaynaklar" },
+  { key: "youtube", label: "YouTube" },
+  { key: "spotify", label: "Spotify" },
+  { key: "deezer", label: "Deezer" },
+];
+
+function curatorSource(c: Curator): Exclude<SourceKey, "all"> {
+  const id = c.deezer_playlist_id || "";
+  if (id.startsWith("yt_")) return "youtube";
+  if (id.startsWith("sp_")) return "spotify";
+  return "deezer";
+}
+
 function statusLabel(status: CuratorStatus): string {
   if (status === "approved") return "Onaylı";
   if (status === "rejected") return "Reddedildi";
@@ -106,6 +122,7 @@ export default function AdminPage() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
+  const [sourceFilter, setSourceFilter] = useState<SourceKey>("all");
   const [busyId, setBusyId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -135,10 +152,19 @@ export default function AdminPage() {
   }, [curators]);
 
   const visible = useMemo(() => {
-    const base = filter === "all" ? curators : curators.filter((c) => c.status === filter);
+    let base = filter === "all" ? curators : curators.filter((c) => c.status === filter);
+    if (sourceFilter !== "all") {
+      base = base.filter((c) => curatorSource(c) === sourceFilter);
+    }
     // Abone/fan sayisina gore azalan sirala — en cok erisimli curator en ustte.
     return [...base].sort((a, b) => b.fans - a.fans);
-  }, [curators, filter]);
+  }, [curators, filter, sourceFilter]);
+
+  const sourceCounts = useMemo(() => {
+    const base = { all: curators.length, youtube: 0, spotify: 0, deezer: 0 };
+    for (const c of curators) base[curatorSource(c)] += 1;
+    return base;
+  }, [curators]);
 
   async function changeStatus(id: number, status: CuratorStatus) {
     setBusyId(id);
@@ -184,6 +210,23 @@ export default function AdminPage() {
               onClick={() => setFilter(f.key)}
             >
               {f.label} <span className={styles.count}>{counts[f.key]}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.filters}>
+          {SOURCE_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              className={
+                sourceFilter === f.key
+                  ? `${styles.filterBtn} ${styles.filterActive}`
+                  : styles.filterBtn
+              }
+              onClick={() => setSourceFilter(f.key)}
+            >
+              {f.label} <span className={styles.count}>{sourceCounts[f.key]}</span>
             </button>
           ))}
         </div>
