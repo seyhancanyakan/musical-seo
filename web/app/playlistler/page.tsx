@@ -18,6 +18,7 @@ type PitchCard = {
   score: number;
   status: Status;
   message: string;
+  url?: string;
 };
 
 const DEMO_CARDS: PitchCard[] = [
@@ -79,6 +80,7 @@ function toCards(pitches: { playlist: PlaylistMatch; message: string }[]): Pitch
       score: p.playlist.score,
       status: "pitched",
       message: p.message,
+      url: p.playlist.url,
     };
   });
 }
@@ -98,10 +100,11 @@ function statusLabel(status: Status): string {
 export default function PlaylistlerPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [cards, setCards] = useState<PitchCard[]>(DEMO_CARDS);
+  const [cards, setCards] = useState<PitchCard[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
   const [apiFailed, setApiFailed] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
-  const [selectedKey, setSelectedKey] = useState<string>(DEMO_CARDS[0].key);
+  const [selectedKey, setSelectedKey] = useState<string>("");
   const [sentKeys, setSentKeys] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState(false);
 
@@ -119,13 +122,16 @@ export default function PlaylistlerPage() {
 
     setLoading(true);
     setCopied(false);
+    setHasSearched(true);
     const result = await generatePitches(q, 5);
     setLoading(false);
 
     if (!result || result.length === 0) {
+      // Bos/null = sarki Deezer'da cozulemedi ya da eslesme yok. Demo'ya DUSME —
+      // net bos durum goster (demo karisikligini onle).
       setApiFailed(true);
-      setCards(DEMO_CARDS);
-      setSelectedKey(DEMO_CARDS[0].key);
+      setCards([]);
+      setSelectedKey("");
       setFilter("all");
       return;
     }
@@ -203,7 +209,8 @@ export default function PlaylistlerPage() {
 
         {apiFailed && (
           <div className={styles.banner} role="status">
-            API&apos;ye ulaşılamadı — demo veri gösteriliyor.
+            Eşleşme bulunamadı ya da API&apos;ye ulaşılamadı. Şarkıyı{" "}
+            <strong>&quot;Sanatçı - Şarkı&quot;</strong> formatında dene (ör. Duman - Senden Daha Güzel).
           </div>
         )}
 
@@ -223,17 +230,28 @@ export default function PlaylistlerPage() {
         <div className={styles.layout}>
           <div className={styles.plList}>
             {filteredCards.length === 0 && (
-              <div className={styles.emptyState}>Bu filtrede playlist bulunamadı.</div>
+              <div className={styles.emptyState}>
+                {!hasSearched
+                  ? "Şarkını yukarıdan ara → uygun playlist'ler burada çıksın."
+                  : "Bu filtrede playlist bulunamadı."}
+              </div>
             )}
 
             {filteredCards.map((card) => (
-              <button
+              <div
                 key={card.key}
-                type="button"
+                role="button"
+                tabIndex={0}
                 className={`${styles.plCard} ${
                   card.key === selectedKey ? styles.plCardSelected : ""
                 }`}
                 onClick={() => handleSelect(card.key)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleSelect(card.key);
+                  }
+                }}
                 aria-pressed={card.key === selectedKey}
               >
                 <div className={styles.plTop}>
@@ -243,7 +261,20 @@ export default function PlaylistlerPage() {
                       {card.trackCount} parça · {card.fans.toLocaleString("tr-TR")} fan
                     </div>
                   </div>
-                  <div className={styles.scoreBadge}>{card.score}</div>
+                  <div className={styles.plTopRight}>
+                    <div className={styles.scoreBadge}>{card.score}</div>
+                    {card.url && (
+                      <a
+                        className={styles.openLink}
+                        href={card.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Aç ↗
+                      </a>
+                    )}
+                  </div>
                 </div>
 
                 <div className={styles.stickerRow}>
@@ -266,7 +297,7 @@ export default function PlaylistlerPage() {
                       : statusLabel(card.status)}
                   </span>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
 

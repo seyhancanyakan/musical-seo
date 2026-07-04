@@ -214,6 +214,32 @@
   flex-shrink: 0;
 }
 
+.plTopRight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.openLink {
+  border: 3px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 4px 8px;
+  box-shadow: 2px 2px 0 var(--ink);
+  white-space: nowrap;
+}
+
+.openLink:hover {
+  background: var(--blue);
+  color: #fff;
+}
+
 .plMeta {
   font-size: 13px;
   color: #555;

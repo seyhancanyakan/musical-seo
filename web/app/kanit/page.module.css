@@ -126,6 +126,17 @@
   min-width: 640px;
 }
 
+.chartEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 24px;
+  text-align: center;
+  font-weight: 700;
+  color: #555;
+}
+
 .tiles {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
