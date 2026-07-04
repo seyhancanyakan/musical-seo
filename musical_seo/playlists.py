@@ -111,6 +111,7 @@ def find_playlists(
             continue
 
         fans = int(detail.get("fans") or 0)
+        creator = detail.get("creator") or pl.get("user") or {}
         matches.append(
             PlaylistMatch(
                 source="deezer",
@@ -122,6 +123,8 @@ def find_playlists(
                 matched_artists=matched,
                 contains_track=contains,
                 score=score_playlist(len(matched), fans, contains),
+                owner_name=creator.get("name"),
+                owner_id=str(creator["id"]) if creator.get("id") else None,
             )
         )
 

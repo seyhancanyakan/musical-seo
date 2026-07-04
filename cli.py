@@ -257,6 +257,27 @@ def _cmd_pitch(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_curators(args: argparse.Namespace) -> int:
+    """Davet edilecek curator adaylarini bul (playlist sahipleri)."""
+    matches = playlists.find_playlists(args.artist, "", limit=args.limit)
+    if not matches:
+        print("Aday bulunamadi.")
+        return 0
+    print(f"Curator adaylari ({args.artist} benzeri listelerin sahipleri):\n")
+    seen: set[str] = set()
+    count = 0
+    for m in matches:
+        key = m.owner_id or m.playlist_id
+        if key in seen:
+            continue
+        seen.add(key)
+        count += 1
+        owner = m.owner_name or "(isim yok)"
+        print(f"{count:>2}. {owner}  -  \"{m.title}\" ({m.fans} fan, {m.track_count} parca)")
+        print(f"      {m.url}")
+    return 0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="musical-seo", description="musical-seo CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -295,6 +316,13 @@ def main() -> None:
         help="Pitch durumunu guncelle (pitched|accepted|rejected)"
     )
     pitch_parser.set_defaults(func=_cmd_pitch)
+
+    curators_parser = subparsers.add_parser(
+        "curators", help="Curator adaylari kesfet (playlist sahipleri)"
+    )
+    curators_parser.add_argument("artist", help="Referans sanatci")
+    curators_parser.add_argument("--limit", type=int, default=15, help="En fazla playlist")
+    curators_parser.set_defaults(func=_cmd_curators)
 
     history_parser = subparsers.add_parser("history", help="Zaman serisi gecmisi")
     history_parser.add_argument("query", help="'Sanatci - Sarki' formatinda sorgu")

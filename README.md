@@ -52,6 +52,24 @@ python cli.py pitch --set 3 accepted      # durum guncelle (pitched|accepted|rej
 `tracks.txt` listesini denetler, `data/snapshots.db`'yi repoya commit'ler.
 Spotify/YouTube anahtarlarini repo Secrets'a ekle (opsiyonel).
 
+## Curator Marketplace (SubmitHub benzeri)
+
+Kendi curator agi: basvuru + otomatik playlist dogrulama + gonderim kuyrugu
+(72 saat SLA) + red'de zorunlu geri bildirim + otomatik yerlesim kaniti
+(sarki playlist'e gercekten eklendi mi, Deezer'dan dogrulanir).
+
+```
+# API'yi baslat
+uvicorn marketplace.api:app --port 8100
+
+# Curator adaylari kesfet (davet listesi)
+python cli.py curators "Duman" --limit 15
+```
+
+Endpoint'ler: POST /curators/apply, GET /curators, POST /submissions,
+GET /submissions?curator_id=, POST /submissions/{id}/respond,
+POST /submissions/{id}/verify-placement — dokumantasyon: http://localhost:8100/docs
+
 ## Skorlama
 
 Kategoriler: metadata %30, presence %25, consistency %20, keywords %25.

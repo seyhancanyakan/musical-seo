@@ -57,6 +57,8 @@ class PlaylistMatch:
     matched_artists: list[str] = field(default_factory=list)  # havuzdan eslesenler
     contains_track: bool = False     # denetlenen sarki zaten listede mi
     score: float = 0.0
+    owner_name: str | None = None    # playlist sahibi (curator kesfi icin)
+    owner_id: str | None = None
 
 
 @dataclass
