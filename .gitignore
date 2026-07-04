@@ -11,3 +11,4 @@ web/.next/
 web/tsconfig.tsbuildinfo
 *.tsbuildinfo
 .gstack/
+data/youtube_quota.json
