@@ -64,18 +64,16 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "rejected", label: "Reddedilen" },
 ];
 
-type SourceKey = "all" | "youtube" | "spotify" | "deezer";
+type SourceKey = "all" | "spotify" | "deezer";
 
 const SOURCE_FILTERS: { key: SourceKey; label: string }[] = [
   { key: "all", label: "Tüm Kaynaklar" },
-  { key: "youtube", label: "YouTube" },
   { key: "spotify", label: "Spotify" },
   { key: "deezer", label: "Deezer" },
 ];
 
 function curatorSource(c: Curator): Exclude<SourceKey, "all"> {
   const id = c.deezer_playlist_id || "";
-  if (id.startsWith("yt_")) return "youtube";
   if (id.startsWith("sp_")) return "spotify";
   return "deezer";
 }
@@ -161,7 +159,7 @@ export default function AdminPage() {
   }, [curators, filter, sourceFilter]);
 
   const sourceCounts = useMemo(() => {
-    const base = { all: curators.length, youtube: 0, spotify: 0, deezer: 0 };
+    const base = { all: curators.length, spotify: 0, deezer: 0 };
     for (const c of curators) base[curatorSource(c)] += 1;
     return base;
   }, [curators]);

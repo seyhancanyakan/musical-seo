@@ -81,9 +81,15 @@ def _pending_leads(limit: int) -> list[dict]:
     conn = sqlite3.connect(db._DB_PATH)
     conn.row_factory = sqlite3.Row
     try:
+        # Gercek curator'lara oncelik: Spotify (sp_) playlist'ler + IG-handle'li
+        # olanlar (IG'den gercek email/website cikarmak icin). Zaten hermes ile
+        # aranip bulunamayanlar (hermes_web_none) haric. Kalite skoruna gore.
         rows = conn.execute(
             "SELECT id, name, playlist_title, playlist_url FROM curators "
-            "WHERE COALESCE(email,'') = '' AND COALESCE(contact_source,'') = '' "
+            "WHERE (COALESCE(email,'') = '' OR email LIKE '@%') "
+            "AND COALESCE(contact_source,'') != 'hermes_web_none' "
+            "ORDER BY (deezer_playlist_id LIKE 'sp\\_%' ESCAPE '\\') DESC, "
+            "(email LIKE '@%') DESC, quality_score DESC "
             f"LIMIT {int(limit)}"
         ).fetchall()
         return [dict(r) for r in rows]
