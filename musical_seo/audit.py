@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from musical_seo import keywords
 from musical_seo.models import AuditResult, Finding, KeywordHit, TrackInfo
-from musical_seo.sources import deezer, itunes, spotify, youtube
+from musical_seo.sources import deezer, itunes, musicbrainz, spotify, youtube
 
 _PAREN_RE = re.compile(r"\([^)]*\)")
 _BRACKET_RE = re.compile(r"\[[^\]]*\]")
@@ -230,7 +230,40 @@ def _evaluate_consistency(sources: list[TrackInfo]) -> list[Finding]:
             )
         )
 
+    # Surum eslesmesi: MusicBrainz'in ilk-yayin tarihi otorite. Bir platformun
+    # tarihi MB'den >1 yil sapiyorsa muhtemelen FARKLI SURUM (derleme/yeniden-teslim)
+    # eslesmis demektir — hangi kaynagin yanlis surumu getirdigini isaret et.
+    mb_src = _get_source(sources, "musicbrainz")
+    mb_year = _release_year(mb_src.release_date) if mb_src and mb_src.found else None
+    if mb_year is not None:
+        drifted = []
+        for s in found_sources:
+            if s.source == "musicbrainz":
+                continue
+            yr = _release_year(s.release_date)
+            if yr is not None and abs(yr - mb_year) > 1:
+                drifted.append(f"{s.source}={yr}")
+        if drifted:
+            findings.append(
+                Finding(
+                    severity="warn",
+                    category="consistency",
+                    message=(
+                        f"Surum uyusmazligi: MusicBrainz ilk-yayin {mb_year}, "
+                        f"farkli tarih getirenler: {', '.join(drifted)} "
+                        "(muhtemelen derleme/yeniden-teslim surumu eslesti)"
+                    ),
+                    action="Dogru orijinal surumu (MusicBrainz tarihi) referans al",
+                )
+            )
+
     return findings
+
+
+def _release_year(date_str: str | None) -> int | None:
+    if not date_str or len(date_str) < 4 or not date_str[:4].isdigit():
+        return None
+    return int(date_str[:4])
 
 
 def _canonical_artist_title(sources: list[TrackInfo]) -> tuple[str | None, str | None]:
@@ -363,8 +396,9 @@ def run_audit(query: str) -> AuditResult:
         if canonical_source == "itunes"
         else itunes.lookup(artist, title),
         "youtube": lambda: youtube.lookup(artist, title),
+        "musicbrainz": lambda: musicbrainz.lookup(artist, title),
     }
-    order = ("spotify", "deezer", "itunes", "youtube")
+    order = ("spotify", "deezer", "itunes", "youtube", "musicbrainz")
 
     with ThreadPoolExecutor(max_workers=len(order)) as executor:
         futures = {name: executor.submit(lookup_tasks[name]) for name in order}
