@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from marketplace import db, service
 from musical_seo import audit as seo_audit
+from musical_seo import contacts as seo_contacts
 from musical_seo import db as seo_db
 from musical_seo import pitch as seo_pitch
 from musical_seo import playlists as seo_playlists
@@ -100,20 +101,34 @@ class PitchGenerate(BaseModel):
     limit: int = 5
 
 
+def _enrich_contacts(pitches: list[dict], emit=None) -> list[dict]:
+    """Her sonuca curator iletisimi ekle (aciklamalardan; bulunamazsa None —
+    panel o durumda 'platforma davet et' akisini gosterir)."""
+    for p in pitches:
+        pl = p["playlist"]
+        if emit is not None:
+            emit({"stage": "contact",
+                  "msg": f"İletişim aranıyor: “{pl['title']}”", "data": None})
+        p["contact"] = seo_contacts.for_playlist(
+            pl["source"], pl["playlist_id"], pl.get("owner_id")
+        )
+    return pitches
+
+
 @app.post("/pitch/generate")
 def pitch_generate(payload: PitchGenerate) -> list[dict]:
-    """Her aday playlist icin kisisellestirilmis pitch mesaji."""
+    """Her aday playlist icin kisisellestirilmis pitch mesaji + iletisim."""
     artist, title = _resolve(payload.query)
     track = seo_deezer.lookup(artist, title)
     track_url = track.url if track.found else None
     matches = seo_playlists.find_playlists(artist, title, limit=payload.limit)
-    return [
+    return _enrich_contacts([
         {
             "playlist": asdict(m),
             "message": seo_pitch.build_message(artist, title, m, track_url=track_url),
         }
         for m in matches
-    ]
+    ])
 
 
 @app.get("/pitch/stream")
@@ -141,15 +156,18 @@ def pitch_stream(query: str, limit: int = 5) -> StreamingResponse:
             matches = seo_playlists.find_playlists(
                 artist, title, limit=limit, progress=emit
             )
-            pitches = [
-                {
-                    "playlist": asdict(m),
-                    "message": seo_pitch.build_message(
-                        artist, title, m, track_url=track_url
-                    ),
-                }
-                for m in matches
-            ]
+            pitches = _enrich_contacts(
+                [
+                    {
+                        "playlist": asdict(m),
+                        "message": seo_pitch.build_message(
+                            artist, title, m, track_url=track_url
+                        ),
+                    }
+                    for m in matches
+                ],
+                emit=emit,
+            )
             emit({"stage": "done", "msg": f"Tamamlandı: {len(pitches)} playlist",
                   "data": {"pitches": pitches}})
         except HTTPException as exc:

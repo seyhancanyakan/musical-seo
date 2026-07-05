@@ -112,8 +112,22 @@ export const getPlaylists = (query: string, limit = 10) =>
     `/playlists?query=${encodeURIComponent(query)}&limit=${limit}`
   );
 
+/** Curator'in KENDI yayinladigi iletisim bilgileri (playlist aciklamalarindan). */
+export type CuratorContact = {
+  emails: string[];
+  instagram: string[];
+  links: string[];
+  source_hint?: string | null;
+};
+
+export type PitchItem = {
+  playlist: PlaylistMatch;
+  message: string;
+  contact?: CuratorContact | null;
+};
+
 export const generatePitches = (query: string, limit = 5) =>
-  j<{ playlist: PlaylistMatch; message: string }[]>(`/pitch/generate`, {
+  j<PitchItem[]>(`/pitch/generate`, {
     method: "POST",
     body: JSON.stringify({ query, limit }),
   });
@@ -123,10 +137,10 @@ export type PitchStreamEvent = {
   stage:
     | "resolve" | "pool" | "search" | "scan" | "skip"
     | "audio" | "audio_profile" | "audio_fit" | "mood"
-    | "match" | "rank" | "done" | "error";
+    | "match" | "rank" | "contact" | "done" | "error";
   msg: string;
   data?: {
-    pitches?: { playlist: PlaylistMatch; message: string }[];
+    pitches?: PitchItem[];
     bpm?: number;
     energy?: number;
     instrumental?: number;

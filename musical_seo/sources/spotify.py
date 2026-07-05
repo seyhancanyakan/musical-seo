@@ -259,6 +259,52 @@ def playlist_tracks(playlist_id: str, limit: int = 100) -> list[dict[str, Any]]:
     return tracks
 
 
+def playlist_description(playlist_id: str) -> str:
+    """Playlist aciklamasi (curator iletisim ayiklama icin). Hata -> ''. """
+    access_token = _get_access_token()
+    if not access_token:
+        return ""
+    try:
+        response = requests.get(
+            _PLAYLIST_URL.format(playlist_id=playlist_id),
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={"fields": "description"},
+            timeout=_TIMEOUT,
+        )
+        response.raise_for_status()
+        return response.json().get("description") or ""
+    except (requests.RequestException, ValueError):
+        return ""
+
+
+def user_playlists(owner_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    """Sahibin herkese acik listeleri (id, name, description) — kendi
+    listesinde iletisim yoksa diger listelerinin aciklamalari taranir."""
+    access_token = _get_access_token()
+    if not access_token:
+        return []
+    try:
+        response = requests.get(
+            f"https://api.spotify.com/v1/users/{owner_id}/playlists",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={"limit": limit},
+            timeout=_TIMEOUT,
+        )
+        response.raise_for_status()
+        items = response.json().get("items") or []
+    except (requests.RequestException, ValueError):
+        return []
+    return [
+        {
+            "id": pl.get("id"),
+            "name": pl.get("name") or "",
+            "description": pl.get("description") or "",
+        }
+        for pl in items
+        if isinstance(pl, dict) and pl.get("id")
+    ]
+
+
 def playlist_followers(playlist_id: str) -> int:
     """Listenin takipci sayisi (fan esdegeri). Hata -> 0."""
     access_token = _get_access_token()

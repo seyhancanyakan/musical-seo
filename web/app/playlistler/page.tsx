@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   streamPitches,
+  type CuratorContact,
+  type PitchItem,
   type PitchStreamEvent,
-  type PlaylistMatch,
 } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -23,6 +24,7 @@ type PitchCard = {
   status: Status;
   message: string;
   url?: string;
+  contact?: CuratorContact | null;
 };
 
 const DEMO_CARDS: PitchCard[] = [
@@ -79,6 +81,7 @@ const STAGE_PHASE: Record<string, number> = {
   mood: 2,
   match: 3,
   rank: 3,
+  contact: 3,
 };
 
 type LogEntry = { id: number; text: string; kind: string };
@@ -99,7 +102,7 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "rejected", label: "Rejected" },
 ];
 
-function toCards(pitches: { playlist: PlaylistMatch; message: string }[]): PitchCard[] {
+function toCards(pitches: PitchItem[]): PitchCard[] {
   return pitches.map((p, i) => {
     const allArtists = p.playlist.matched_artists ?? [];
     return {
@@ -113,6 +116,7 @@ function toCards(pitches: { playlist: PlaylistMatch; message: string }[]): Pitch
       status: "pitched",
       message: p.message,
       url: p.playlist.url,
+      contact: p.contact ?? null,
     };
   });
 }
@@ -138,6 +142,7 @@ export default function PlaylistlerPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedKey, setSelectedKey] = useState<string>("");
   const [sentKeys, setSentKeys] = useState<Record<string, boolean>>({});
+  const [invitedKeys, setInvitedKeys] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState(false);
 
   // Canli analiz VFX durumu
@@ -238,6 +243,25 @@ export default function PlaylistlerPage() {
   function handleMarkSent() {
     if (!selected) return;
     setSentKeys((prev) => ({ ...prev, [selected.key]: true }));
+  }
+
+  async function handleInvite(card: PitchCard) {
+    // Iletisimi olmayan curator'a platform daveti — mesaj panoya kopyalanir,
+    // sanatci Spotify/Deezer uzerinden (takip/yorum) iletebilir.
+    const inviteText =
+      `Merhaba! ${card.title} listeni MuzikSEO curator ağına davet etmek istiyoruz. ` +
+      `Sanatçılardan doğrudan, sana uygun şarkı gönderimi alırsın; kabul/ret tek tık. ` +
+      `Başvuru: ${window.location.origin}/curator/basvuru`;
+    try {
+      await navigator.clipboard.writeText(inviteText);
+      setInvitedKeys((prev) => ({ ...prev, [card.key]: true }));
+      setTimeout(
+        () => setInvitedKeys((prev) => ({ ...prev, [card.key]: false })),
+        2500
+      );
+    } catch {
+      // pano reddedilirse sessiz gec — kritik olmayan yardimci eylem
+    }
   }
 
   return (
@@ -415,6 +439,60 @@ export default function PlaylistlerPage() {
                     <span className={`${styles.sticker} ${styles.stickerMore}`}>
                       +{card.extraCount}
                     </span>
+                  )}
+                </div>
+
+                <div className={styles.contactRow}>
+                  {card.contact ? (
+                    <>
+                      {card.contact.emails.slice(0, 1).map((email) => (
+                        <a
+                          key={email}
+                          className={styles.contactLink}
+                          href={`mailto:${email}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          📧 {email}
+                        </a>
+                      ))}
+                      {card.contact.instagram.slice(0, 1).map((handle) => (
+                        <a
+                          key={handle}
+                          className={styles.contactLink}
+                          href={`https://instagram.com/${handle}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          📸 @{handle}
+                        </a>
+                      ))}
+                      {card.contact.links.slice(0, 1).map((link) => (
+                        <a
+                          key={link}
+                          className={styles.contactLink}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          🔗 {link.replace(/^https?:\/\/(www\.)?/, "").slice(0, 28)}
+                        </a>
+                      ))}
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.inviteBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleInvite(card);
+                      }}
+                    >
+                      {invitedKeys[card.key]
+                        ? "✓ Davet mesajı kopyalandı"
+                        : "➕ Platforma davet et"}
+                    </button>
                   )}
                 </div>
 
