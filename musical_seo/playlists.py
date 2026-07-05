@@ -118,6 +118,7 @@ def _collect_candidates(
 _AUDIO_FIT_MIN = 0.55      # ses uyumu bu esigin altindaysa aday elenir
 _AUDIO_FIT_WEIGHT = 20.0   # ses uyumunun skora katkisi (0-20)
 _AUDIO_SAMPLE = 3          # playlist basina analiz edilecek onizleme sayisi
+_MIN_FANS = 1000           # pitch degeri esigi: 1000 alti takipcili liste elenir
 
 
 def _matches_from_candidates(
@@ -171,6 +172,10 @@ def _matches_from_candidates(
             continue
 
         fans = int(detail.get("fans") or 0)
+        if fans < _MIN_FANS:
+            _emit(progress, "skip",
+                  f"Elendi (takipçi {fans} < {_MIN_FANS}): “{pl.get('title') or pid}”")
+            continue
         score = score_playlist(len(matched), fans, contains)
 
         # Ses uyumu: fallback modunda listenin ornek parcalarini analiz et.
@@ -264,6 +269,10 @@ def _spotify_matches(
                 continue
 
             followers = spotify_source.playlist_followers(pid)
+            if followers < _MIN_FANS:
+                _emit(progress, "skip",
+                      f"Elendi (takipçi {followers} < {_MIN_FANS}): “{pl['name']}”")
+                continue
             score = score_playlist(len(matched), followers, contains)
 
             if target_profile is not None and not require_pool_match:

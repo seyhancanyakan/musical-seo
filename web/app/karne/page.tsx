@@ -200,7 +200,7 @@ export default function KarnePage() {
   return (
     <div className={styles.shell}>
       <div className={styles.topbar}>
-        <div className={styles.logo}>MuzikSEO</div>
+        <Link href="/" className={styles.logo}>MuzikSEO</Link>
         <div className={styles.userChip}>
           👤 {data.resolved_artist} — Sanatçı Paneli
         </div>

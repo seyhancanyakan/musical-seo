@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   listAllCurators,
   setCuratorStatus,
@@ -183,7 +184,7 @@ export default function AdminPage() {
     <div>
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
-          <div className={styles.logo}>MuzikSEO</div>
+          <Link href="/" className={styles.logo}>MuzikSEO</Link>
           <div className={styles.userChip}>🛡️ Admin — Küratör Yönetimi</div>
         </div>
       </nav>

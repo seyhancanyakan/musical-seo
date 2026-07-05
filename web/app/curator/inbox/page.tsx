@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { listSubmissions, respondSubmission, type Submission } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -252,7 +253,7 @@ export default function CuratorInboxPage() {
     <div>
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
-          <div className={styles.logo}>MuzikSEO</div>
+          <Link href="/" className={styles.logo}>MuzikSEO</Link>
           <div className={styles.userChip}>
             👤 &quot;Türk&quot; — Curator Paneli
           </div>

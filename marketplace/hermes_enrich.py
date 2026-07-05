@@ -27,6 +27,9 @@ except ImportError:  # pragma: no cover
     paramiko = None
 
 from marketplace import db
+from musical_seo import envutil
+
+envutil.load_env()  # HERMES_SSH_* .env'den gelsin (sifre koda gomulmez)
 
 HERMES_DIR = "/usr/local/lib/hermes-agent"
 PROMPT_PATH = "/root/hermes_enrich_prompt.txt"

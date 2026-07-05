@@ -103,7 +103,9 @@ class PitchGenerate(BaseModel):
 
 def _enrich_contacts(pitches: list[dict], emit=None) -> list[dict]:
     """Her sonuca curator iletisimi ekle (aciklamalardan; bulunamazsa None —
-    panel o durumda 'platforma davet et' akisini gosterir)."""
+    panel 'platforma davet et' akisini gosterir). Iletisimi bulunamayanlar
+    ayrica marketplace.db'ye lead olarak yazilir; hermes_enrich toplu isi
+    onlarin halka acik gonderim iletisimini web'den arastirip tamamlar."""
     for p in pitches:
         pl = p["playlist"]
         if emit is not None:
@@ -112,6 +114,25 @@ def _enrich_contacts(pitches: list[dict], emit=None) -> list[dict]:
         p["contact"] = seo_contacts.for_playlist(
             pl["source"], pl["playlist_id"], pl.get("owner_id")
         )
+        if p["contact"] is None:
+            # sp_ prefix'i hermes kuyrugunda Spotify oncelik kurali icin.
+            lead_pid = (f"sp_{pl['playlist_id']}" if pl["source"] == "spotify"
+                        else str(pl["playlist_id"]))
+            try:
+                db.add_curator(
+                    name=pl.get("owner_name") or pl["title"],
+                    email="",
+                    playlist_id=lead_pid,
+                    playlist_title=pl["title"],
+                    playlist_url=pl["url"],
+                    fans=int(pl.get("fans") or 0),
+                    track_count=int(pl.get("track_count") or 0),
+                    diversity=0.0,
+                    quality_score=float(pl.get("score") or 0),
+                    status="lead",
+                )
+            except Exception:
+                pass  # lead kaydi kritik degil; pitch akisini bozmasin
     return pitches
 
 

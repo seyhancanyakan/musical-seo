@@ -221,7 +221,7 @@ export default function PlaylistlerPage() {
     setProfile(null);
 
     stopStreamRef.current?.();
-    stopStreamRef.current = streamPitches(q, 5, handleStreamEvent);
+    stopStreamRef.current = streamPitches(q, 10, handleStreamEvent);
   }
 
   function handleSelect(key: string) {
@@ -267,7 +267,7 @@ export default function PlaylistlerPage() {
   return (
     <div className={styles.shell}>
       <div className={styles.topbar}>
-        <div className={styles.logo}>MuzikSEO</div>
+        <Link href="/" className={styles.logo}>MuzikSEO</Link>
         <div className={styles.userChip}>👤 Duman — Sanatçı Paneli</div>
       </div>
 

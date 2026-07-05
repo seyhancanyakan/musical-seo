@@ -90,7 +90,7 @@ export default function KanitPage() {
     <>
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
-          <div className={styles.logo}>MuzikSEO</div>
+          <Link href="/" className={styles.logo}>MuzikSEO</Link>
           <div className={styles.navLinks}>
             {NAV_LINKS.map((link) => (
               <Link

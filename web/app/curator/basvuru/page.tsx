@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { applyCurator, type Curator } from "@/lib/api";
 import styles from "./page.module.css";
 
@@ -68,7 +69,7 @@ export default function CuratorBasvuruPage() {
     <>
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
-          <div className={styles.logo}>MuzikSEO</div>
+          <Link href="/" className={styles.logo}>MuzikSEO</Link>
         </div>
       </nav>
 
