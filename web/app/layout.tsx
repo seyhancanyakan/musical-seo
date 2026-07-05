@@ -12,7 +12,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="tr">
-      <body>{children}</body>
+      {/* suppressHydrationWarning: tarayici eklentileri body'ye attribute
+          enjekte edip (or. data-smart-converter-loaded) sahte hydration
+          uyarisi uretiyor; sadece bu elementin attribute farklarini susturur. */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

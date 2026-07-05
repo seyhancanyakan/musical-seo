@@ -379,3 +379,158 @@
   font-weight: 800;
   color: var(--green-ink, #1a7a45);
 }
+
+/* ---- Canli analiz VFX paneli ---- */
+
+.analysisPanel {
+  background: #14121f;
+  color: #f2f0ff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 24px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  position: relative;
+}
+
+.analysisPanel::after {
+  /* radar süpürmesi — panel üzerinde soldan sağa akan ışık şeridi */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(155, 120, 255, 0.12) 50%,
+    transparent 70%
+  );
+  animation: sweep 2.4s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.stageRail {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.stageChip {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.45);
+  transition: all 0.3s ease;
+}
+
+.stageChipActive {
+  border-color: #9b78ff;
+  color: #fff;
+  background: rgba(155, 120, 255, 0.18);
+  animation: chipPulse 1.1s ease-in-out infinite;
+}
+
+.stageChipDone {
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+@keyframes chipPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(155, 120, 255, 0.55); }
+  50% { box-shadow: 0 0 0 7px rgba(155, 120, 255, 0); }
+}
+
+.eqRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 46px;
+  margin-bottom: 18px;
+}
+
+.eqBar {
+  width: 9px;
+  background: #9b78ff;
+  animation: eqBounce 0.9s ease-in-out infinite;
+}
+
+.eqBarAudio {
+  background: #4ade80;
+  animation-duration: 0.45s;
+}
+
+.eqBar:nth-child(2) { animation-delay: 0.12s; }
+.eqBar:nth-child(3) { animation-delay: 0.24s; }
+.eqBar:nth-child(4) { animation-delay: 0.06s; }
+.eqBar:nth-child(5) { animation-delay: 0.3s; }
+.eqBar:nth-child(6) { animation-delay: 0.18s; }
+.eqBar:nth-child(7) { animation-delay: 0.36s; }
+.eqBar:nth-child(8) { animation-delay: 0.09s; }
+.eqBar:nth-child(9) { animation-delay: 0.27s; }
+.eqBar:nth-child(10) { animation-delay: 0.15s; }
+
+@keyframes eqBounce {
+  0%, 100% { height: 18%; }
+  50% { height: 100%; }
+}
+
+.profileChips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.profileChip {
+  font-size: 13px;
+  font-weight: 900;
+  padding: 8px 14px;
+  background: #4ade80;
+  color: #0c2416;
+  border: 2px solid #0c2416;
+  animation: popIn 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.logFeed {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  max-height: 150px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.logLine {
+  animation: logIn 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.logLine:first-child {
+  color: #fff;
+  font-weight: 700;
+}
+
+@keyframes logIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.logMatch { color: #4ade80 !important; }
+.logSkip { color: rgba(255, 255, 255, 0.4) !important; }
+.logAudio { color: #9b78ff !important; }

@@ -1,8 +1,12 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { generatePitches, type PlaylistMatch } from "@/lib/api";
+import {
+  streamPitches,
+  type PitchStreamEvent,
+  type PlaylistMatch,
+} from "@/lib/api";
 import styles from "./page.module.css";
 
 type Status = "pitched" | "accepted" | "rejected";
@@ -60,6 +64,34 @@ const DEMO_CARDS: PitchCard[] = [
   },
 ];
 
+/** VFX aşama rayı: SSE stage -> görsel faz eşlemesi. */
+const PHASES = ["Çözümleme", "Tarama", "Ses Analizi", "Skorlama"] as const;
+
+const STAGE_PHASE: Record<string, number> = {
+  resolve: 0,
+  pool: 0,
+  search: 1,
+  scan: 1,
+  skip: 1,
+  audio: 2,
+  audio_profile: 2,
+  audio_fit: 2,
+  mood: 2,
+  match: 3,
+  rank: 3,
+};
+
+type LogEntry = { id: number; text: string; kind: string };
+
+type TrackProfile = { bpm: number; energy: number; instrumental: number };
+
+function logLineClass(kind: string): string {
+  if (kind === "match") return styles.logMatch;
+  if (kind === "skip") return styles.logSkip;
+  if (kind.startsWith("audio") || kind === "mood") return styles.logAudio;
+  return "";
+}
+
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "Tümü" },
   { key: "pitched", label: "Pitched" },
@@ -108,6 +140,16 @@ export default function PlaylistlerPage() {
   const [sentKeys, setSentKeys] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState(false);
 
+  // Canli analiz VFX durumu
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [activePhase, setActivePhase] = useState(0);
+  const [visitedPhases, setVisitedPhases] = useState<number[]>([]);
+  const [profile, setProfile] = useState<TrackProfile | null>(null);
+  const stopStreamRef = useRef<(() => void) | null>(null);
+  const logIdRef = useRef(0);
+
+  useEffect(() => () => stopStreamRef.current?.(), []);
+
   const filteredCards = useMemo(
     () => (filter === "all" ? cards : cards.filter((c) => c.status === filter)),
     [cards, filter]
@@ -115,7 +157,49 @@ export default function PlaylistlerPage() {
 
   const selected = cards.find((c) => c.key === selectedKey) ?? cards[0] ?? null;
 
-  async function handleSearch(e: FormEvent) {
+  function handleStreamEvent(ev: PitchStreamEvent) {
+    if (ev.stage === "done") {
+      setLoading(false);
+      const pitches = ev.data?.pitches ?? [];
+      if (pitches.length === 0) {
+        // Bos = eslesme yok. Demo'ya DUSME — net bos durum goster.
+        setApiFailed(true);
+        setCards([]);
+        setSelectedKey("");
+        setFilter("all");
+        return;
+      }
+      const liveCards = toCards(pitches);
+      setApiFailed(false);
+      setCards(liveCards);
+      setSelectedKey(liveCards[0]?.key ?? "");
+      setFilter("all");
+      return;
+    }
+    if (ev.stage === "error") {
+      setLoading(false);
+      setApiFailed(true);
+      return;
+    }
+
+    if (ev.stage === "audio_profile" && ev.data) {
+      setProfile({
+        bpm: ev.data.bpm ?? 0,
+        energy: ev.data.energy ?? 0,
+        instrumental: ev.data.instrumental ?? 0,
+      });
+    }
+    const phase = STAGE_PHASE[ev.stage];
+    if (phase !== undefined) {
+      setActivePhase(phase);
+      setVisitedPhases((v) => (v.includes(phase) ? v : [...v, phase]));
+    }
+    logIdRef.current += 1;
+    const entry: LogEntry = { id: logIdRef.current, text: ev.msg, kind: ev.stage };
+    setLogs((prev) => [entry, ...prev].slice(0, 8));
+  }
+
+  function handleSearch(e: FormEvent) {
     e.preventDefault();
     const q = query.trim();
     if (!q || loading) return;
@@ -123,24 +207,16 @@ export default function PlaylistlerPage() {
     setLoading(true);
     setCopied(false);
     setHasSearched(true);
-    const result = await generatePitches(q, 5);
-    setLoading(false);
-
-    if (!result || result.length === 0) {
-      // Bos/null = sarki Deezer'da cozulemedi ya da eslesme yok. Demo'ya DUSME —
-      // net bos durum goster (demo karisikligini onle).
-      setApiFailed(true);
-      setCards([]);
-      setSelectedKey("");
-      setFilter("all");
-      return;
-    }
-
-    const liveCards = toCards(result);
     setApiFailed(false);
-    setCards(liveCards);
-    setSelectedKey(liveCards[0]?.key ?? "");
-    setFilter("all");
+    setCards([]);
+    setSelectedKey("");
+    setLogs([]);
+    setVisitedPhases([]);
+    setActivePhase(0);
+    setProfile(null);
+
+    stopStreamRef.current?.();
+    stopStreamRef.current = streamPitches(q, 5, handleStreamEvent);
   }
 
   function handleSelect(key: string) {
@@ -203,9 +279,61 @@ export default function PlaylistlerPage() {
             className={`nb-btn nb-btn--purple ${styles.searchBtn}`}
             disabled={loading}
           >
-            {loading ? "Aranıyor..." : "Playlist Bul"}
+            {loading ? "Analiz ediliyor..." : "Playlist Bul"}
           </button>
         </form>
+
+        {loading && (
+          <div className={styles.analysisPanel} aria-live="polite">
+            <div className={styles.stageRail}>
+              {PHASES.map((phaseLabel, i) => (
+                <span
+                  key={phaseLabel}
+                  className={`${styles.stageChip} ${
+                    i === activePhase
+                      ? styles.stageChipActive
+                      : visitedPhases.includes(i)
+                        ? styles.stageChipDone
+                        : ""
+                  }`}
+                >
+                  {phaseLabel}
+                </span>
+              ))}
+            </div>
+
+            <div className={styles.eqRow} aria-hidden="true">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`${styles.eqBar} ${
+                    activePhase === 2 ? styles.eqBarAudio : ""
+                  }`}
+                />
+              ))}
+            </div>
+
+            {profile && (
+              <div className={styles.profileChips}>
+                <span className={styles.profileChip}>♩ {profile.bpm} BPM</span>
+                <span className={styles.profileChip}>
+                  ⚡ Enerji %{Math.round(profile.energy * 100)}
+                </span>
+                <span className={styles.profileChip}>
+                  🎹 Enstrümantal %{Math.round(profile.instrumental * 100)}
+                </span>
+              </div>
+            )}
+
+            <div className={styles.logFeed}>
+              {logs.map((l) => (
+                <div key={l.id} className={`${styles.logLine} ${logLineClass(l.kind)}`}>
+                  ▸ {l.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {apiFailed && (
           <div className={styles.banner} role="status">

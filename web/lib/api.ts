@@ -118,6 +118,53 @@ export const generatePitches = (query: string, limit = 5) =>
     body: JSON.stringify({ query, limit }),
   });
 
+/** SSE canli asama olayi — /pitch/stream. `done.data.pitches` sonucu tasir. */
+export type PitchStreamEvent = {
+  stage:
+    | "resolve" | "pool" | "search" | "scan" | "skip"
+    | "audio" | "audio_profile" | "audio_fit" | "mood"
+    | "match" | "rank" | "done" | "error";
+  msg: string;
+  data?: {
+    pitches?: { playlist: PlaylistMatch; message: string }[];
+    bpm?: number;
+    energy?: number;
+    instrumental?: number;
+    fit?: number;
+    names?: string[];
+    terms?: string[];
+    fans?: number;
+  } | null;
+};
+
+/** Pitch uretimini canli izle (EventSource). Kapatma fonksiyonu dondurur.
+ *  'done' veya 'error' geldiginde baglanti otomatik kapanir. */
+export function streamPitches(
+  query: string,
+  limit: number,
+  onEvent: (ev: PitchStreamEvent) => void
+): () => void {
+  const es = new EventSource(
+    `${API}/pitch/stream?query=${encodeURIComponent(query)}&limit=${limit}`
+  );
+  es.onmessage = (e) => {
+    let ev: PitchStreamEvent | null = null;
+    try {
+      ev = JSON.parse(e.data) as PitchStreamEvent;
+    } catch {
+      return;
+    }
+    if (ev.stage === "done" || ev.stage === "error") es.close();
+    onEvent(ev);
+  };
+  es.onerror = () => {
+    // Sunucu akisi kapatinca da tetiklenir; acik baglantiyi kapat, hata bildir.
+    if (es.readyState !== EventSource.CLOSED) es.close();
+    onEvent({ stage: "error", msg: "Bağlantı koptu" });
+  };
+  return () => es.close();
+}
+
 export const applyCurator = (payload: {
   name: string;
   email: string;

@@ -5,10 +5,14 @@ Is kurali ihlalleri (ValueError) HTTP 400, eksik kayit 404 doner.
 """
 from __future__ import annotations
 
+import json
+import queue
+import threading
 from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from marketplace import db, service
@@ -110,6 +114,65 @@ def pitch_generate(payload: PitchGenerate) -> list[dict]:
         }
         for m in matches
     ]
+
+
+@app.get("/pitch/stream")
+def pitch_stream(query: str, limit: int = 5) -> StreamingResponse:
+    """Pitch uretiminin CANLI akisi (SSE) — panel VFX'i bu olaylari cizer.
+
+    Olay: data: {"stage": "...", "msg": "...", "data": {...}|null}
+    Asamalar: resolve, pool, search, scan, skip, audio, audio_profile,
+    audio_fit, mood, match, rank, done, error. 'done' olayi /pitch/generate
+    ile ayni sekilli sonucu tasir. Eslestirme is parcaciginda kosar; olaylar
+    kuyruk uzerinden aninda akar.
+    """
+    event_queue: queue.Queue = queue.Queue()
+
+    def emit(event: dict) -> None:
+        event_queue.put(event)
+
+    def work() -> None:
+        try:
+            artist, title = _resolve(query)
+            emit({"stage": "resolve", "msg": f"Şarkı çözümlendi: {artist} - {title}",
+                  "data": {"artist": artist, "title": title}})
+            track = seo_deezer.lookup(artist, title)
+            track_url = track.url if track.found else None
+            matches = seo_playlists.find_playlists(
+                artist, title, limit=limit, progress=emit
+            )
+            pitches = [
+                {
+                    "playlist": asdict(m),
+                    "message": seo_pitch.build_message(
+                        artist, title, m, track_url=track_url
+                    ),
+                }
+                for m in matches
+            ]
+            emit({"stage": "done", "msg": f"Tamamlandı: {len(pitches)} playlist",
+                  "data": {"pitches": pitches}})
+        except HTTPException as exc:
+            emit({"stage": "error", "msg": str(exc.detail), "data": None})
+        except Exception as exc:  # is parcaciginda yutulmasin, kullaniciya aksin
+            emit({"stage": "error", "msg": f"Beklenmeyen hata: {exc}", "data": None})
+        finally:
+            event_queue.put(None)  # akis sonu isareti
+
+    threading.Thread(target=work, daemon=True).start()
+
+    def sse():
+        while True:
+            event = event_queue.get()
+            if event is None:
+                break
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        sse(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/curators/apply")
