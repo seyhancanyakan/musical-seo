@@ -184,11 +184,17 @@ def _analyze(preview_url: str) -> AudioProfile | None:
         return None
 
     try:
-        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-        bpm = float(np.atleast_1d(tempo)[0])
-
         rms = float(np.mean(librosa.feature.rms(y=y)))
         energy = min(rms / _ENERGY_NORM, 1.0)
+
+        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        bpm = float(np.atleast_1d(tempo)[0])
+        # Oktav duzeltmesi: librosa yavas parcalarda vurusu cift sayip tempoyu
+        # ikiye katlar (or. 76 BPM'lik sakin parca 152 raporlanir). Yuksek
+        # tempo + dusuk enerji kombinasyonu gercek muzikte nadirdir; boyle
+        # durumda tempo yariya indirilir.
+        if bpm >= 130 and energy < 0.5:
+            bpm /= 2
 
         centroid = float(np.mean(librosa.feature.spectral_centroid(y=y, sr=sr)))
         brightness = min(centroid / _BRIGHTNESS_NORM, 1.0)
