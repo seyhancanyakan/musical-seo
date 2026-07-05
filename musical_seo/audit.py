@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from musical_seo import keywords
 from musical_seo.models import AuditResult, Finding, KeywordHit, TrackInfo
-from musical_seo.sources import deezer, itunes, musicbrainz, spotify, youtube
+from musical_seo.sources import deezer, itunes, lastfm, musicbrainz, spotify, youtube
 
 _PAREN_RE = re.compile(r"\([^)]*\)")
 _BRACKET_RE = re.compile(r"\[[^\]]*\]")
@@ -397,8 +397,9 @@ def run_audit(query: str) -> AuditResult:
         else itunes.lookup(artist, title),
         "youtube": lambda: youtube.lookup(artist, title),
         "musicbrainz": lambda: musicbrainz.lookup(artist, title),
+        "lastfm": lambda: lastfm.lookup(artist, title),
     }
-    order = ("spotify", "deezer", "itunes", "youtube", "musicbrainz")
+    order = ("spotify", "deezer", "itunes", "youtube", "musicbrainz", "lastfm")
 
     with ThreadPoolExecutor(max_workers=len(order)) as executor:
         futures = {name: executor.submit(lookup_tasks[name]) for name in order}

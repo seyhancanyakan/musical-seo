@@ -127,14 +127,15 @@ def _cmd_history(args: argparse.Namespace) -> int:
         print("Kayit bulunamadi.")
         return 0
 
-    header = f"{'Tarih':<26} {'Skor':>5} {'Spotify':>8} {'Deezer':>7} {'YT views':>9}"
+    header = (f"{'Tarih':<26} {'Skor':>5} {'Spotify':>8} {'Deezer':>7} "
+              f"{'YT views':>9} {'Last.fm':>9}")
     print(header)
     print("-" * len(header))
     for row in rows:
         print(
             f"{row['created_at']:<26} {row['score']:>5} "
             f"{_fmt(row['spotify_popularity']):>8} {_fmt(row['deezer_rank']):>7} "
-            f"{_fmt(row['youtube_views']):>9}"
+            f"{_fmt(row['youtube_views']):>9} {_fmt(row.get('lastfm_listeners')):>9}"
         )
     return 0
 

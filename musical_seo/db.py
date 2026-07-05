@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS snapshots (
     spotify_popularity INTEGER,
     deezer_rank INTEGER,
     youtube_views INTEGER,
+    lastfm_listeners INTEGER,
     subscores_json TEXT NOT NULL,
     result_json TEXT NOT NULL
 );
@@ -67,7 +68,15 @@ def _connect() -> sqlite3.Connection:
     conn.execute(_CREATE_INDEX_SQL)
     conn.execute(_CREATE_PITCHES_SQL)
     conn.execute(_CREATE_PITCHES_INDEX_SQL)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Eski DB dosyalarina sonradan eklenen kolonlari tamamlar."""
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(snapshots)")}
+    if "lastfm_listeners" not in columns:
+        conn.execute("ALTER TABLE snapshots ADD COLUMN lastfm_listeners INTEGER")
 
 
 def _find_source(sources: list, source_name: str):
@@ -81,12 +90,14 @@ def save(result: AuditResult) -> int:
     spotify = _find_source(result.sources, "spotify")
     deezer = _find_source(result.sources, "deezer")
     youtube = _find_source(result.sources, "youtube")
+    lastfm = _find_source(result.sources, "lastfm")
 
     spotify_popularity = spotify.popularity if spotify is not None else None
     deezer_rank = deezer.popularity if deezer is not None else None
     youtube_views = None
     if youtube is not None:
         youtube_views = youtube.extra.get("views")
+    lastfm_listeners = lastfm.popularity if lastfm is not None else None
 
     conn = _connect()
     try:
@@ -95,9 +106,9 @@ def save(result: AuditResult) -> int:
                 """
                 INSERT INTO snapshots (
                     created_at, query, artist, title, score,
-                    spotify_popularity, deezer_rank, youtube_views,
+                    spotify_popularity, deezer_rank, youtube_views, lastfm_listeners,
                     subscores_json, result_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     result.created_at,
@@ -108,6 +119,7 @@ def save(result: AuditResult) -> int:
                     spotify_popularity,
                     deezer_rank,
                     youtube_views,
+                    lastfm_listeners,
                     json.dumps(result.subscores, ensure_ascii=False),
                     json.dumps(result.to_dict(), ensure_ascii=False),
                 ),
@@ -124,7 +136,8 @@ def history(artist: str, title: str) -> list[dict]:
         with conn:
             rows = conn.execute(
                 """
-                SELECT created_at, score, spotify_popularity, deezer_rank, youtube_views
+                SELECT created_at, score, spotify_popularity, deezer_rank,
+                       youtube_views, lastfm_listeners
                 FROM snapshots
                 WHERE LOWER(artist) = LOWER(?) AND LOWER(title) = LOWER(?)
                 ORDER BY created_at ASC
@@ -141,6 +154,7 @@ def history(artist: str, title: str) -> list[dict]:
             "spotify_popularity": row["spotify_popularity"],
             "deezer_rank": row["deezer_rank"],
             "youtube_views": row["youtube_views"],
+            "lastfm_listeners": row["lastfm_listeners"],
         }
         for row in rows
     ]
