@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-from marketplace import db
+from marketplace import accounts, db
 from musical_seo import pitch
 from musical_seo.models import PlaylistMatch
 from musical_seo.sources import deezer
@@ -149,12 +149,24 @@ def apply_curator(name: str, email: str, playlist_ref: str) -> dict:
     return curator
 
 
-def create_submission(artist: str, title: str, curator_id: int) -> dict:
+def create_submission(
+    artist: str, title: str, curator_id: int, artist_user_id: int | None = None
+) -> dict:
     curator = db.get_curator(curator_id)
     if curator is None:
         raise ValueError(f"Curator bulunamadi: {curator_id}")
     if curator["status"] != "approved":
         raise ValueError("Curator henuz onayli degil")
+
+    # Kredi on-kontrolu: bakiye yoksa gonderim hic olusturulmaz. Asil dusum
+    # kayit olustuktan sonra atomik yapilir (spend_credit); ayni kullanicinin
+    # es zamanli iki gonderiminde nadir yaris pilotta kabul edilebilir.
+    if artist_user_id is not None:
+        user = accounts.get_user(artist_user_id)
+        if user is None:
+            raise ValueError(f"Kullanici bulunamadi: {artist_user_id}")
+        if user["credits"] < 1:
+            raise ValueError("Yetersiz kredi — paket satin almalisin")
 
     track = deezer.lookup(artist, title)
     if not track.found:
@@ -174,7 +186,10 @@ def create_submission(artist: str, title: str, curator_id: int) -> dict:
         artist=artist, title=title, track_url=track.url,
         curator_id=curator_id, message=message,
         deadline=compute_deadline(created),
+        artist_user_id=artist_user_id,
     )
+    if artist_user_id is not None:
+        accounts.spend_credit(artist_user_id, submission_id)
     submission = db.get_submission(submission_id)
     if submission is None:
         raise ValueError("Gonderim kaydi olusturulamadi")
@@ -196,9 +211,32 @@ def respond(submission_id: int, action: str, feedback: str = "") -> dict:
         raise ValueError("Red icin kisa bir geri bildirim zorunlu")
 
     db.set_submission_response(submission_id, action, feedback.strip())
+
+    # Nitelikli geri bildirim -> kurator kazanci. Kabul/red FARK ETMEZ
+    # (editoryal bagimsizlik); playlist'e ekleme odeme sarti DEGIL.
+    if accounts.is_qualified_feedback(feedback):
+        curator_user = accounts.user_for_curator(submission["curator_id"])
+        if curator_user is not None:
+            accounts.accrue_earning(curator_user["id"], submission_id)
+
     updated = db.get_submission(submission_id)
     assert updated is not None
     return updated
+
+
+def expire_and_refund() -> dict:
+    """SLA'si dolan gonderimleri expired isaretle + kredileri OTOMATIK iade et.
+
+    Idempotent: refund_credit ayni gonderime ikinci iadeyi yazmaz. Kurator
+    inbox'i her cekildiginde ve /maintenance/expire ile cagrilir.
+    """
+    expired_count = db.expire_overdue()
+    refunded = 0
+    for sub in db.list_submissions(status="expired"):
+        if sub.get("artist_user_id"):
+            if accounts.refund_credit(sub["artist_user_id"], sub["id"]):
+                refunded += 1
+    return {"expired": expired_count, "refunded": refunded}
 
 
 def verify_placement(submission_id: int) -> dict:

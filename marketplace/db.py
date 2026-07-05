@@ -37,7 +37,8 @@ _SCHEMA = [
         feedback TEXT,
         responded_at TEXT,
         deadline TEXT NOT NULL,
-        placement_verified INTEGER NOT NULL DEFAULT 0
+        placement_verified INTEGER NOT NULL DEFAULT 0,
+        artist_user_id INTEGER
     );
     """,
     "CREATE INDEX IF NOT EXISTS idx_submissions_curator ON submissions (curator_id, status);",
@@ -54,6 +55,10 @@ def _connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     for stmt in _SCHEMA:
         conn.execute(stmt)
+    # Eski DB dosyalarina sonradan eklenen kolonlar
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(submissions)")}
+    if "artist_user_id" not in cols:
+        conn.execute("ALTER TABLE submissions ADD COLUMN artist_user_id INTEGER")
     return conn
 
 
@@ -120,7 +125,7 @@ def update_curator_status(curator_id: int, status: str) -> bool:
 
 def add_submission(
     artist: str, title: str, track_url: str | None, curator_id: int,
-    message: str, deadline: str,
+    message: str, deadline: str, artist_user_id: int | None = None,
 ) -> int:
     conn = _connect()
     try:
@@ -128,10 +133,12 @@ def add_submission(
             cur = conn.execute(
                 """
                 INSERT INTO submissions
-                    (created_at, artist, title, track_url, curator_id, message, deadline)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (created_at, artist, title, track_url, curator_id, message,
+                     deadline, artist_user_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (now_iso(), artist, title, track_url, curator_id, message, deadline),
+                (now_iso(), artist, title, track_url, curator_id, message,
+                 deadline, artist_user_id),
             )
             return int(cur.lastrowid)
     finally:

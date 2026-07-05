@@ -6,16 +6,17 @@ Is kurali ihlalleri (ValueError) HTTP 400, eksik kayit 404 doner.
 from __future__ import annotations
 
 import json
+import os
 import queue
 import threading
 from dataclasses import asdict
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from marketplace import db, service
+from marketplace import accounts, db, service
 from musical_seo import audit as seo_audit
 from musical_seo import contacts as seo_contacts
 from musical_seo import db as seo_db
@@ -212,6 +213,145 @@ def pitch_stream(query: str, limit: int = 5) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# --- Hesap / kredi / cekirdek dongu ---------------------------------------
+# Dongu: kredi al -> kurator sec -> gonder (1 kredi) -> kurator dinler +
+# yazili geri bildirim -> nitelikliyse $1 kazanir -> 72 saatte cevap yoksa
+# kredi otomatik iade. Playlist'e ekleme HICBIR ZAMAN satilmaz/garanti edilmez.
+
+class AuthRegister(BaseModel):
+    email: str = Field(min_length=6)
+    password: str = Field(min_length=8)
+    name: str = Field(min_length=1)
+    role: str = Field(pattern="^(artist|curator)$")
+    playlist_url: str | None = None  # kurator: Deezer listesi (Spotify sonraki faz)
+
+
+class AuthLogin(BaseModel):
+    email: str
+    password: str
+
+
+class CreditGrant(BaseModel):
+    user_id: int
+    amount: int = Field(gt=0)
+    reason: str = "purchase"
+
+
+def _current_user(authorization: str | None = Header(default=None)) -> dict:
+    token = (authorization or "").removeprefix("Bearer ").strip()
+    user = accounts.user_by_token(token)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Giris gerekli")
+    return user
+
+
+def _require_role(user: dict, role: str) -> None:
+    if user["role"] != role:
+        raise HTTPException(status_code=403, detail=f"Bu islem {role} hesabi ister")
+
+
+@app.post("/auth/register")
+def auth_register(payload: AuthRegister) -> dict:
+    try:
+        curator_id = None
+        if payload.role == "curator" and payload.playlist_url:
+            curator = service.apply_curator(
+                payload.name, payload.email, payload.playlist_url
+            )
+            curator_id = curator["id"]
+        user = accounts.register(
+            payload.email, payload.password, payload.name, payload.role,
+            curator_id=curator_id,
+        )
+        token = accounts.login(payload.email, payload.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"user": user, "token": token}
+
+
+@app.post("/auth/login")
+def auth_login(payload: AuthLogin) -> dict:
+    try:
+        token = accounts.login(payload.email, payload.password)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    user = accounts.user_by_token(token)
+    return {"user": user, "token": token}
+
+
+@app.get("/me")
+def me(user: dict = Depends(_current_user)) -> dict:
+    result = {"user": user, "transactions": accounts.transactions_for(user["id"])}
+    if user["role"] == "curator":
+        result["earnings"] = accounts.earnings_for(user["id"])
+    return result
+
+
+@app.post("/admin/credits/grant")
+def admin_grant(
+    payload: CreditGrant, x_admin_key: str | None = Header(default=None)
+) -> dict:
+    """Pilot: odeme manuel alinir (iyzico/Papara), kredi buradan yuklenir.
+    MARKETPLACE_ADMIN_KEY .env'de tanimli olmali."""
+    expected = os.environ.get("MARKETPLACE_ADMIN_KEY")
+    if not expected or x_admin_key != expected:
+        raise HTTPException(status_code=403, detail="Gecersiz admin anahtari")
+    try:
+        return accounts.grant_credits(payload.user_id, payload.amount, payload.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/me/submissions")
+def my_submission_create(
+    payload: SubmissionCreate, user: dict = Depends(_current_user)
+) -> dict:
+    _require_role(user, "artist")
+    try:
+        return service.create_submission(
+            payload.artist, payload.title, payload.curator_id,
+            artist_user_id=user["id"],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/me/inbox")
+def my_inbox(user: dict = Depends(_current_user)) -> list[dict]:
+    _require_role(user, "curator")
+    service.expire_and_refund()  # inbox her acilista SLA suprüntüsü + iade
+    if not user.get("curator_id"):
+        return []
+    return db.list_submissions(curator_id=user["curator_id"])
+
+
+@app.post("/me/submissions/{submission_id}/respond")
+def my_submission_respond(
+    submission_id: int, payload: SubmissionRespond,
+    user: dict = Depends(_current_user),
+) -> dict:
+    _require_role(user, "curator")
+    submission = db.get_submission(submission_id)
+    if submission is None or submission["curator_id"] != user.get("curator_id"):
+        raise HTTPException(status_code=404, detail="Gonderim bulunamadi")
+    try:
+        return service.respond(submission_id, payload.action, payload.feedback)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/me/earnings")
+def my_earnings(user: dict = Depends(_current_user)) -> dict:
+    _require_role(user, "curator")
+    return accounts.earnings_for(user["id"])
+
+
+@app.post("/maintenance/expire")
+def maintenance_expire() -> dict:
+    """Cron hedefi: SLA dolan gonderimleri kapat + kredileri iade et."""
+    return service.expire_and_refund()
 
 
 @app.post("/curators/apply")
