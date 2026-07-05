@@ -173,3 +173,105 @@ def lookup(artist: str, title: str) -> TrackInfo:
     structured_q = f'artist:"{artist}" track:"{title}"'
     free_text_q = f"{artist} {title}"
     return _search_with_fallback(structured_q, free_text_q, access_token)
+
+
+# --- Playlist kesfi (curator pitch icin) -----------------------------------
+# Kasim 2024 sonrasi olusturulan Spotify uygulamalari editoryal/algoritmik
+# listelere erisemez; arama KULLANICI listelerini dondurur — pitch icin zaten
+# istedigimiz tam olarak bu. Hata/anahtarsizlik durumunda [] doner.
+
+_PLAYLIST_URL = "https://api.spotify.com/v1/playlists/{playlist_id}"
+
+
+def search_playlists(query: str, limit: int = 8) -> list[dict[str, Any]]:
+    """Playlist aramasi. Donen dict: id, name, url, owner_name, owner_id,
+    track_count. Spotify bazen listede null item dondurur — ayiklanir."""
+    access_token = _get_access_token()
+    if not access_token:
+        return []
+    try:
+        response = requests.get(
+            _SEARCH_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={"q": query, "type": "playlist", "limit": limit},
+            timeout=_TIMEOUT,
+        )
+        response.raise_for_status()
+        items = ((response.json().get("playlists") or {}).get("items")) or []
+    except (requests.RequestException, ValueError):
+        return []
+
+    results: list[dict[str, Any]] = []
+    for pl in items:
+        if not isinstance(pl, dict) or not pl.get("id"):
+            continue
+        owner = pl.get("owner") or {}
+        results.append(
+            {
+                "id": pl["id"],
+                "name": pl.get("name") or "",
+                "url": (pl.get("external_urls") or {}).get("spotify")
+                or f"https://open.spotify.com/playlist/{pl['id']}",
+                "owner_name": owner.get("display_name"),
+                "owner_id": owner.get("id"),
+                "track_count": (pl.get("tracks") or {}).get("total") or 0,
+            }
+        )
+    return results
+
+
+def playlist_tracks(playlist_id: str, limit: int = 100) -> list[dict[str, Any]]:
+    """Playlist parcalari. Donen dict: title, artists (list[str]), preview_url
+    (yeni API uygulamalarinda cogunlukla None — ses analizi o zaman atlanir)."""
+    access_token = _get_access_token()
+    if not access_token:
+        return []
+    try:
+        response = requests.get(
+            _PLAYLIST_URL.format(playlist_id=playlist_id) + "/tracks",
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={
+                "limit": limit,
+                "fields": "items(track(name,preview_url,artists(name)))",
+            },
+            timeout=_TIMEOUT,
+        )
+        response.raise_for_status()
+        items = response.json().get("items") or []
+    except (requests.RequestException, ValueError):
+        return []
+
+    tracks: list[dict[str, Any]] = []
+    for item in items:
+        track = (item or {}).get("track") or {}
+        if not track.get("name"):
+            continue
+        tracks.append(
+            {
+                "title": track["name"],
+                "artists": [
+                    a.get("name") for a in (track.get("artists") or [])
+                    if a.get("name")
+                ],
+                "preview_url": track.get("preview_url"),
+            }
+        )
+    return tracks
+
+
+def playlist_followers(playlist_id: str) -> int:
+    """Listenin takipci sayisi (fan esdegeri). Hata -> 0."""
+    access_token = _get_access_token()
+    if not access_token:
+        return 0
+    try:
+        response = requests.get(
+            _PLAYLIST_URL.format(playlist_id=playlist_id),
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={"fields": "followers.total"},
+            timeout=_TIMEOUT,
+        )
+        response.raise_for_status()
+        return int((response.json().get("followers") or {}).get("total") or 0)
+    except (requests.RequestException, ValueError):
+        return 0
