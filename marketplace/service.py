@@ -8,6 +8,7 @@ bunlari HTTP 400'e cevirir.
 from __future__ import annotations
 
 import re
+import secrets
 import unicodedata
 from datetime import datetime, timedelta, timezone
 
@@ -17,6 +18,7 @@ from marketplace import accounts, db
 from musical_seo import pitch
 from musical_seo.models import PlaylistMatch
 from musical_seo.sources import deezer
+from musical_seo.sources import spotify as spotify_source
 
 SLA_HOURS = 72
 MIN_TRACKS = 20          # curator playlist alt siniri
@@ -63,6 +65,15 @@ def parse_playlist_id(ref: str) -> str | None:
     if ref.isdigit():
         return ref
     m = re.search(r"deezer\.com/(?:[a-z]{2}/)?playlist/(\d+)", ref)
+    return m.group(1) if m else None
+
+
+_SPOTIFY_PL_RE = re.compile(r"open\.spotify\.com/playlist/([A-Za-z0-9]{10,})")
+
+
+def parse_spotify_playlist_id(ref: str) -> str | None:
+    """'https://open.spotify.com/playlist/<id>?si=..' -> '<id>'."""
+    m = _SPOTIFY_PL_RE.search(ref.strip())
     return m.group(1) if m else None
 
 
@@ -124,9 +135,20 @@ def inspect_playlist(playlist_id: str) -> dict | None:
 # --- Akislar -------------------------------------------------------------
 
 def apply_curator(name: str, email: str, playlist_ref: str) -> dict:
+    """Kurator basvurusu — Deezer VEYA Spotify playlist linkiyle.
+
+    Spotify listeleri sahiplik dogrulamasi (verify_code) tamamlanana kadar
+    otomatik onaylanmaz; Deezer'da eski otomatik-onay kurallari gecerli.
+    """
+    spotify_id = parse_spotify_playlist_id(playlist_ref)
+    if spotify_id:
+        return _apply_spotify_curator(name, email, spotify_id)
+
     playlist_id = parse_playlist_id(playlist_ref)
     if not playlist_id:
-        raise ValueError(f"Gecersiz Deezer playlist referansi: {playlist_ref}")
+        raise ValueError(
+            f"Gecersiz playlist referansi (Deezer veya Spotify linki ver): {playlist_ref}"
+        )
     info = inspect_playlist(playlist_id)
     if info is None:
         raise ValueError(f"Playlist Deezer'da bulunamadi: {playlist_ref}")
@@ -149,6 +171,75 @@ def apply_curator(name: str, email: str, playlist_ref: str) -> dict:
     return curator
 
 
+def _apply_spotify_curator(name: str, email: str, spotify_id: str) -> dict:
+    tracks = spotify_source.playlist_tracks(spotify_id)
+    if not tracks:
+        raise ValueError(
+            "Spotify playlist okunamadi — liste herkese acik mi? (private liste kabul edilemez)"
+        )
+    unique_artists = {
+        a.casefold() for t in tracks for a in t.get("artists", [])
+    }
+    diversity = round(len(unique_artists) / len(tracks), 3) if tracks else 0.0
+    followers = spotify_source.playlist_followers(spotify_id)
+    quality = curator_quality(followers, len(tracks), diversity)
+
+    # Spotify'da sahiplik API'den bilinemez -> dogrulanana kadar pending.
+    curator_id = db.add_curator(
+        name=name, email=email, playlist_id=f"sp_{spotify_id}",
+        playlist_title=name if not tracks else f"Spotify listesi ({len(tracks)} parça)",
+        playlist_url=f"https://open.spotify.com/playlist/{spotify_id}",
+        fans=followers, track_count=len(tracks),
+        diversity=diversity, quality_score=quality, status="pending",
+    )
+    curator = db.get_curator(curator_id)
+    if curator is None:
+        raise ValueError("Curator kaydi olusturulamadi")
+    return curator
+
+
+# --- Playlist sahiplik dogrulamasi (SubmitHub yontemi) --------------------
+
+def start_ownership_verification(curator_id: int) -> str:
+    """Benzersiz kod uret; kurator kodu playlist ACIKLAMASINA ekleyecek."""
+    curator = db.get_curator(curator_id)
+    if curator is None:
+        raise ValueError(f"Curator bulunamadi: {curator_id}")
+    code = f"MZK-{secrets.token_hex(3).upper()}"
+    db.set_verify_code(curator_id, code)
+    return code
+
+
+def _playlist_description(playlist_id: str) -> str:
+    """Kaynaga gore playlist aciklamasi (sp_ -> Spotify, sayi -> Deezer)."""
+    if playlist_id.startswith("sp_"):
+        return spotify_source.playlist_description(playlist_id[3:])
+    data = _get(f"/playlist/{playlist_id}")
+    return data.get("description") or ""
+
+
+def check_ownership(curator_id: int) -> dict:
+    """Kod aciklamada gorunuyorsa sahiplik kanitlanir + kurator onaylanir."""
+    curator = db.get_curator(curator_id)
+    if curator is None:
+        raise ValueError(f"Curator bulunamadi: {curator_id}")
+    code = curator.get("verify_code")
+    if not code:
+        raise ValueError("Once dogrulama kodu al (verify/start)")
+
+    description = _playlist_description(curator["deezer_playlist_id"])
+    if code not in description:
+        raise ValueError(
+            "Kod playlist aciklamasinda bulunamadi — ekledikten sonra tekrar dene "
+            "(Spotify aciklama guncellemesi 1-2 dk gecikebilir)"
+        )
+    db.mark_ownership_verified(curator_id)
+    db.update_curator_status(curator_id, "approved")
+    updated = db.get_curator(curator_id)
+    assert updated is not None
+    return updated
+
+
 def create_submission(
     artist: str, title: str, curator_id: int, artist_user_id: int | None = None
 ) -> dict:
@@ -158,19 +249,17 @@ def create_submission(
     if curator["status"] != "approved":
         raise ValueError("Curator henuz onayli degil")
 
-    # Kredi on-kontrolu: bakiye yoksa gonderim hic olusturulmaz. Asil dusum
-    # kayit olustuktan sonra atomik yapilir (spend_credit); ayni kullanicinin
-    # es zamanli iki gonderiminde nadir yaris pilotta kabul edilebilir.
-    if artist_user_id is not None:
-        user = accounts.get_user(artist_user_id)
-        if user is None:
-            raise ValueError(f"Kullanici bulunamadi: {artist_user_id}")
-        if user["credits"] < 1:
-            raise ValueError("Yetersiz kredi — paket satin almalisin")
+    if artist_user_id is not None and accounts.get_user(artist_user_id) is None:
+        raise ValueError(f"Kullanici bulunamadi: {artist_user_id}")
 
+    # Sarki cozumleme: once Deezer, bulunamazsa Spotify (Spotify-only kataloglar)
     track = deezer.lookup(artist, title)
     if not track.found:
-        raise ValueError(f"Sarki Deezer'da bulunamadi: {artist} - {title}")
+        track = spotify_source.lookup(artist, title)
+    if not track.found:
+        raise ValueError(
+            f"Sarki Deezer/Spotify'da bulunamadi: {artist} - {title}"
+        )
 
     match = PlaylistMatch(
         source="deezer",
@@ -182,14 +271,46 @@ def create_submission(
     )
     message = pitch.build_message(artist, title, match, track_url=track.url)
     created = db.now_iso()
-    submission_id = db.add_submission(
-        artist=artist, title=title, track_url=track.url,
-        curator_id=curator_id, message=message,
-        deadline=compute_deadline(created),
-        artist_user_id=artist_user_id,
-    )
-    if artist_user_id is not None:
-        accounts.spend_credit(artist_user_id, submission_id)
+    deadline = compute_deadline(created)
+
+    if artist_user_id is None:
+        submission_id = db.add_submission(
+            artist=artist, title=title, track_url=track.url,
+            curator_id=curator_id, message=message, deadline=deadline,
+        )
+    else:
+        # TEK transaction: kosullu kredi dusumu + gonderim + defter kaydi.
+        # Kredi dusmezse hicbir kayit olusmaz (orphan/ucretsiz gonderim yok).
+        conn = accounts._connect()
+        try:
+            with conn:
+                cur = conn.execute(
+                    "UPDATE users SET credits = credits - 1 "
+                    "WHERE id = ? AND credits >= 1",
+                    (artist_user_id,),
+                )
+                if not cur.rowcount:
+                    raise ValueError("Yetersiz kredi — paket satin almalisin")
+                sub_cur = conn.execute(
+                    """
+                    INSERT INTO submissions
+                        (created_at, artist, title, track_url, curator_id,
+                         message, deadline, artist_user_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (created, artist, title, track.url, curator_id,
+                     message, deadline, artist_user_id),
+                )
+                submission_id = int(sub_cur.lastrowid)
+                conn.execute(
+                    "INSERT INTO transactions "
+                    "(created_at, user_id, delta, reason, submission_id) "
+                    "VALUES (?, ?, -1, 'submission', ?)",
+                    (db.now_iso(), artist_user_id, submission_id),
+                )
+        finally:
+            conn.close()
+
     submission = db.get_submission(submission_id)
     if submission is None:
         raise ValueError("Gonderim kaydi olusturulamadi")
@@ -207,8 +328,13 @@ def respond(submission_id: int, action: str, feedback: str = "") -> dict:
     if is_expired(submission["deadline"], db.now_iso()):
         db.expire_overdue()
         raise ValueError("SLA suresi dolmus; gonderim expired olarak isaretlendi")
-    if action == "rejected" and not feedback.strip():
-        raise ValueError("Red icin kisa bir geri bildirim zorunlu")
+    # Garantili geri bildirim: KABUL de RED de 120+ karakter yazili
+    # degerlendirme ister — urunun sattigi sey tam olarak bu.
+    if not accounts.is_qualified_feedback(feedback):
+        raise ValueError(
+            f"En az {accounts.QUALIFIED_FEEDBACK_MIN_CHARS} karakter geri bildirim zorunlu "
+            "(sanatci nitelikli degerlendirme icin odeme yapiyor)"
+        )
 
     db.set_submission_response(submission_id, action, feedback.strip())
 
@@ -250,7 +376,14 @@ def verify_placement(submission_id: int) -> dict:
     if curator is None:
         raise ValueError("Curator kaydi bulunamadi")
 
-    tracks = _playlist_tracks(curator["deezer_playlist_id"])
+    playlist_ref = curator["deezer_playlist_id"]
+    if playlist_ref.startswith("sp_"):
+        tracks = [
+            (t["artists"][0] if t.get("artists") else "", t.get("title", ""))
+            for t in spotify_source.playlist_tracks(playlist_ref[3:])
+        ]
+    else:
+        tracks = _playlist_tracks(playlist_ref)
     artist_f = fold(submission["artist"])
     title_f = fold(submission["title"])
     verified = any(

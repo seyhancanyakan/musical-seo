@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   listAllCurators,
+  setAdminKey,
   setCuratorStatus,
   type Curator,
   type CuratorStatus,
@@ -123,16 +124,23 @@ export default function AdminPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sourceFilter, setSourceFilter] = useState<SourceKey>("all");
   const [busyId, setBusyId] = useState<number | null>(null);
+  // /admin/curators X-Admin-Key ister; anahtar girilene kadar liste bos doner.
+  const [keyDraft, setKeyDraft] = useState("");
+  const [needsKey, setNeedsKey] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
 
     listAllCurators().then((data) => {
       if (cancelled) return;
       if (data === null) {
-        setIsDemoMode(true);
-        setCurators(DEMO_CURATORS);
+        // Anahtar yok/yanlis ya da API kapali — anahtar iste, demoya DUSME.
+        setNeedsKey(true);
+        setCurators([]);
       } else {
+        setNeedsKey(false);
         setIsDemoMode(false);
         setCurators(data);
       }
@@ -142,7 +150,12 @@ export default function AdminPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadTick]);
+
+  function handleSaveKey() {
+    setAdminKey(keyDraft.trim());
+    setReloadTick((t) => t + 1);
+  }
 
   const counts = useMemo(() => {
     const base = { all: curators.length, lead: 0, pending: 0, approved: 0, rejected: 0 };
@@ -192,9 +205,23 @@ export default function AdminPage() {
       <div className={styles.wrap}>
         <h1 className={styles.pageTitle}>Küratör Paneli</h1>
 
-        {isDemoMode && (
+        {needsKey && (
           <div className={styles.apiBanner} role="status">
-            <strong>API&apos;ye ulaşılamadı</strong> — demo veri gösteriliyor.
+            <strong>Admin anahtarı gerekli</strong> — .env&apos;deki
+            MARKETPLACE_ADMIN_KEY değerini gir:
+            <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+              <input
+                className="nb-input"
+                type="password"
+                placeholder="Admin anahtarı"
+                value={keyDraft}
+                onChange={(e) => setKeyDraft(e.target.value)}
+                style={{ maxWidth: 320 }}
+              />
+              <button type="button" className="nb-btn" onClick={handleSaveKey}>
+                Bağlan
+              </button>
+            </div>
           </div>
         )}
 

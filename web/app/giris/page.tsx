@@ -102,7 +102,7 @@ export default function GirisPage() {
               {role === "curator" && (
                 <input
                   className="nb-input"
-                  placeholder="Deezer playlist linki (opsiyonel — sonra da eklenebilir)"
+                  placeholder="Deezer veya Spotify playlist linki (opsiyonel — sonra da eklenebilir)"
                   value={playlistUrl}
                   onChange={(e) => setPlaylistUrl(e.target.value)}
                 />

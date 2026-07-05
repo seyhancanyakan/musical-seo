@@ -67,15 +67,47 @@ def test_full_loop_qualified_feedback_earns(loop_db):
     assert accounts.accrue_earning(curator["id"], sub["id"]) is False
 
 
-def test_short_feedback_does_not_earn(loop_db):
+def test_short_feedback_is_rejected(loop_db):
+    """Garantili geri bildirim: 120 karakterin alti KABUL EDILMEZ —
+    kabul de red de nitelikli yazili degerlendirme ister."""
     curator_id = loop_db
     artist, curator = _make_users(curator_id)
     accounts.grant_credits(artist["id"], 1)
     sub = service.create_submission(
         "Sanatci", "Sarki", curator_id, artist_user_id=artist["id"]
     )
-    service.respond(sub["id"], "rejected", "kisa yorum")  # nitelikli DEGIL
+    with pytest.raises(ValueError, match="120 karakter"):
+        service.respond(sub["id"], "rejected", "kisa yorum")
+    with pytest.raises(ValueError, match="120 karakter"):
+        service.respond(sub["id"], "accepted", "")
+    # Gonderim hala pending; kazanc yok
     assert accounts.earnings_for(curator["id"])["total_usd"] == 0.0
+
+
+def test_parse_spotify_playlist_id():
+    assert service.parse_spotify_playlist_id(
+        "https://open.spotify.com/playlist/3FixUcICt6cDhoqX5HCL9Y?si=abc"
+    ) == "3FixUcICt6cDhoqX5HCL9Y"
+    assert service.parse_spotify_playlist_id("https://deezer.com/playlist/1") is None
+
+
+def test_ownership_verification_flow(loop_db, monkeypatch):
+    """Kod uret -> aciklamada gorunce dogrula + otomatik onay."""
+    curator_id = loop_db
+    code = service.start_ownership_verification(curator_id)
+    assert code.startswith("MZK-")
+
+    # Aciklamayi sahtele: once kodsuz (hata), sonra kodlu (onay)
+    monkeypatch.setattr(service, "_playlist_description", lambda pid: "bos aciklama")
+    with pytest.raises(ValueError, match="bulunamadi"):
+        service.check_ownership(curator_id)
+
+    monkeypatch.setattr(
+        service, "_playlist_description", lambda pid: f"Submit: x@y.com | {code}"
+    )
+    curator = service.check_ownership(curator_id)
+    assert curator["ownership_verified"] == 1
+    assert curator["status"] == "approved"
 
 
 def test_expired_submission_refunds_credit(loop_db, monkeypatch):

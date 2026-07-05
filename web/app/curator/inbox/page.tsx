@@ -5,8 +5,13 @@ import Link from "next/link";
 import {
   getMe,
   getToken,
+  linkCuratorPlaylist,
+  myCurator,
   myInbox,
   myRespond,
+  verifyOwnershipCheck,
+  verifyOwnershipStart,
+  type Curator,
   type Earnings,
   type Submission,
   type User,
@@ -96,6 +101,42 @@ export default function CuratorInboxPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
+  // Spotify/Deezer playlist sahiplik dogrulamasi
+  const [curatorRec, setCuratorRec] = useState<Curator | null>(null);
+  const [verifyCode, setVerifyCode] = useState<string | null>(null);
+  const [verifyMsg, setVerifyMsg] = useState("");
+  const [linkDraft, setLinkDraft] = useState("");
+
+  async function handleLinkPlaylist() {
+    setVerifyMsg("");
+    const curator = await linkCuratorPlaylist(linkDraft.trim());
+    if (!curator) {
+      setVerifyMsg("Liste bağlanamadı — linki kontrol et (Deezer veya Spotify, herkese açık).");
+      return;
+    }
+    setCuratorRec(curator);
+    setUser((prev) => (prev ? { ...prev, curator_id: curator.id } : prev));
+  }
+
+  async function handleVerifyStart() {
+    setVerifyMsg("");
+    const result = await verifyOwnershipStart();
+    if (result) setVerifyCode(result.code);
+    else setVerifyMsg("Kod üretilemedi — tekrar dene.");
+  }
+
+  async function handleVerifyCheck() {
+    setVerifyMsg("");
+    const curator = await verifyOwnershipCheck();
+    if (curator) {
+      setCuratorRec(curator);
+      setVerifyCode(null);
+      setVerifyMsg("✅ Sahiplik doğrulandı — listen onaylandı, kodu açıklamadan silebilirsin.");
+    } else {
+      setVerifyMsg("Kod açıklamada bulunamadı — ekledikten 1-2 dk sonra tekrar dene.");
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -113,6 +154,10 @@ export default function CuratorInboxPage() {
       }
       setUser(me.user);
       setEarnings(me.earnings ?? null);
+      if (me.user.curator_id) {
+        const rec = await myCurator();
+        if (!cancelled && rec) setCuratorRec(rec);
+      }
       const inbox = await myInbox();
       if (cancelled) return;
       if (inbox === null) {
@@ -210,6 +255,56 @@ export default function CuratorInboxPage() {
             <strong>API&apos;ye ulaşılamadı</strong> — tekrar dene.
           </div>
         )}
+
+        {user && !user.curator_id && (
+          <div className={styles.apiBanner} role="status">
+            <strong>Playlist bağlı değil.</strong> Deezer veya Spotify playlist
+            linkini ekle:
+            <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+              <input
+                className="nb-input"
+                placeholder="https://open.spotify.com/playlist/... veya deezer.com/playlist/..."
+                value={linkDraft}
+                onChange={(e) => setLinkDraft(e.target.value)}
+              />
+              <button type="button" className="nb-btn" onClick={handleLinkPlaylist}>
+                Bağla
+              </button>
+            </div>
+            {verifyMsg && <div style={{ marginTop: 8, fontWeight: 800 }}>{verifyMsg}</div>}
+          </div>
+        )}
+
+        {curatorRec && !curatorRec.ownership_verified && (
+          <div className={styles.apiBanner} role="status">
+            <strong>Liste sahipliğini doğrula</strong> — doğrulanana kadar
+            gönderim alamazsın.
+            {verifyCode ? (
+              <div style={{ marginTop: 10 }}>
+                1. Bu kodu playlist <b>açıklamasına</b> ekle:{" "}
+                <code style={{ fontSize: 16, fontWeight: 900, background: "#fff",
+                               padding: "2px 8px", border: "2px solid #000" }}>
+                  {verifyCode}
+                </code>
+                <br />
+                2. Kaydettikten sonra doğrula:
+                <button type="button" className="nb-btn" style={{ marginLeft: 10 }}
+                        onClick={handleVerifyCheck}>
+                  Doğrula
+                </button>
+              </div>
+            ) : (
+              <button type="button" className="nb-btn" style={{ marginLeft: 10 }}
+                      onClick={handleVerifyStart}>
+                Doğrulama kodu al
+              </button>
+            )}
+            {verifyMsg && <div style={{ marginTop: 8, fontWeight: 800 }}>{verifyMsg}</div>}
+          </div>
+        )}
+        {verifyMsg.startsWith("✅") && curatorRec?.ownership_verified ? (
+          <div className={styles.apiBanner} role="status">{verifyMsg}</div>
+        ) : null}
 
         <div className={styles.statsBar}>
           <div className={styles.stat}>

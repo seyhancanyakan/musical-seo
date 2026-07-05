@@ -59,6 +59,13 @@ def _connect() -> sqlite3.Connection:
     cols = {r[1] for r in conn.execute("PRAGMA table_info(submissions)")}
     if "artist_user_id" not in cols:
         conn.execute("ALTER TABLE submissions ADD COLUMN artist_user_id INTEGER")
+    ccols = {r[1] for r in conn.execute("PRAGMA table_info(curators)")}
+    if "verify_code" not in ccols:
+        conn.execute("ALTER TABLE curators ADD COLUMN verify_code TEXT")
+    if "ownership_verified" not in ccols:
+        conn.execute(
+            "ALTER TABLE curators ADD COLUMN ownership_verified INTEGER NOT NULL DEFAULT 0"
+        )
     return conn
 
 
@@ -156,8 +163,31 @@ def get_submission(submission_id: int) -> dict | None:
         conn.close()
 
 
+def set_verify_code(curator_id: int, code: str) -> None:
+    conn = _connect()
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE curators SET verify_code = ? WHERE id = ?", (code, curator_id)
+            )
+    finally:
+        conn.close()
+
+
+def mark_ownership_verified(curator_id: int) -> None:
+    conn = _connect()
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE curators SET ownership_verified = 1 WHERE id = ?", (curator_id,)
+            )
+    finally:
+        conn.close()
+
+
 def list_submissions(
-    curator_id: int | None = None, status: str | None = None
+    curator_id: int | None = None, status: str | None = None,
+    artist_user_id: int | None = None,
 ) -> list[dict]:
     conditions, params = [], []
     if curator_id is not None:
@@ -166,6 +196,9 @@ def list_submissions(
     if status:
         conditions.append("status = ?")
         params.append(status)
+    if artist_user_id is not None:
+        conditions.append("artist_user_id = ?")
+        params.append(artist_user_id)
     sql = "SELECT * FROM submissions"
     if conditions:
         sql += " WHERE " + " AND ".join(conditions)

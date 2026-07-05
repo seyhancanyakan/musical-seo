@@ -348,8 +348,15 @@ def my_earnings(user: dict = Depends(_current_user)) -> dict:
     return accounts.earnings_for(user["id"])
 
 
+def _require_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
+    """Server-side admin yetkisi: MARKETPLACE_ADMIN_KEY eslesmesi sart."""
+    expected = os.environ.get("MARKETPLACE_ADMIN_KEY")
+    if not expected or x_admin_key != expected:
+        raise HTTPException(status_code=403, detail="Gecersiz admin anahtari")
+
+
 @app.post("/maintenance/expire")
-def maintenance_expire() -> dict:
+def maintenance_expire(_: None = Depends(_require_admin_key)) -> dict:
     """Cron hedefi: SLA dolan gonderimleri kapat + kredileri iade et."""
     return service.expire_and_refund()
 
@@ -362,9 +369,20 @@ def curators_apply(payload: CuratorApply) -> dict:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+# Public curator DTO: e-posta / iletisim kaynagi / dogrulama kodu SIZDIRILMAZ.
+_PUBLIC_CURATOR_FIELDS = (
+    "id", "name", "playlist_title", "playlist_url", "fans",
+    "track_count", "quality_score", "status", "ownership_verified",
+)
+
+
+def _public_curator(curator: dict) -> dict:
+    return {k: curator.get(k) for k in _PUBLIC_CURATOR_FIELDS}
+
+
 @app.get("/curators")
 def curators_list(status: str | None = "approved") -> list[dict]:
-    return db.list_curators(status=status or None)
+    return [_public_curator(c) for c in db.list_curators(status=status or None)]
 
 
 @app.get("/curators/{curator_id}")
@@ -372,7 +390,15 @@ def curators_get(curator_id: int) -> dict:
     curator = db.get_curator(curator_id)
     if curator is None:
         raise HTTPException(status_code=404, detail="Curator bulunamadi")
-    return curator
+    return _public_curator(curator)
+
+
+@app.get("/admin/curators")
+def admin_curators_list(
+    status: str | None = None, _: None = Depends(_require_admin_key)
+) -> list[dict]:
+    """Admin: tam kayitlar (e-posta + iletisim kaynagi dahil)."""
+    return db.list_curators(status=status or None)
 
 
 class CuratorStatus(BaseModel):
@@ -380,7 +406,9 @@ class CuratorStatus(BaseModel):
 
 
 @app.post("/curators/{curator_id}/status")
-def curators_set_status(curator_id: int, payload: CuratorStatus) -> dict:
+def curators_set_status(
+    curator_id: int, payload: CuratorStatus, _: None = Depends(_require_admin_key)
+) -> dict:
     """Admin: pending basvuruyu elle onayla/reddet."""
     if payload.status not in ("approved", "rejected", "pending"):
         raise HTTPException(status_code=400, detail=f"Gecersiz durum: {payload.status}")
@@ -391,39 +419,107 @@ def curators_set_status(curator_id: int, payload: CuratorStatus) -> dict:
     return curator
 
 
-@app.post("/submissions")
-def submissions_create(payload: SubmissionCreate) -> dict:
-    try:
-        return service.create_submission(payload.artist, payload.title, payload.curator_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
-@app.get("/submissions")
-def submissions_list(curator_id: int | None = None, status: str | None = None) -> list[dict]:
-    db.expire_overdue()  # her listelemede SLA supurmesi
-    return db.list_submissions(curator_id=curator_id, status=status)
-
-
-@app.get("/submissions/{submission_id}")
-def submissions_get(submission_id: int) -> dict:
-    submission = db.get_submission(submission_id)
-    if submission is None:
-        raise HTTPException(status_code=404, detail="Gonderim bulunamadi")
-    return submission
-
-
-@app.post("/submissions/{submission_id}/respond")
-def submissions_respond(submission_id: int, payload: SubmissionRespond) -> dict:
-    try:
-        return service.respond(submission_id, payload.action, payload.feedback)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
+# ESKI public /submissions yollari KALDIRILDI: kredi harcamadan gonderim,
+# herkese acik listeleme ve sahipsiz yanit guvenlik acigiydi. Gonderim
+# /me/submissions (auth), yanit /me/submissions/{id}/respond (auth) uzerinden.
 
 @app.post("/submissions/{submission_id}/verify-placement")
-def submissions_verify(submission_id: int) -> dict:
+def submissions_verify(
+    submission_id: int, _: None = Depends(_require_admin_key)
+) -> dict:
     try:
         return service.verify_placement(submission_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+
+
+# --- Oturum / sanatci gecmisi / kurator dogrulama --------------------------
+
+@app.post("/auth/logout")
+def auth_logout(authorization: str | None = Header(default=None)) -> dict:
+    token = (authorization or "").removeprefix("Bearer ").strip()
+    return {"ok": accounts.logout(token)}
+
+
+@app.get("/me/submissions")
+def my_submissions(user: dict = Depends(_current_user)) -> list[dict]:
+    """Sanatci kampanya gecmisi: durum + geri bildirim + SLA."""
+    _require_role(user, "artist")
+    service.expire_and_refund()  # gecmis her acilista SLA supurmesi + iade
+    return db.list_submissions(artist_user_id=user["id"])
+
+
+class CuratorLink(BaseModel):
+    playlist_url: str = Field(min_length=10)
+
+
+@app.post("/me/curator/link")
+def my_curator_link(
+    payload: CuratorLink, user: dict = Depends(_current_user)
+) -> dict:
+    """Kayitta playlist vermeyen kurator hesabina sonradan liste baglar."""
+    _require_role(user, "curator")
+    try:
+        curator = service.apply_curator(user["name"], user["email"], payload.playlist_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    accounts.set_curator_id(user["id"], curator["id"])
+    return curator
+
+
+@app.get("/me/curator")
+def my_curator(user: dict = Depends(_current_user)) -> dict:
+    _require_role(user, "curator")
+    if not user.get("curator_id"):
+        raise HTTPException(status_code=404, detail="Bagli playlist yok")
+    curator = db.get_curator(user["curator_id"])
+    if curator is None:
+        raise HTTPException(status_code=404, detail="Curator kaydi bulunamadi")
+    curator.pop("email", None)
+    return curator
+
+
+@app.post("/me/curator/verify/start")
+def my_curator_verify_start(user: dict = Depends(_current_user)) -> dict:
+    """Sahiplik dogrulama kodu uret — kurator playlist ACIKLAMASINA ekler."""
+    _require_role(user, "curator")
+    if not user.get("curator_id"):
+        raise HTTPException(status_code=404, detail="Once playlist bagla")
+    try:
+        code = service.start_ownership_verification(user["curator_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"code": code,
+            "instructions": "Kodu playlist açıklamasına ekle, sonra Doğrula'ya bas. "
+                            "Doğrulama sonrası kodu silebilirsin."}
+
+
+@app.post("/me/curator/verify/check")
+def my_curator_verify_check(user: dict = Depends(_current_user)) -> dict:
+    _require_role(user, "curator")
+    if not user.get("curator_id"):
+        raise HTTPException(status_code=404, detail="Once playlist bagla")
+    try:
+        curator = service.check_ownership(user["curator_id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    curator.pop("email", None)
+    return curator
+
+
+# --- Yerlesik SLA cron'u ----------------------------------------------------
+# Gercek cron: uygulama ayakta oldugu surece 15 dakikada bir SLA supurmesi +
+# otomatik kredi iadesi kosar. Hetzner'da ek olarak crontab onerisi:
+#   */15 * * * * curl -s -X POST -H "X-Admin-Key: $KEY" http://127.0.0.1:8100/maintenance/expire
+
+def _sla_cron() -> None:
+    import time as _time
+    while True:
+        _time.sleep(15 * 60)
+        try:
+            service.expire_and_refund()
+        except Exception:
+            pass  # cron dongusu tek hatayla olmesin
+
+
+threading.Thread(target=_sla_cron, daemon=True).start()

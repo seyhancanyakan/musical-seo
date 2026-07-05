@@ -1,0 +1,119 @@
+/* Kampanya gecmisi — sanatci gonderim/feedback ekrani */
+
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.wallet {
+  border: 3px solid var(--ink);
+  background: var(--green);
+  padding: 8px 16px;
+  font-weight: 900;
+  font-size: 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.subline {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.empty {
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 24px;
+  font-weight: 800;
+  color: #555;
+}
+
+.subCard {
+  padding: 20px 24px;
+}
+
+.subHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.subTitle {
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.subMeta {
+  font-size: 12px;
+  color: #555;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.pill {
+  border: 2px solid var(--ink);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.ok { background: var(--green); }
+.warn { background: #ffd166; }
+.refund { background: var(--lightblue); }
+.pending { background: #fff; }
+
+.feedback {
+  margin-top: 14px;
+  border: 2px solid var(--ink);
+  background: #fdfdf8;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 600;
+  white-space: pre-wrap;
+}
+
+.feedbackLabel {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--purple);
+  margin-bottom: 6px;
+}
+
+.placement {
+  margin-top: 10px;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--green-ink, #1a7a45);
+}
+
+.gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

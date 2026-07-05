@@ -83,6 +83,9 @@ export type Curator = {
   contact_source?: string | null;
   source_url?: string | null;
   contact_confidence?: number | null;
+  // Playlist sahiplik dogrulamasi (SubmitHub yontemi: kod aciklamaya eklenir)
+  ownership_verified?: number;
+  verify_code?: string | null;
 };
 
 export type Submission = {
@@ -187,42 +190,30 @@ export const applyCurator = (payload: {
 
 export const listCurators = () => j<Curator[]>(`/curators`);
 
-/** Admin: tüm curator'lar (pending + approved + rejected). status="" → API None → hepsi. */
-export const listAllCurators = () => j<Curator[]>(`/curators?status=`);
+/** Admin cagrilari X-Admin-Key ister (server-side yetki). Anahtar admin
+ *  panelinde girilir, localStorage'da tutulur — public build'e gomulmez. */
+const ADMIN_KEY_STORAGE = "muzikseo_admin_key";
+
+export const getAdminKey = (): string =>
+  typeof window === "undefined" ? "" : localStorage.getItem(ADMIN_KEY_STORAGE) ?? "";
+
+export const setAdminKey = (key: string): void => {
+  if (typeof window !== "undefined") localStorage.setItem(ADMIN_KEY_STORAGE, key);
+};
+
+const adminHeaders = (): Record<string, string> => ({ "X-Admin-Key": getAdminKey() });
+
+/** Admin: tüm curator'lar — tam kayıt (e-posta + iletişim kaynağı dahil). */
+export const listAllCurators = () =>
+  j<Curator[]>(`/admin/curators`, { headers: adminHeaders() });
 
 /** Admin: bir curator'ın başvuru durumunu değiştir. */
 export const setCuratorStatus = (id: number, status: CuratorStatus) =>
   j<Curator>(`/curators/${id}/status`, {
     method: "POST",
+    headers: adminHeaders(),
     body: JSON.stringify({ status }),
   });
-
-export const createSubmission = (payload: {
-  artist: string;
-  title: string;
-  curator_id: number;
-}) => j<Submission>(`/submissions`, { method: "POST", body: JSON.stringify(payload) });
-
-export const listSubmissions = (curatorId?: number) =>
-  j<Submission[]>(
-    `/submissions${curatorId ? `?curator_id=${curatorId}` : ""}`
-  );
-
-export const respondSubmission = (
-  id: number,
-  action: "accepted" | "rejected",
-  feedback = ""
-) =>
-  j<Submission>(`/submissions/${id}/respond`, {
-    method: "POST",
-    body: JSON.stringify({ action, feedback }),
-  });
-
-export const verifyPlacement = (id: number) =>
-  j<Submission & { placement_checked: boolean }>(
-    `/submissions/${id}/verify-placement`,
-    { method: "POST" }
-  );
 
 /* --- Hesap / kredi / cekirdek dongu ------------------------------------- */
 
@@ -323,3 +314,33 @@ export const myRespond = (
 
 export const myEarnings = () =>
   j<Earnings>(`/me/earnings`, { headers: authHeaders() });
+
+/** Sanatci kampanya gecmisi (durum + feedback + SLA). */
+export const mySubmissions = () =>
+  j<Submission[]>(`/me/submissions`, { headers: authHeaders() });
+
+/** Kuratorun bagli playlist kaydi (sahiplik durumu dahil, e-postasiz). */
+export const myCurator = () =>
+  j<Curator & { ownership_verified?: number; verify_code?: string | null }>(
+    `/me/curator`,
+    { headers: authHeaders() }
+  );
+
+export const linkCuratorPlaylist = (playlistUrl: string) =>
+  j<Curator>(`/me/curator/link`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ playlist_url: playlistUrl }),
+  });
+
+export const verifyOwnershipStart = () =>
+  j<{ code: string; instructions: string }>(`/me/curator/verify/start`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+export const verifyOwnershipCheck = () =>
+  j<Curator>(`/me/curator/verify/check`, {
+    method: "POST",
+    headers: authHeaders(),
+  });

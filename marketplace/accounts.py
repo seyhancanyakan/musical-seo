@@ -20,10 +20,15 @@ from __future__ import annotations
 import hashlib
 import secrets
 import sqlite3
+import time
+from datetime import datetime, timedelta, timezone
 
 from marketplace import db
 
 PBKDF2_ITERATIONS = 120_000
+SESSION_TTL_DAYS = 30                # oturum omru; gecince token gecersiz
+LOGIN_MAX_FAILURES = 5               # e-posta basina ardisik hatali giris
+LOGIN_LOCK_SECONDS = 15 * 60         # kilit suresi
 QUALIFIED_FEEDBACK_MIN_CHARS = 120   # "nitelikli" esigi: bos/tek cumle odenmez
 FEEDBACK_EARNING_USD = 1.0           # nitelikli degerlendirme basina kurator payi
 ROLES = ("artist", "curator", "admin")
@@ -45,7 +50,8 @@ _SCHEMA = [
     CREATE TABLE IF NOT EXISTS sessions (
         token TEXT PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
-        created_at TEXT NOT NULL
+        created_at TEXT NOT NULL,
+        expires_at TEXT
     );
     """,
     """
@@ -68,6 +74,13 @@ _SCHEMA = [
         status TEXT NOT NULL DEFAULT 'accrued'
     );
     """,
+    # Cift iade DB seviyesinde imkansiz: ayni submission icin ikinci 'refund'
+    # satiri unique partial index'e takilir (es zamanli cron'lar dahil).
+    # (transactions tablosundan SONRA gelmeli.)
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_refund_once
+        ON transactions (submission_id) WHERE reason = 'refund';
+    """,
 ]
 
 
@@ -75,7 +88,30 @@ def _connect() -> sqlite3.Connection:
     conn = db._connect()  # marketplace.db + ana sema hazir
     for stmt in _SCHEMA:
         conn.execute(stmt)
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(sessions)")}
+    if "expires_at" not in cols:
+        conn.execute("ALTER TABLE sessions ADD COLUMN expires_at TEXT")
     return conn
+
+
+# Basit giris rate-limit'i (surec ici; pilot olcegi icin yeterli).
+# e-posta -> (ardisik hata sayisi, kilit bitis epoch'u)
+_login_failures: dict[str, tuple[int, float]] = {}
+
+
+def _check_login_lock(email: str) -> None:
+    count, locked_until = _login_failures.get(email, (0, 0.0))
+    if count >= LOGIN_MAX_FAILURES and time.time() < locked_until:
+        raise ValueError("Cok fazla hatali deneme — 15 dakika sonra tekrar dene")
+
+
+def _record_login_failure(email: str) -> None:
+    count, _ = _login_failures.get(email, (0, 0.0))
+    _login_failures[email] = (count + 1, time.time() + LOGIN_LOCK_SECONDS)
+
+
+def _clear_login_failures(email: str) -> None:
+    _login_failures.pop(email, None)
 
 
 # --- Parola / oturum ------------------------------------------------------
@@ -128,22 +164,39 @@ def register(email: str, password: str, name: str, role: str,
 
 
 def login(email: str, password: str) -> str:
-    """Basarili giriste oturum token'i doner."""
+    """Basarili giriste sureli oturum token'i doner (SESSION_TTL_DAYS)."""
+    email = email.strip().lower()
+    _check_login_lock(email)
     conn = _connect()
     try:
         row = conn.execute(
-            "SELECT id, password_hash FROM users WHERE email = ?",
-            (email.strip().lower(),),
+            "SELECT id, password_hash FROM users WHERE email = ?", (email,)
         ).fetchone()
         if row is None or not _verify_password(password, row["password_hash"]):
+            _record_login_failure(email)
             raise ValueError("E-posta veya parola hatali")
+        _clear_login_failures(email)
         token = secrets.token_hex(32)
+        expires = (
+            datetime.now(timezone.utc) + timedelta(days=SESSION_TTL_DAYS)
+        ).isoformat()
         with conn:
             conn.execute(
-                "INSERT INTO sessions (token, user_id, created_at) VALUES (?, ?, ?)",
-                (token, row["id"], db.now_iso()),
+                "INSERT INTO sessions (token, user_id, created_at, expires_at) "
+                "VALUES (?, ?, ?, ?)",
+                (token, row["id"], db.now_iso(), expires),
             )
         return token
+    finally:
+        conn.close()
+
+
+def logout(token: str) -> bool:
+    conn = _connect()
+    try:
+        with conn:
+            cur = conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+            return cur.rowcount > 0
     finally:
         conn.close()
 
@@ -154,11 +207,31 @@ def user_by_token(token: str) -> dict | None:
     conn = _connect()
     try:
         row = conn.execute(
-            "SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id "
+            "SELECT u.*, s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id "
             "WHERE s.token = ?",
             (token,),
         ).fetchone()
-        return _public(dict(row)) if row else None
+        if row is None:
+            return None
+        data = dict(row)
+        expires_at = data.pop("expires_at", None)
+        if expires_at and datetime.fromisoformat(expires_at) < datetime.now(timezone.utc):
+            logout(token)  # suresi dolan oturumu temizle
+            return None
+        return _public(data)
+    finally:
+        conn.close()
+
+
+def set_curator_id(user_id: int, curator_id: int) -> None:
+    """Kurator hesabini sonradan playlist'e bagla (kayitta link verilmediyse)."""
+    conn = _connect()
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE users SET curator_id = ? WHERE id = ? AND role = 'curator'",
+                (curator_id, user_id),
+            )
     finally:
         conn.close()
 
@@ -244,19 +317,24 @@ def spend_credit(user_id: int, submission_id: int) -> None:
 
 
 def refund_credit(user_id: int, submission_id: int) -> bool:
-    """SLA dolan gonderimin kredisini iade et. Idempotent: ayni gonderim icin
-    ikinci iade yazilmaz (refund transaction'i zaten varsa False)."""
+    """SLA dolan gonderimin kredisini iade et. Cift iade DB seviyesinde
+    engelli: once refund transaction'i yazilir (idx_tx_refund_once unique),
+    yazilamadiysa kredi hic dokunulmaz — es zamanli cron'larda da guvenli."""
     conn = _connect()
     try:
         with conn:
-            existing = conn.execute(
-                "SELECT 1 FROM transactions "
-                "WHERE submission_id = ? AND reason = 'refund'",
-                (submission_id,),
-            ).fetchone()
-            if existing:
-                return False
-            _apply_credit(conn, user_id, 1, "refund", submission_id)
+            try:
+                conn.execute(
+                    "INSERT INTO transactions "
+                    "(created_at, user_id, delta, reason, submission_id) "
+                    "VALUES (?, ?, 1, 'refund', ?)",
+                    (db.now_iso(), user_id, submission_id),
+                )
+            except sqlite3.IntegrityError:
+                return False  # zaten iade edilmis
+            conn.execute(
+                "UPDATE users SET credits = credits + 1 WHERE id = ?", (user_id,)
+            )
             return True
     finally:
         conn.close()
