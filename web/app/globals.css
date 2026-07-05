@@ -17,6 +17,14 @@ body {
   font-family: "Segoe UI", Arial, sans-serif;
 }
 
+/* Logo artik her sayfada ana sayfaya link — CSS module hash'li class adlari
+   (page_logo__xyz) tek global kuralla yakalanir; alti cizgi/mavi kalkar. */
+a[class*="logo"] {
+  /* Sadece alti cizgi kaldirilir; renk module class'indan gelir (beyaz).
+     Buraya color yazma — attribute selector specificity'si module'u ezer. */
+  text-decoration: none;
+}
+
 h1, h2, h3, .nb-h {
   font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
   text-transform: uppercase;
