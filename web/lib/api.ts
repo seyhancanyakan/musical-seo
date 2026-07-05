@@ -223,3 +223,103 @@ export const verifyPlacement = (id: number) =>
     `/submissions/${id}/verify-placement`,
     { method: "POST" }
   );
+
+/* --- Hesap / kredi / cekirdek dongu ------------------------------------- */
+
+export type User = {
+  id: number;
+  created_at: string;
+  email: string;
+  role: "artist" | "curator" | "admin";
+  name: string;
+  curator_id: number | null;
+  credits: number;
+};
+
+export type WalletTransaction = {
+  id: number;
+  created_at: string;
+  delta: number;
+  reason: string;
+  submission_id: number | null;
+};
+
+export type Earnings = {
+  items: {
+    id: number;
+    created_at: string;
+    submission_id: number;
+    amount_usd: number;
+    status: "accrued" | "paid";
+  }[];
+  total_usd: number;
+  pending_usd: number;
+};
+
+const TOKEN_KEY = "muzikseo_token";
+
+export const getToken = (): string | null =>
+  typeof window === "undefined" ? null : localStorage.getItem(TOKEN_KEY);
+
+export const setToken = (token: string | null): void => {
+  if (typeof window === "undefined") return;
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+};
+
+const authHeaders = (): Record<string, string> => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+export const authRegister = (payload: {
+  email: string;
+  password: string;
+  name: string;
+  role: "artist" | "curator";
+  playlist_url?: string;
+}) =>
+  j<{ user: User; token: string }>(`/auth/register`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const authLogin = (email: string, password: string) =>
+  j<{ user: User; token: string }>(`/auth/login`, {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+
+export const getMe = () =>
+  j<{ user: User; transactions: WalletTransaction[]; earnings?: Earnings }>(
+    `/me`,
+    { headers: authHeaders() }
+  );
+
+export const submitToCurator = (
+  artist: string,
+  title: string,
+  curatorId: number
+) =>
+  j<Submission>(`/me/submissions`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ artist, title, curator_id: curatorId }),
+  });
+
+export const myInbox = () =>
+  j<Submission[]>(`/me/inbox`, { headers: authHeaders() });
+
+export const myRespond = (
+  id: number,
+  action: "accepted" | "rejected",
+  feedback = ""
+) =>
+  j<Submission>(`/me/submissions/${id}/respond`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ action, feedback }),
+  });
+
+export const myEarnings = () =>
+  j<Earnings>(`/me/earnings`, { headers: authHeaders() });

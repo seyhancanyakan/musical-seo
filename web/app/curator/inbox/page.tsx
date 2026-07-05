@@ -2,13 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { listSubmissions, respondSubmission, type Submission } from "@/lib/api";
+import {
+  getMe,
+  getToken,
+  myInbox,
+  myRespond,
+  type Earnings,
+  type Submission,
+  type User,
+} from "@/lib/api";
 import styles from "./page.module.css";
 
-const CURATOR_ID = 1;
 const SLA_URGENT_HOURS = 6;
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
+const QUALIFIED_MIN_CHARS = 120; // backend esigiyle ayni: nitelikli = odenir
 
 type RowStatus = Submission["status"];
 
@@ -18,83 +26,9 @@ type Row = {
   artist: string;
   status: RowStatus;
   feedback: string | null;
-  isDemo: boolean;
   createdAt: string | null;
   deadline: string | null;
-  // Demo rows use fixed display values straight from the approved mockup
-  // instead of computed SLA math.
-  fixedSlaText?: string;
-  fixedSlaPercent?: number;
-  fixedUrgent?: boolean;
 };
-
-const DEMO_ROWS: Row[] = [
-  {
-    id: 9001,
-    title: "Senden Daha Güzel",
-    artist: "Duman",
-    status: "pending",
-    feedback: null,
-    isDemo: true,
-    createdAt: null,
-    deadline: null,
-    fixedSlaText: "3 sa 40 dk",
-    fixedSlaPercent: 8,
-    fixedUrgent: true,
-  },
-  {
-    id: 9002,
-    title: "Kırık Ayna",
-    artist: "Mor ve Ötesi",
-    status: "pending",
-    feedback: null,
-    isDemo: true,
-    createdAt: null,
-    deadline: null,
-    fixedSlaText: "58 sa 12 dk",
-    fixedSlaPercent: 78,
-    fixedUrgent: false,
-  },
-  {
-    id: 9003,
-    title: "Yeşil Sessizlik",
-    artist: "Şebnem Ferah",
-    status: "pending",
-    feedback: null,
-    isDemo: true,
-    createdAt: null,
-    deadline: null,
-    fixedSlaText: "41 sa 05 dk",
-    fixedSlaPercent: 55,
-    fixedUrgent: false,
-  },
-  {
-    id: 9004,
-    title: "Uzak İhtimal",
-    artist: "Athena",
-    status: "pending",
-    feedback: null,
-    isDemo: true,
-    createdAt: null,
-    deadline: null,
-    fixedSlaText: "22 sa 30 dk",
-    fixedSlaPercent: 32,
-    fixedUrgent: false,
-  },
-  {
-    id: 9005,
-    title: "Dön Bak Bana",
-    artist: "maNga",
-    status: "pending",
-    feedback: null,
-    isDemo: true,
-    createdAt: null,
-    deadline: null,
-    fixedSlaText: "65 sa 50 dk",
-    fixedSlaPercent: 88,
-    fixedUrgent: false,
-  },
-];
 
 function submissionToRow(sub: Submission): Row {
   return {
@@ -103,7 +37,6 @@ function submissionToRow(sub: Submission): Row {
     artist: sub.artist,
     status: sub.status,
     feedback: sub.feedback,
-    isDemo: false,
     createdAt: sub.created_at,
     deadline: sub.deadline,
   };
@@ -112,14 +45,6 @@ function submissionToRow(sub: Submission): Row {
 type SlaDisplay = { text: string; percent: number; urgent: boolean };
 
 function formatSla(row: Row, now: number): SlaDisplay {
-  if (row.isDemo) {
-    return {
-      text: row.fixedSlaText ?? "—",
-      percent: row.fixedSlaPercent ?? 0,
-      urgent: !!row.fixedUrgent,
-    };
-  }
-
   if (!row.deadline) {
     return { text: "—", percent: 0, urgent: false };
   }
@@ -159,94 +84,111 @@ function statusClass(status: RowStatus): string {
 }
 
 export default function CuratorInboxPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [checked, setChecked] = useState(false);
+  const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
-  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [apiFailed, setApiFailed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedAction, setExpandedAction] = useState<"accepted" | "rejected">("rejected");
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<number, string>>({});
   const [busyId, setBusyId] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let cancelled = false;
-
-    listSubmissions(CURATOR_ID).then((data) => {
+    (async () => {
+      if (!getToken()) {
+        setChecked(true);
+        setIsLoading(false);
+        return;
+      }
+      const me = await getMe();
       if (cancelled) return;
-      if (data === null) {
-        setIsDemoMode(true);
-        setRows(DEMO_ROWS);
+      setChecked(true);
+      if (!me || me.user.role !== "curator") {
+        setIsLoading(false);
+        return;
+      }
+      setUser(me.user);
+      setEarnings(me.earnings ?? null);
+      const inbox = await myInbox();
+      if (cancelled) return;
+      if (inbox === null) {
+        setApiFailed(true);
       } else {
-        setIsDemoMode(false);
-        setRows(data.map(submissionToRow));
+        setRows(inbox.map(submissionToRow));
       }
       setIsLoading(false);
-    });
-
+    })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Keep SLA countdowns fresh for real (non-demo) rows.
+  // SLA geri sayimlarini canli tut
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
 
   const stats = useMemo(() => {
-    if (isDemoMode) {
-      return { acceptRate: "%38", avgResponse: "14 sa", weekCount: "12" };
-    }
-
     const decided = rows.filter((r) => r.status === "accepted" || r.status === "rejected");
     const accepted = rows.filter((r) => r.status === "accepted").length;
     const acceptRatePct =
       decided.length > 0 ? Math.round((accepted / decided.length) * 100) : 0;
-
-    const responseHours = decided
-      .map((r) => (r.createdAt ? (now - new Date(r.createdAt).getTime()) / MS_PER_HOUR : null))
-      .filter((h): h is number => h !== null && h >= 0);
-    const avgHours =
-      responseHours.length > 0
-        ? Math.round(responseHours.reduce((sum, h) => sum + h, 0) / responseHours.length)
-        : 0;
-
     const weekAgo = now - 7 * MS_PER_DAY;
     const weekCount = rows.filter(
       (r) => r.createdAt && new Date(r.createdAt).getTime() >= weekAgo
     ).length;
-
-    return {
-      acceptRate: `%${acceptRatePct}`,
-      avgResponse: `${avgHours} sa`,
-      weekCount: String(weekCount),
-    };
-  }, [rows, isDemoMode, now]);
+    return { acceptRate: `%${acceptRatePct}`, weekCount: String(weekCount) };
+  }, [rows, now]);
 
   function updateRow(id: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
-  async function handleAccept(id: number) {
-    setBusyId(id);
-    const updated = await respondSubmission(id, "accepted");
-    updateRow(id, { status: "accepted", feedback: updated?.feedback ?? null });
-    setBusyId(null);
+  function handleActionClick(id: number, action: "accepted" | "rejected") {
+    setExpandedAction(action);
+    setExpandedId((current) => (current === id && expandedAction === action ? null : id));
   }
 
-  function handleRejectClick(id: number) {
-    setExpandedId((current) => (current === id ? null : id));
-  }
-
-  async function handleSendReject(id: number) {
-    const reason = (feedbackDrafts[id] ?? "").trim();
-    if (!reason) return;
+  async function handleSend(id: number) {
+    const draft = (feedbackDrafts[id] ?? "").trim();
+    if (expandedAction === "rejected" && !draft) return;
 
     setBusyId(id);
-    const updated = await respondSubmission(id, "rejected", reason);
-    updateRow(id, { status: "rejected", feedback: updated?.feedback ?? reason });
+    const updated = await myRespond(id, expandedAction, draft);
     setBusyId(null);
+    if (!updated) return;
+    updateRow(id, { status: expandedAction, feedback: updated.feedback ?? draft });
     setExpandedId(null);
+    if (draft.length >= QUALIFIED_MIN_CHARS) {
+      // Kazanc tahakkuku backend'de olustu; paneli tazele
+      setEarnings((prev) =>
+        prev
+          ? {
+              ...prev,
+              total_usd: prev.total_usd + 1,
+              pending_usd: prev.pending_usd + 1,
+              items: prev.items,
+            }
+          : prev
+      );
+    }
+  }
+
+  if (checked && !user) {
+    return (
+      <div className={styles.wrap} style={{ paddingTop: 80, textAlign: "center" }}>
+        <h1 className={styles.pageTitle}>Curator Gelen Kutusu</h1>
+        <p style={{ fontWeight: 600, margin: "16px 0 24px" }}>
+          Gelen kutunu görmek için küratör hesabınla giriş yap.
+        </p>
+        <Link href="/giris" className="nb-btn">Giriş / Kayıt</Link>
+      </div>
+    );
   }
 
   return (
@@ -255,7 +197,7 @@ export default function CuratorInboxPage() {
         <div className={styles.topbarInner}>
           <Link href="/" className={styles.logo}>MuzikSEO</Link>
           <div className={styles.userChip}>
-            👤 &quot;Türk&quot; — Curator Paneli
+            👤 {user ? `${user.name} — Curator Paneli` : "Curator Paneli"}
           </div>
         </div>
       </nav>
@@ -263,9 +205,9 @@ export default function CuratorInboxPage() {
       <div className={styles.wrap}>
         <h1 className={styles.pageTitle}>Gelen Kutusu</h1>
 
-        {isDemoMode && (
+        {apiFailed && (
           <div className={styles.apiBanner} role="status">
-            <strong>API&apos;ye ulaşılamadı</strong> — demo veri gösteriliyor.
+            <strong>API&apos;ye ulaşılamadı</strong> — tekrar dene.
           </div>
         )}
 
@@ -275,15 +217,26 @@ export default function CuratorInboxPage() {
           </div>
           <div className={styles.sep} />
           <div className={styles.stat}>
-            Ort. yanıt <b>{stats.avgResponse}</b>
-          </div>
-          <div className={styles.sep} />
-          <div className={styles.stat}>
             Bu hafta <b>{stats.weekCount}</b> gönderim
           </div>
+          {earnings && (
+            <>
+              <div className={styles.sep} />
+              <div className={styles.stat}>
+                Kazanç <b>${earnings.total_usd.toFixed(0)}</b> (bekleyen $
+                {earnings.pending_usd.toFixed(0)})
+              </div>
+            </>
+          )}
         </div>
 
         {isLoading && <div className={styles.loading}>Yükleniyor...</div>}
+
+        {!isLoading && rows.length === 0 && !apiFailed && (
+          <div className={styles.loading}>
+            Henüz gönderim yok — sanatçılar şarkı gönderince burada görünür.
+          </div>
+        )}
 
         {!isLoading &&
           rows.map((row) => {
@@ -292,6 +245,7 @@ export default function CuratorInboxPage() {
             const isBusy = busyId === row.id;
             const draft = feedbackDrafts[row.id] ?? "";
             const isPending = row.status === "pending";
+            const qualified = draft.trim().length >= QUALIFIED_MIN_CHARS;
 
             return (
               <div key={row.id}>
@@ -329,7 +283,7 @@ export default function CuratorInboxPage() {
                         <button
                           type="button"
                           className={`${styles.btn} ${styles.btnAccept}`}
-                          onClick={() => handleAccept(row.id)}
+                          onClick={() => handleActionClick(row.id, "accepted")}
                           disabled={isBusy}
                         >
                           Kabul Et
@@ -337,7 +291,7 @@ export default function CuratorInboxPage() {
                         <button
                           type="button"
                           className={`${styles.btn} ${styles.btnReject}`}
-                          onClick={() => handleRejectClick(row.id)}
+                          onClick={() => handleActionClick(row.id, "rejected")}
                           disabled={isBusy}
                         >
                           Reddet
@@ -351,25 +305,32 @@ export default function CuratorInboxPage() {
                   )}
                 </div>
 
-                {isExpanded && (
+                {isExpanded && isPending && (
                   <div className={styles.expanded}>
-                    <label htmlFor={`reason-${row.id}`}>Red nedeni (zorunlu)</label>
+                    <label htmlFor={`reason-${row.id}`}>
+                      {expandedAction === "accepted"
+                        ? "Geri bildirim (opsiyonel — 120+ karakter nitelikli sayılır ve $1 kazandırır)"
+                        : "Red nedeni (zorunlu — 120+ karakter nitelikli sayılır ve $1 kazandırır)"}
+                    </label>
                     <textarea
                       id={`reason-${row.id}`}
-                      placeholder="Örn: Listenin tempo/tarz profiline uymuyor..."
+                      placeholder="Örn: Miks temiz ama nakarat listenin tempo profiline göre yavaş kalıyor; ikinci verse'teki vokal katmanı güçlü..."
                       value={draft}
                       onChange={(e) =>
                         setFeedbackDrafts((prev) => ({ ...prev, [row.id]: e.target.value }))
                       }
                     />
                     <div className={styles.sendRow}>
+                      <span style={{ fontSize: 12, fontWeight: 700 }}>
+                        {draft.trim().length} karakter {qualified ? "— nitelikli ✓ ($1)" : ""}
+                      </span>
                       <button
                         type="button"
                         className={`${styles.btn} ${styles.btnSend}`}
-                        onClick={() => handleSendReject(row.id)}
-                        disabled={!draft.trim() || isBusy}
+                        onClick={() => handleSend(row.id)}
+                        disabled={(expandedAction === "rejected" && !draft.trim()) || isBusy}
                       >
-                        Gönder
+                        {expandedAction === "accepted" ? "Kabul + Gönder" : "Reddet + Gönder"}
                       </button>
                     </div>
                   </div>
