@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 reports/
 data/marketplace.db
+data/audio_cache.db
 web/node_modules/
 web/.next/
 

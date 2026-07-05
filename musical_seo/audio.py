@@ -14,8 +14,12 @@ playlist eslestirme ses katmani olmadan calismaya devam eder.
 from __future__ import annotations
 
 import os
+import sqlite3
 import tempfile
+import threading
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
 
 import requests
 
@@ -35,6 +39,84 @@ _VOCAL_BAND = (300.0, 3400.0)  # insan sesi enerji bandi
 
 _cache: dict[str, "AudioProfile | None"] = {}
 
+# Kalici cache: ayni onizleme surec yeniden basladiginda da analiz edilmesin
+# (Hetzner'da en buyuk CPU tasarrufu — populer listeler her aramada tekrarlanir).
+_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "audio_cache.db"
+_db_lock = threading.Lock()
+
+# Ayni anda TEK analiz: librosa CPU-yogun; es zamanli aramalar cekirdekleri
+# doyurup API'yi kilitlemesin diye analizler sirayla kosar.
+_analysis_gate = threading.Semaphore(1)
+
+
+def _db_connect() -> sqlite3.Connection:
+    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(_DB_PATH)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS audio_profiles (
+            url TEXT PRIMARY KEY,
+            bpm REAL NOT NULL,
+            energy REAL NOT NULL,
+            brightness REAL NOT NULL,
+            instrumental REAL NOT NULL,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    return conn
+
+
+def _cache_key(preview_url: str) -> str:
+    # Sorgu parametreleri (imza/expiry) degisebilir; sabit kisim anahtar olur.
+    return preview_url.split("?")[0]
+
+
+def _cache_get(preview_url: str) -> "AudioProfile | None":
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                row = conn.execute(
+                    "SELECT bpm, energy, brightness, instrumental "
+                    "FROM audio_profiles WHERE url = ?",
+                    (_cache_key(preview_url),),
+                ).fetchone()
+            finally:
+                conn.close()
+    except sqlite3.Error:
+        return None
+    if row is None:
+        return None
+    return AudioProfile(
+        bpm=row[0], energy=row[1], brightness=row[2], instrumental_score=row[3]
+    )
+
+
+def _cache_put(preview_url: str, profile: "AudioProfile") -> None:
+    try:
+        with _db_lock:
+            conn = _db_connect()
+            try:
+                with conn:
+                    conn.execute(
+                        "INSERT OR REPLACE INTO audio_profiles "
+                        "(url, bpm, energy, brightness, instrumental, created_at) "
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                        (
+                            _cache_key(preview_url),
+                            profile.bpm,
+                            profile.energy,
+                            profile.brightness,
+                            profile.instrumental_score,
+                            datetime.now(timezone.utc).isoformat(),
+                        ),
+                    )
+            finally:
+                conn.close()
+    except sqlite3.Error:
+        pass  # cache yazilamamasi analizi bozmasin
+
 
 @dataclass(frozen=True)
 class AudioProfile:
@@ -51,12 +133,23 @@ def available() -> bool:
 
 
 def analyze_url(preview_url: str) -> AudioProfile | None:
-    """30 sn onizleme URL'ini indir + analiz et. Hata -> None. Cache'li."""
+    """30 sn onizleme URL'ini indir + analiz et. Hata -> None.
+
+    Iki katmanli cache: RAM (surec ici) -> SQLite (kalici). Analizin kendisi
+    semaphore ile teklenir; es zamanli istekler sirada bekler (CPU korumasi).
+    """
     if not _AUDIO_OK or not preview_url:
         return None
     if preview_url in _cache:
         return _cache[preview_url]
-    profile = _analyze(preview_url)
+
+    profile = _cache_get(preview_url)
+    if profile is None:
+        with _analysis_gate:
+            profile = _analyze(preview_url)
+        if profile is not None:
+            _cache_put(preview_url, profile)
+
     _cache[preview_url] = profile
     return profile
 
