@@ -25,6 +25,8 @@ type Dict = {
     becomeCurator: string;
     curatorTypes: string;
     inbox: string;
+    adInventory: string;
+    radioAds: string;
     admin: string;
     login: string;
     join: string;
@@ -124,6 +126,8 @@ const T: { tr: Dict; en: Dict } = {
       becomeCurator: "Küratör Ol",
       curatorTypes: "Küratör & Profesyonel Türleri",
       inbox: "Gelen Kutusu",
+      adInventory: "📻 Reklam Envanterim",
+      radioAds: "Radyo Reklamı",
       admin: "Admin",
       login: "Giriş",
       join: "Bize Katıl",
@@ -234,6 +238,8 @@ const T: { tr: Dict; en: Dict } = {
       becomeCurator: "Become a Curator",
       curatorTypes: "Curator & Professional Types",
       inbox: "Inbox",
+      adInventory: "📻 My Ad Inventory",
+      radioAds: "Radio Ads",
       admin: "Admin",
       login: "Log In",
       join: "Join Us",
@@ -398,8 +404,14 @@ export default function HomePage() {
                 <Link href="/curator/inbox" className={styles.dropdownLink}>
                   {t.nav.inbox}
                 </Link>
+                <Link href="/reklam/yonet" className={styles.dropdownLink}>
+                  {t.nav.adInventory}
+                </Link>
               </div>
             </div>
+            <Link href="/reklam" className={styles.menuLink}>
+              {t.nav.radioAds}
+            </Link>
             <Link href="/admin" className={styles.menuLink}>
               {t.nav.admin}
             </Link>
