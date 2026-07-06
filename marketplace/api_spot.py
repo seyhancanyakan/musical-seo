@@ -68,6 +68,88 @@ def public_spot_voice(payload: VoiceCreate) -> dict:
     return {"file_url": f"/spot-file/{asset['id']}", "asset": asset}
 
 
+class MusicCreate(BaseModel):
+    # Ya dogrudan prompt, ya da senaryo alanlari (otomatik istem uretilir).
+    prompt: str = ""
+    product_name: str = ""
+    details: str = ""
+    tone: str = "enerjik"
+    seconds: int = 15
+
+
+@router.post("/public/spot/music")
+def public_spot_music(payload: MusicCreate) -> dict:
+    """ElevenLabs Music ile jingle uret (SENKRON — Suno alternatifi).
+    prompt bossa urun/detay/tondan otomatik (Ingilizce) muzik istemi uretilir.
+    Secilirse Suno kullanilmaz; muzik+ses+efekt tek servisten gelir."""
+    prompt = payload.prompt.strip()
+    if not prompt:
+        if not payload.product_name.strip():
+            raise HTTPException(status_code=400, detail="Ürün adı veya prompt gerekli")
+        prompt = spot_ai.suggest_jingle_prompt(
+            payload.product_name, payload.details, payload.tone, payload.seconds
+        )
+    try:
+        req = spot_ai.synthesize_music(prompt, length_ms=payload.seconds * 1000)
+    except ValueError as exc:
+        raise _400(exc)
+    result = dict(req)
+    result["file_url"] = f"/spot-jingle-file/{req['id']}"
+    return result
+
+
+class AdPlanCreate(BaseModel):
+    product_name: str
+    details: str = ""
+    tone: str = "enerjik"
+    seconds: int = 20
+
+
+@router.post("/public/spot/plan")
+def public_spot_plan(payload: AdPlanCreate) -> dict:
+    """Tek senaryodan TAM reklam planı üret (yönetmen): music_prompt,
+    voiceover, sfx:[{prompt, at_second, duration}], voice_delay, notes."""
+    try:
+        return spot_ai.plan_ad(
+            payload.product_name, payload.details, payload.tone, payload.seconds
+        )
+    except ValueError as exc:
+        raise _400(exc)
+
+
+class AdProduce(BaseModel):
+    plan: dict
+    voice_id: str = "default"
+    campaign_hint: str = ""
+
+
+@router.post("/public/spot/produce")
+def public_spot_produce(payload: AdProduce) -> dict:
+    """Reklam planını UÇTAN UCA üret: müzik + efektler + ses + zamanlı mix.
+    Nihai reklam (mix_file_url) + tüm bileşenler döner."""
+    try:
+        return spot_ai.produce_ad(
+            payload.plan, payload.voice_id, payload.campaign_hint
+        )
+    except ValueError as exc:
+        raise _400(exc)
+
+
+class SfxCreate(BaseModel):
+    description: str
+    duration_seconds: float = 2.0
+
+
+@router.post("/public/spot/sfx")
+def public_spot_sfx(payload: SfxCreate) -> dict:
+    """ElevenLabs Sound Effects ile kisa efekt uret (kasa sesi, alkis...)."""
+    try:
+        asset = spot_ai.synthesize_sfx(payload.description, payload.duration_seconds)
+    except ValueError as exc:
+        raise _400(exc)
+    return {"file_url": f"/spot-file/{asset['id']}", "asset": asset}
+
+
 @router.get("/spot-file/{asset_id}")
 def spot_file(asset_id: int) -> FileResponse:
     asset = spot_ai.get_asset(asset_id)

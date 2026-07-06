@@ -64,8 +64,13 @@ def _llm_config() -> tuple[str, str, str | None]:
     return url, model, key
 _ELEVEN_TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
 _ELEVEN_VOICES_URL = "https://api.elevenlabs.io/v1/voices"
+_ELEVEN_MUSIC_URL = "https://api.elevenlabs.io/v1/music"
+_ELEVEN_SFX_URL = "https://api.elevenlabs.io/v1/sound-generation"
 _REQUEST_TIMEOUT_SECONDS = 30
+_MUSIC_TIMEOUT_SECONDS = 120  # muzik uretimi daha uzun surebilir
 _WORDS_PER_SECOND = 2.5
+# Ses efekti mix'te voiceover ustunde ama bogmayacak seviyede.
+_SFX_VOLUME = 0.7
 
 _FALLBACK_VOICES = [
     {"voice_id": "sample-female-tr", "name": "Örnek Kadın Ses (TR)", "category": "örnek"},
@@ -288,6 +293,94 @@ def synthesize_voice(text: str, voice_id: str = "default") -> dict:
                 "(created_at, kind, campaign_hint, text, file_path, voice_id, status) "
                 "VALUES (?, 'voice', NULL, ?, ?, ?, 'ready')",
                 (db.now_iso(), text, str(file_path), voice_id),
+            )
+            asset_id = int(cur.lastrowid)
+        row = conn.execute(
+            "SELECT * FROM spot_assets WHERE id = ?", (asset_id,)
+        ).fetchone()
+        return dict(row)
+    finally:
+        conn.close()
+
+
+def synthesize_music(prompt: str, length_ms: int = 15000) -> dict:
+    """ElevenLabs Music ile jingle/bed muzigi uret (SENKRON — Suno gibi
+    polling/odeme derdi yok). jingle_requests'e 'ready' statuyle yazilir,
+    boylece mevcut mix akisi (jingle_request_id) degismeden calisir."""
+    if not prompt.strip():
+        raise ValueError("Müzik istemi boş olamaz")
+    api_key = os.environ.get("ELEVENLABS_API_KEY")
+    if not api_key:
+        raise ValueError("Müzik üretimi için ELEVENLABS_API_KEY gerekli (.env)")
+    length_ms = max(3000, min(int(length_ms), 120000))  # EL siniri
+
+    resp = requests.post(
+        _ELEVEN_MUSIC_URL,
+        headers={"xi-api-key": api_key, "Content-Type": "application/json",
+                 "Accept": "audio/mpeg"},
+        json={"prompt": prompt.strip(), "music_length_ms": length_ms},
+        timeout=_MUSIC_TIMEOUT_SECONDS,
+    )
+    if resp.status_code != 200:
+        raise ValueError(
+            f"ElevenLabs Müzik hatası ({resp.status_code}): {resp.text[:200]}"
+        )
+    JINGLES_DIR.mkdir(parents=True, exist_ok=True)
+    file_path = JINGLES_DIR / f"elmusic-{secrets.token_hex(4)}.mp3"
+    file_path.write_bytes(resp.content)
+
+    conn = _connect()
+    try:
+        with conn:
+            cur = conn.execute(
+                "INSERT INTO jingle_requests "
+                "(created_at, brief, style, status, file_path, duration) "
+                "VALUES (?, ?, 'elevenlabs', 'ready', ?, ?)",
+                (db.now_iso(), prompt.strip(), str(file_path), length_ms / 1000.0),
+            )
+            request_id = int(cur.lastrowid)
+        row = conn.execute(
+            "SELECT * FROM jingle_requests WHERE id = ?", (request_id,)
+        ).fetchone()
+        return dict(row)
+    finally:
+        conn.close()
+
+
+def synthesize_sfx(description: str, duration_seconds: float = 2.0) -> dict:
+    """ElevenLabs Sound Effects ile kisa ses efekti uret (kasa 'ching',
+    alkis, kapi zili...). spot_assets'e kind='sfx' yazilir; mix'e katman
+    olarak eklenebilir."""
+    if not description.strip():
+        raise ValueError("Ses efekti açıklaması boş olamaz")
+    api_key = os.environ.get("ELEVENLABS_API_KEY")
+    if not api_key:
+        raise ValueError("Ses efekti için ELEVENLABS_API_KEY gerekli (.env)")
+    duration_seconds = max(0.5, min(float(duration_seconds), 22.0))
+
+    resp = requests.post(
+        _ELEVEN_SFX_URL,
+        headers={"xi-api-key": api_key, "Content-Type": "application/json",
+                 "Accept": "audio/mpeg"},
+        json={"text": description.strip(), "duration_seconds": duration_seconds},
+        timeout=_REQUEST_TIMEOUT_SECONDS,
+    )
+    if resp.status_code != 200:
+        raise ValueError(
+            f"ElevenLabs SFX hatası ({resp.status_code}): {resp.text[:200]}"
+        )
+    SPOTS_DIR.mkdir(parents=True, exist_ok=True)
+    file_path = SPOTS_DIR / f"sfx-{secrets.token_hex(4)}.mp3"
+    file_path.write_bytes(resp.content)
+
+    conn = _connect()
+    try:
+        with conn:
+            cur = conn.execute(
+                "INSERT INTO spot_assets "
+                "(created_at, kind, campaign_hint, text, file_path, voice_id, status) "
+                "VALUES (?, 'sfx', NULL, ?, ?, NULL, 'ready')",
+                (db.now_iso(), description.strip(), str(file_path)),
             )
             asset_id = int(cur.lastrowid)
         row = conn.execute(
@@ -647,11 +740,17 @@ def _audio_duration(path: Path) -> float:
 
 
 def mix_ad(voice_asset_id: int, jingle_path: str,
-           campaign_hint: str = "") -> dict:
-    """Voiceover + bed muzigi TEK reklama karistir (ffmpeg).
+           campaign_hint: str = "", sfx_asset_ids: list[int] | None = None,
+           sfx_specs: list[dict] | None = None,
+           voice_delay_seconds: float = 0.0) -> dict:
+    """Voiceover + bed muzik (+ zamanlanmis ses efektleri) TEK reklama
+    karistir (ffmpeg) — radyo reklam direktoru cikti.
 
     - Bed muzik voiceover'in altinda (_BED_VOLUME), kisaysa dongulenir,
-      voiceover suresine kirpilir, sonda _FADE_OUT_SECONDS fade-out.
+      reklam suresine kirpilir, sonda _FADE_OUT_SECONDS fade-out.
+    - voice_delay_seconds: voiceover muzikten sonra girsin (intro icin).
+    - sfx_specs: [{'asset_id': N, 'at_second': S}] — efektler tam o saniyede
+      bindirilir (adelay). sfx_asset_ids geriye donuk uyum: 0. saniyeye konur.
     - Cikti data/spots/mix-{hex}.mp3, spot_assets'e kind='mix' yazilir.
     Radyoya gonderilecek nihai spot budur.
     """
@@ -672,21 +771,58 @@ def mix_ad(voice_asset_id: int, jingle_path: str,
     if not bed_path.is_file():
         raise ValueError(f"Jingle dosyası bulunamadı: {jingle_path}")
 
+    # SFX yerlesimi: yeni sfx_specs [{asset_id, at_second}] tercih edilir;
+    # eski sfx_asset_ids ise 0. saniyeye konur (geriye donuk uyum).
+    specs: list[dict] = list(sfx_specs or [])
+    if not specs and sfx_asset_ids:
+        specs = [{"asset_id": s, "at_second": 0.0} for s in sfx_asset_ids]
+    sfx_resolved: list[tuple[Path, float]] = []
+    for spec in specs:
+        asset = get_asset(int(spec["asset_id"]))
+        if asset is None or asset["kind"] != "sfx" or not asset["file_path"]:
+            raise ValueError(f"Ses efekti bulunamadı: {spec.get('asset_id')}")
+        p = Path(asset["file_path"])
+        if p.is_file():
+            sfx_resolved.append((p, float(spec.get("at_second", 0.0))))
+
     voice_dur = _audio_duration(voice_path)
-    fade_start = max(0.0, voice_dur - _FADE_OUT_SECONDS)
+    total_dur = voice_dur + max(0.0, voice_delay_seconds)
+    fade_start = max(0.0, total_dur - _FADE_OUT_SECONDS)
     SPOTS_DIR.mkdir(parents=True, exist_ok=True)
     out_path = SPOTS_DIR / f"mix-{secrets.token_hex(4)}.mp3"
 
-    # -stream_loop -1: bed'i sonsuz dongule; amix duration=first -> voiceover
-    # boyunda keser; normalize=0 -> voiceover tam sesli kalir; bed kisik+fade.
-    filter_complex = (
+    # Girdi 0 = voiceover, 1 = bed (stream_loop). SFX'ler 2..N.
+    inputs = [ffmpeg, "-y", "-i", str(voice_path),
+              "-stream_loop", "-1", "-i", str(bed_path)]
+    for p, _ in sfx_resolved:
+        inputs += ["-i", str(p)]
+
+    # -stream_loop -1: bed'i sonsuz dongule; amix duration=first -> ilk girdi
+    # (asagida [voc]) boyunda keser; normalize=0 -> voiceover tam sesli kalir.
+    voc_delay_ms = int(max(0.0, voice_delay_seconds) * 1000)
+    voc = (f"[0:a]adelay={voc_delay_ms}|{voc_delay_ms},"
+           f"apad=whole_dur={total_dur:.3f}[voc]"
+           if voc_delay_ms > 0 else "[0:a]apad=whole_dur=%.3f[voc]" % total_dur)
+    parts = [
+        voc,
         f"[1:a]volume={_BED_VOLUME},"
-        f"afade=t=out:st={fade_start:.3f}:d={_FADE_OUT_SECONDS}[bed];"
-        f"[0:a][bed]amix=inputs=2:duration=first:normalize=0[mix]"
+        f"afade=t=out:st={fade_start:.3f}:d={_FADE_OUT_SECONDS}[bed]",
+    ]
+    mix_labels = ["[voc]", "[bed]"]
+    for i, (_, at_sec) in enumerate(sfx_resolved):
+        idx = 2 + i  # ffmpeg girdi indeksi
+        delay_ms = int(max(0.0, at_sec) * 1000)
+        parts.append(
+            f"[{idx}:a]volume={_SFX_VOLUME},adelay={delay_ms}|{delay_ms}[sfx{i}]"
+        )
+        mix_labels.append(f"[sfx{i}]")
+    n = len(mix_labels)
+    parts.append(
+        "".join(mix_labels)
+        + f"amix=inputs={n}:duration=first:normalize=0[mix]"
     )
-    cmd = [
-        ffmpeg, "-y", "-i", str(voice_path),
-        "-stream_loop", "-1", "-i", str(bed_path),
+    filter_complex = ";".join(parts)
+    cmd = inputs + [
         "-filter_complex", filter_complex, "-map", "[mix]",
         "-ac", "2", "-ar", "44100", "-b:a", "192k", str(out_path),
     ]
@@ -709,4 +845,137 @@ def mix_ad(voice_asset_id: int, jingle_path: str,
     return {
         "id": asset_id, "kind": "mix", "file_path": str(out_path),
         "duration": round(voice_dur, 2),
+    }
+
+
+# --- Reklam direktoru: tek senaryodan tam prodüksiyon planı ------------------
+
+def _fallback_plan(product_name: str, details: str, tone: str, seconds: int) -> dict:
+    """LLM yoksa/parse hatasi olursa deterministik basit plan."""
+    text, _ = _template_script(product_name, details, seconds)
+    return {
+        "total_seconds": seconds,
+        "music_prompt": suggest_jingle_prompt(product_name, details, tone, seconds),
+        "voiceover": text,
+        "voice_delay_seconds": 1.0,
+        "sfx": [],
+        "notes": "Otomatik plan (LLM yok): müzik baştan, ses 1sn'de girer, "
+                 "sonda fade-out.",
+    }
+
+
+def plan_ad(product_name: str, details: str = "", tone: str = "enerjik",
+            seconds: int = 20) -> dict:
+    """Tek senaryodan TAM reklam planı üret (LLM — z.ai/Claude).
+
+    Donen plan (radyo direktoru cikti):
+      total_seconds, music_prompt, voiceover ({KUPON} yer tutuculu),
+      voice_delay_seconds, sfx:[{prompt, at_second, duration}], notes.
+    LLM yoksa/parse basarisizsa deterministik fallback plan.
+    """
+    if not product_name.strip():
+        raise ValueError("Ürün adı boş olamaz")
+    url, model, api_key = _llm_config()
+    if not api_key:
+        return _fallback_plan(product_name, details, tone, seconds)
+
+    target_words = _target_word_count(seconds)
+    prompt = (
+        "Sen bir radyo reklam yönetmenisin. Aşağıdaki ürün için TEK bir "
+        f"{seconds} saniyelik radyo reklamının tam prodüksiyon planını üret.\n"
+        f"Ürün: {product_name}\nDetaylar: {details}\nTon: {tone}\n\n"
+        "SADECE geçerli JSON döndür (başka açıklama yok). Şema:\n"
+        "{\n"
+        f'  "total_seconds": {seconds},\n'
+        '  "music_prompt": "İngilizce, enstrümantal, vokalsiz bed müzik istemi",\n'
+        f'  "voiceover": "Türkçe spot metni (~{target_words} kelime), içinde tam '
+        'olarak {KUPON} yer tutucusu",\n'
+        '  "voice_delay_seconds": 1.5,\n'
+        '  "sfx": [{"prompt": "İngilizce kısa efekt (örn cash register ching)", '
+        '"at_second": 17, "duration": 1.5}],\n'
+        '  "notes": "Türkçe zaman çizelgesi notu"\n'
+        "}\n"
+        "Kurallar: sfx 0-2 adet, her biri reklamın uygun anına (giriş vurgusu "
+        "ya da sonda CTA anı) yerleştirilsin; at_second toplam süreyi aşmasın. "
+        "voiceover müziğin altında akıcı ve harekete geçirici olsun."
+    )
+    try:
+        resp = requests.post(
+            url,
+            headers={"x-api-key": api_key, "anthropic-version": "2023-06-01",
+                     "content-type": "application/json"},
+            json={"model": model, "max_tokens": 900,
+                  "messages": [{"role": "user", "content": prompt}]},
+            timeout=_MUSIC_TIMEOUT_SECONDS,
+        )
+        resp.raise_for_status()
+        parts = resp.json().get("content", [])
+        text = "".join(p.get("text", "") for p in parts if p.get("type") == "text")
+        # JSON'u kod blogu/fazladan metinden ayikla.
+        start, end = text.find("{"), text.rfind("}")
+        plan = json.loads(text[start:end + 1])
+    except (requests.RequestException, ValueError, KeyError, json.JSONDecodeError):
+        return _fallback_plan(product_name, details, tone, seconds)
+
+    # Sema dogrulama + guvenli varsayilanlar.
+    plan.setdefault("total_seconds", seconds)
+    plan.setdefault("voice_delay_seconds", 1.0)
+    plan.setdefault("sfx", [])
+    if not plan.get("music_prompt"):
+        plan["music_prompt"] = suggest_jingle_prompt(
+            product_name, details, tone, seconds
+        )
+    if not plan.get("voiceover"):
+        plan["voiceover"], _ = _template_script(product_name, details, seconds)
+    plan["sfx"] = [s for s in plan["sfx"] if isinstance(s, dict) and s.get("prompt")][:2]
+    return plan
+
+
+def produce_ad(plan: dict, voice_id: str = "default",
+               campaign_hint: str = "") -> dict:
+    """Reklam planını UÇTAN UCA üret: müzik + efektler + seslendirme + zamanlı
+    mix. Bilesenlerin hepsi ElevenLabs'ten (Suno gerekmez). Donen: nihai mix +
+    tum bilesen varliklari + kullanilan plan (seffaflik).
+    """
+    music_prompt = (plan.get("music_prompt") or "").strip()
+    voiceover = (plan.get("voiceover") or "").strip()
+    if not voiceover:
+        raise ValueError("Planda seslendirme metni yok")
+    seconds = int(plan.get("total_seconds") or 20)
+    voice_delay = float(plan.get("voice_delay_seconds") or 0.0)
+
+    # 1) Bed muzik (ElevenLabs Music — senkron).
+    music = synthesize_music(
+        music_prompt or "soft instrumental background bed, no vocals",
+        length_ms=seconds * 1000,
+    )
+    # 2) Ses efektleri (varsa) — her biri kendi saniyesiyle.
+    sfx_specs: list[dict] = []
+    sfx_assets: list[dict] = []
+    for item in plan.get("sfx", []):
+        try:
+            asset = synthesize_sfx(
+                item["prompt"], float(item.get("duration", 2.0))
+            )
+        except ValueError:
+            continue  # tek efekt hatasi tum reklami bozmasin
+        sfx_assets.append(asset)
+        sfx_specs.append({
+            "asset_id": asset["id"],
+            "at_second": float(item.get("at_second", 0.0)),
+        })
+    # 3) Seslendirme (ElevenLabs TTS).
+    voice = synthesize_voice(voiceover, voice_id)
+    # 4) Zamanlı mix — nihai radyo spotu.
+    mix = mix_ad(
+        voice["id"], music["file_path"], campaign_hint=campaign_hint,
+        sfx_specs=sfx_specs, voice_delay_seconds=voice_delay,
+    )
+    return {
+        "mix": mix,
+        "mix_file_url": f"/spot-file/{mix['id']}",
+        "voice": voice,
+        "music": music,
+        "sfx": sfx_assets,
+        "plan": plan,
     }

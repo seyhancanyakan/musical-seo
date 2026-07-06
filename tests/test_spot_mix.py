@@ -171,3 +171,98 @@ def test_mix_ad_produces_voice_length_output(spot_db):
 def test_mix_ad_missing_voice_raises(spot_db):
     with pytest.raises(ValueError, match="Seslendirme bulunamadı"):
         spot_ai.mix_ad(9999, "nope.mp3")
+
+
+# --- ElevenLabs muzik + SFX + reklam direktoru -------------------------------
+
+def _insert_asset(kind, path):
+    conn = spot_ai._connect()
+    with conn:
+        cur = conn.execute(
+            "INSERT INTO spot_assets (created_at, kind, campaign_hint, text, "
+            "file_path, voice_id, status) VALUES (?, ?, NULL, NULL, ?, NULL, 'ready')",
+            (db.now_iso(), kind, str(path)),
+        )
+        aid = int(cur.lastrowid)
+    conn.close()
+    return aid
+
+
+def test_synthesize_music_saves_ready_jingle(spot_db, monkeypatch):
+    class R:
+        status_code = 200
+        content = b"ID3musicbytes"
+        text = ""
+    monkeypatch.setattr(spot_ai.os, "environ", {"ELEVENLABS_API_KEY": "k"})
+    monkeypatch.setattr(spot_ai.requests, "post", lambda *a, **k: R())
+    req = spot_ai.synthesize_music("bakery bed", length_ms=15000)
+    assert req["status"] == "ready"
+    assert Path(req["file_path"]).read_bytes() == b"ID3musicbytes"
+    assert req["duration"] == 15.0
+
+
+def test_synthesize_sfx_saves_asset(spot_db, monkeypatch):
+    class R:
+        status_code = 200
+        content = b"sfxbytes"
+        text = ""
+    monkeypatch.setattr(spot_ai.os, "environ", {"ELEVENLABS_API_KEY": "k"})
+    monkeypatch.setattr(spot_ai.requests, "post", lambda *a, **k: R())
+    a = spot_ai.synthesize_sfx("cash register ching", 1.5)
+    assert a["kind"] == "sfx"
+    assert Path(a["file_path"]).read_bytes() == b"sfxbytes"
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg gerekli")
+def test_mix_ad_with_timed_sfx(spot_db):
+    voice_wav = spot_db / "v.wav"
+    bed_wav = spot_db / "jingles" / "b.wav"
+    sfx_wav = spot_db / "spots" / "s.wav"
+    _write_tone_wav(voice_wav, 4.0)
+    _write_tone_wav(bed_wav, 2.0)
+    _write_tone_wav(sfx_wav, 0.5)
+    vid = _insert_asset("voice", voice_wav)
+    sid = _insert_asset("sfx", sfx_wav)
+    res = spot_ai.mix_ad(
+        vid, str(bed_wav),
+        sfx_specs=[{"asset_id": sid, "at_second": 3.0}],
+        voice_delay_seconds=1.0,
+    )
+    out = Path(res["file_path"])
+    assert out.is_file() and out.stat().st_size > 0
+    dur = float(subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "csv=p=0", str(out)],
+        capture_output=True, text=True,
+    ).stdout.strip())
+    # voiceover 4sn + 1sn gecikme = ~5sn
+    assert 4.5 <= dur <= 5.6
+
+
+def test_plan_ad_fallback_without_llm(spot_db, monkeypatch):
+    monkeypatch.setattr(spot_ai, "_llm_config", lambda: ("u", "m", None))
+    plan = spot_ai.plan_ad("Afyon Lokum", "acilis", "samimi", 20)
+    assert plan["total_seconds"] == 20
+    assert "{KUPON}" in plan["voiceover"]
+    assert "music_prompt" in plan and plan["sfx"] == []
+
+
+def test_plan_ad_parses_llm_json(spot_db, monkeypatch):
+    monkeypatch.setattr(spot_ai, "_llm_config", lambda: ("u", "m", "key"))
+    fake = {
+        "content": [{"type": "text", "text":
+            'Iste plan: {"total_seconds":15,"music_prompt":"upbeat bed",'
+            '"voiceover":"Gelin {KUPON} kodu ile","voice_delay_seconds":2,'
+            '"sfx":[{"prompt":"ching","at_second":13,"duration":1}],'
+            '"notes":"ok"} tesekkurler'}]
+    }
+
+    class R:
+        status_code = 200
+        def raise_for_status(self): pass
+        def json(self): return fake
+    monkeypatch.setattr(spot_ai.requests, "post", lambda *a, **k: R())
+    plan = spot_ai.plan_ad("X", "y", "enerjik", 15)
+    assert plan["total_seconds"] == 15
+    assert plan["sfx"][0]["at_second"] == 13
+    assert "{KUPON}" in plan["voiceover"]
