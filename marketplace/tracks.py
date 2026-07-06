@@ -8,6 +8,7 @@ Is kurali ihlalleri ValueError (Turkce); API katmani 400'e cevirir.
 from __future__ import annotations
 
 from marketplace import accounts, db
+from marketplace.service import fold
 from musical_seo.sources import deezer
 from musical_seo.sources import spotify as spotify_source
 
@@ -54,8 +55,27 @@ def add_track(user_id: int, artist: str, title: str) -> dict:
             "Yazimi kontrol et; sarki henuz yayinlanmadiysa once dagitima cik "
             "(dagitim ortaklari icin /linkler sayfasindaki Ortaklar bolumune bak)."
         )
+    # SANATCI ESLESME KAPISI: arama motoru serbest-metin fallback'inde
+    # ilk sonucu doner — yanlis sanatcinin sarkisi sessizce kaydedilmesin.
+    # Aksan-duyarsiz karsilastirma; kisaltma/uzun-ad tolerans icin icerme
+    # iki yonlu kontrol edilir ("Duman" ~ "Duman Band").
+    resolved_artist = (track.artist or "").strip()
+
+    def _norm(s: str) -> str:
+        # fold() aksanlari soker ama Turkce noktasiz 'ı' base karakter oldugu
+        # icin kalir — ASCII yazan kullanici ("kisaparmak") eslessin diye.
+        return fold(s).replace("ı", "i")
+
+    req_f, res_f = _norm(artist), _norm(resolved_artist)
+    if resolved_artist and req_f not in res_f and res_f not in req_f:
+        raise ValueError(
+            f"Bulunan sarki farkli sanatciya ait: {resolved_artist} - "
+            f"{track.title or title}. '{artist}' adina kayitli bu isimde sarki "
+            "bulunamadi — yazimi kontrol et ya da sarkinin dagitimda yayinda "
+            "oldugundan emin ol."
+        )
     # Cozumlenen resmi ad/baslik yazilir (yazim varyasyonlari tekillesir).
-    artist_r = track.artist or artist
+    artist_r = resolved_artist or artist
     title_r = track.title or title
     conn = _connect()
     try:

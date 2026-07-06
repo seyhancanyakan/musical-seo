@@ -34,6 +34,29 @@ def test_add_track_resolves_and_dedupes(trk_db, monkeypatch):
     assert len(tracks.list_tracks(1)) == 1
 
 
+def test_add_track_rejects_wrong_artist(trk_db, monkeypatch):
+    """Serbest-metin fallback yanlis sanatciyi getirirse kayit REDDEDILIR
+    (gercek vaka: 'Seyhan Canyakan - Yar dedim' -> Sebnem Kisaparmak / Yar)."""
+    monkeypatch.setattr(
+        tracks.deezer, "lookup",
+        lambda a, t: _found("Şebnem Kısaparmak", "Yar"),
+    )
+    with pytest.raises(ValueError, match="farkli sanatciya ait"):
+        tracks.add_track(1, "Seyhan Canyakan", "Yar dedim")
+    assert tracks.list_tracks(1) == []
+
+
+def test_add_track_accent_tolerant_artist_match(trk_db, monkeypatch):
+    """Aksan/buyuk-kucuk farki eslesmeyi bozmaz: 'sebnem kisaparmak' ==
+    'Şebnem Kısaparmak'."""
+    monkeypatch.setattr(
+        tracks.deezer, "lookup",
+        lambda a, t: _found("Şebnem Kısaparmak", "Yar"),
+    )
+    t = tracks.add_track(1, "sebnem kisaparmak", "yar")
+    assert t["artist"] == "Şebnem Kısaparmak"
+
+
 def test_add_track_not_found_raises_turkish(trk_db, monkeypatch):
     monkeypatch.setattr(tracks.deezer, "lookup", _not_found)
     monkeypatch.setattr(tracks.spotify_source, "lookup", _not_found)
