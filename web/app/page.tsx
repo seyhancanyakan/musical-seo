@@ -537,6 +537,9 @@ export default function HomePage() {
             <Link href="/pro">{t.footer.artistPro}</Link>
             <Link href="/sync">Sync Market</Link>
             <Link href="/label">Label / A&amp;R</Link>
+            <Link href="/reklam">
+              {locale === "tr" ? "Radyo Reklamı" : "Radio Ads"}
+            </Link>
           </div>
           <div className={styles.footerCol}>
             <h4>{t.footer.artistsHeading}</h4>

@@ -759,6 +759,125 @@ export const deleteTrack = (trackId: number) =>
     headers: authHeaders(),
   });
 
+/* --- Radyo reklam pazari ------------------------------------------------------ */
+
+export type RadioAdListing = {
+  id: number;
+  created_at: string;
+  curator_id: number;
+  station_name: string;
+  slot_seconds: number;
+  daypart: "sabah" | "gunduz" | "drive" | "aksam" | "gece";
+  weekly_spots: number;
+  price_week_try: number;
+  description: string;
+  status: "active" | "paused";
+};
+
+export type RadioAdOrder = {
+  id: number;
+  created_at: string;
+  listing_id: number;
+  buyer_name: string;
+  buyer_email: string;
+  buyer_kind: "artist" | "business";
+  weeks: number;
+  message: string;
+  status: "pending" | "accepted" | "rejected" | "paid" | "airing";
+  price_try: number;
+  commission_try: number;
+  contract_text: string | null;
+  verified_plays: number;
+  station_name?: string; // owner gorunumunde join'li gelir
+};
+
+export const createRadioAdListing = (payload: {
+  station_name: string;
+  slot_seconds: number;
+  daypart: string;
+  weekly_spots: number;
+  price_week_try: number;
+  description?: string;
+}) =>
+  jd<RadioAdListing>(`/me/radio-ads/listings`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+export const myRadioAdListings = () =>
+  j<RadioAdListing[]>(`/me/radio-ads/listings`, { headers: authHeaders() });
+
+export const pauseRadioAdListing = (id: number) =>
+  j<RadioAdListing>(`/me/radio-ads/listings/${id}/pause`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+export const activateRadioAdListing = (id: number) =>
+  j<RadioAdListing>(`/me/radio-ads/listings/${id}/activate`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+export const publicRadioAds = (filters?: {
+  daypart?: string;
+  max_price?: number;
+}) => {
+  const q = new URLSearchParams();
+  if (filters?.daypart) q.set("daypart", filters.daypart);
+  if (filters?.max_price) q.set("max_price", String(filters.max_price));
+  const qs = q.toString();
+  return j<RadioAdListing[]>(`/public/radio-ads${qs ? `?${qs}` : ""}`);
+};
+
+export const orderRadioAd = (
+  listingId: number,
+  payload: {
+    buyer_name: string;
+    buyer_email: string;
+    buyer_kind: "artist" | "business";
+    weeks: number;
+    message?: string;
+  }
+) =>
+  jd<RadioAdOrder>(`/public/radio-ads/${listingId}/order`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const myRadioAdOrders = () =>
+  j<RadioAdOrder[]>(`/me/radio-ads/orders`, { headers: authHeaders() });
+
+export const respondRadioAdOrder = (
+  id: number,
+  action: "accepted" | "rejected"
+) =>
+  jd<RadioAdOrder>(`/me/radio-ads/orders/${id}/respond`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ action }),
+  });
+
+/** Radyo sahibi: spot yayinlandi -> dogrulanan yayin sayacini artir. */
+export const recordRadioAdAir = (id: number) =>
+  jd<RadioAdOrder>(`/me/radio-ads/orders/${id}/air`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+export const adminRadioAdOrders = (status?: string) =>
+  j<RadioAdOrder[]>(
+    `/admin/radio-ads/orders${status ? `?status=${status}` : ""}`,
+    { headers: adminHeaders() }
+  );
+
+export const adminRadioAdMarkPaid = (id: number) =>
+  j<RadioAdOrder>(`/admin/radio-ads/orders/${id}/paid`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+
 /** Gonderim — hata detayli surum (kredi/cozumleme hatalari gorunur). */
 export const submitToCuratorD = (
   artist: string,
