@@ -71,6 +71,10 @@ def _connect() -> sqlite3.Connection:
     conn = db._connect()  # marketplace.db + ana sema (curators dahil) hazir
     for stmt in _SCHEMA:
         conn.execute(stmt)
+    # Eski DB dosyalarina sonradan eklenen kolon (sehir filtresi/kampanya fan-out)
+    lcols = {r[1] for r in conn.execute("PRAGMA table_info(radio_ad_listings)")}
+    if "city" not in lcols:
+        conn.execute("ALTER TABLE radio_ad_listings ADD COLUMN city TEXT DEFAULT NULL")
     return conn
 
 
@@ -79,6 +83,7 @@ def _connect() -> sqlite3.Connection:
 def create_listing(
     user: dict, station_name: str, slot_seconds: int, daypart: str,
     weekly_spots: int, price_week_try: int, description: str | None = None,
+    city: str | None = None,
 ) -> dict:
     """Yeni reklam envanteri acar. Sadece radyo turu kurator hesabi acabilir."""
     curator_id = user.get("curator_id")
@@ -105,11 +110,12 @@ def create_listing(
                 """
                 INSERT INTO radio_ad_listings
                     (created_at, curator_id, station_name, slot_seconds, daypart,
-                     weekly_spots, price_week_try, description)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     weekly_spots, price_week_try, description, city)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (db.now_iso(), curator_id, station_name.strip(), slot_seconds,
-                 daypart, weekly_spots, price_week_try, description),
+                 daypart, weekly_spots, price_week_try, description,
+                 city.strip() if city else None),
             )
             listing_id = int(cur.lastrowid)
         row = conn.execute(
@@ -184,7 +190,10 @@ def activate_listing(user: dict, listing_id: int) -> dict:
         conn.close()
 
 
-def public_catalog(daypart: str | None = None, max_price: int | None = None) -> list[dict]:
+def public_catalog(
+    daypart: str | None = None, max_price: int | None = None,
+    city: str | None = None,
+) -> list[dict]:
     """Sadece active durumundaki ilanlar (pause edilenler katalogda gorunmez)."""
     conditions, params = ["status = 'active'"], []
     if daypart:
@@ -195,6 +204,9 @@ def public_catalog(daypart: str | None = None, max_price: int | None = None) -> 
     if max_price is not None:
         conditions.append("price_week_try <= ?")
         params.append(max_price)
+    if city:
+        conditions.append("city = ?")
+        params.append(city.strip())
     sql = "SELECT * FROM radio_ad_listings WHERE " + " AND ".join(conditions)
     sql += " ORDER BY id DESC"
     conn = _connect()
