@@ -404,7 +404,7 @@ def charge_credits(user_id: int, amount: int, reason: str,
             )
             if not cur.rowcount:
                 raise ValueError(
-                    f"Yetersiz kredi ({amount} gerekli) — paket satin almalisin"
+                    f"Yetersiz kredi ({amount} gerekli) — paket satın almalısın"
                 )
             conn.execute(
                 "INSERT INTO transactions "

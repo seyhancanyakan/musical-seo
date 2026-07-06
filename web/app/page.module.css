@@ -253,7 +253,9 @@
 }
 .heroTitle {
   font-size: 68px;
-  line-height: 1.02;
+  /* 1.02 cok sikiydi: vurgulu span'in 3px cercevesi + Turkce buyuk harf
+     aksanlari (Ğ/Ü) alt satirla ust uste biniyordu. */
+  line-height: 1.18;
   max-width: 920px;
   margin-bottom: 28px;
 }

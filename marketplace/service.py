@@ -381,7 +381,7 @@ def create_submission(
     if curator is None:
         raise ValueError(f"Curator bulunamadi: {curator_id}")
     if curator["status"] != "approved":
-        raise ValueError("Curator henuz onayli degil")
+        raise ValueError("Kürator henüz onaylı değil")
 
     user = None
     if artist_user_id is not None:
@@ -395,7 +395,7 @@ def create_submission(
         track = spotify_source.lookup(artist, title)
     if not track.found:
         raise ValueError(
-            f"Sarki Deezer/Spotify'da bulunamadi: {artist} - {title}"
+            f"Şarkı Deezer/Spotify'da bulunamadı: {artist} - {title}"
         )
 
     match = PlaylistMatch(
@@ -439,7 +439,7 @@ def create_submission(
                 )
                 if not cur.rowcount:
                     raise ValueError(
-                        f"Yetersiz kredi ({total_cost} gerekli) — paket satin almalisin"
+                        f"Yetersiz kredi ({total_cost} gerekli) — paket satın almalısın"
                     )
                 sub_cur = conn.execute(
                     """
@@ -504,7 +504,7 @@ def respond(
         opened_at = submission.get("opened_at")
         if not opened_at:
             raise ValueError(
-                "Once gonderimi ac ve sarkiyi dinle — sonra yanitla"
+                "Önce gönderimi aç ve şarkıyı dinle — sonra yanıtla"
             )
         elapsed = (
             datetime.fromisoformat(db.now_iso())
@@ -512,15 +512,15 @@ def respond(
         ).total_seconds()
         if elapsed < pricing.LISTEN_GATE_SECONDS:
             raise ValueError(
-                f"Dinleme kaniti: yanit icin acilistan sonra en az "
-                f"{pricing.LISTEN_GATE_SECONDS} saniye gecmeli"
+                f"Dinleme kanıtı: yanıt için açılıştan sonra en az "
+                f"{pricing.LISTEN_GATE_SECONDS} saniye geçmeli"
             )
     # Garantili geri bildirim: KABUL de RED de 120+ karakter yazili
     # degerlendirme ister — urunun sattigi sey tam olarak bu.
     if not accounts.is_qualified_feedback(feedback):
         raise ValueError(
             f"En az {accounts.QUALIFIED_FEEDBACK_MIN_CHARS} karakter geri bildirim zorunlu "
-            "(sanatci nitelikli degerlendirme icin odeme yapiyor)"
+            "(sanatçı nitelikli değerlendirme için ödeme yapıyor)"
         )
 
     curator = db.get_curator(submission["curator_id"])

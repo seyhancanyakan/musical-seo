@@ -43,7 +43,7 @@ def add_track(user_id: int, artist: str, title: str) -> dict:
     """
     artist, title = artist.strip(), title.strip()
     if not artist or not title:
-        raise ValueError("Sanatci ve sarki adi bos olamaz")
+        raise ValueError("Sanatçı ve şarkı adı boş olamaz")
     track = deezer.lookup(artist, title)
     source = "deezer"
     if not track.found:
@@ -51,9 +51,9 @@ def add_track(user_id: int, artist: str, title: str) -> dict:
         source = "spotify"
     if not track.found:
         raise ValueError(
-            f"Sarki Deezer/Spotify'da bulunamadi: {artist} - {title}. "
-            "Yazimi kontrol et; sarki henuz yayinlanmadiysa once dagitima cik "
-            "(dagitim ortaklari icin /linkler sayfasindaki Ortaklar bolumune bak)."
+            f"Şarkı Deezer/Spotify'da bulunamadı: {artist} - {title}. "
+            "Yazımı kontrol et; şarkı henüz yayınlanmadıysa önce dağıtıma çık "
+            "(dağıtım ortakları için /linkler sayfasındaki Ortaklar bölümüne bak)."
         )
     # SANATCI ESLESME KAPISI: arama motoru serbest-metin fallback'inde
     # ilk sonucu doner — yanlis sanatcinin sarkisi sessizce kaydedilmesin.
@@ -69,10 +69,10 @@ def add_track(user_id: int, artist: str, title: str) -> dict:
     req_f, res_f = _norm(artist), _norm(resolved_artist)
     if resolved_artist and req_f not in res_f and res_f not in req_f:
         raise ValueError(
-            f"Bulunan sarki farkli sanatciya ait: {resolved_artist} - "
-            f"{track.title or title}. '{artist}' adina kayitli bu isimde sarki "
-            "bulunamadi — yazimi kontrol et ya da sarkinin dagitimda yayinda "
-            "oldugundan emin ol."
+            f"Bulunan şarkı farklı sanatçıya ait: {resolved_artist} - "
+            f"{track.title or title}. '{artist}' adına kayıtlı bu isimde şarkı "
+            "bulunamadı — yazımı kontrol et ya da şarkının dağıtımda yayında "
+            "olduğundan emin ol."
         )
     # Cozumlenen resmi ad/baslik yazilir (yazim varyasyonlari tekillesir).
     artist_r = resolved_artist or artist
