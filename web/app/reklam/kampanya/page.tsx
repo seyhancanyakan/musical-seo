@@ -13,6 +13,11 @@ import {
   requestJingle,
   listJingles,
   getCampaignProof,
+  autoJingle,
+  pollJingle,
+  jingleFileUrl,
+  mixAd,
+  apiFileUrl,
   type AdPackage,
   type AdCampaign,
   type AdCampaignOrderBreakdown,
@@ -21,6 +26,7 @@ import {
   type JingleLibraryItem,
   type JingleRequest,
   type FingerprintDetection,
+  type AutoJingle,
 } from "@/lib/api";
 import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
@@ -39,8 +45,15 @@ const T = {
     logo: "MuzikSEO",
     heading: "Kampanya Sihirbazı",
     intro:
-      "5 adımda kendi radyo reklam kampanyanı kur: hedefini seç, spotunu AI ile yaz, istersen seslendir ve jingle ekle, sonra tek onayla yayına al.",
-    steps: ["Hedef", "Spot Metni", "Seslendirme", "Jingle", "Özet + Onay"],
+      "6 adımda kendi radyo reklam kampanyanı kur: hedefini seç, spotunu AI ile yaz, istersen seslendir ve jingle ekle, müzik + sesi birleştir, sonra tek onayla yayına al.",
+    steps: [
+      "Hedef",
+      "Spot Metni",
+      "Seslendirme",
+      "Jingle",
+      "Reklamı Birleştir",
+      "Özet + Onay",
+    ],
     // --- Adim 1 ---
     cityLabel: "Şehir (opsiyonel — boş bırakırsan tüm şehirler)",
     cityPlaceholder: "Örn. İstanbul",
@@ -104,6 +117,14 @@ const T = {
     skipBtn: "Bu Adımı Atla",
     // --- Adim 4 ---
     jingleStepTitle: "Jingle (opsiyonel)",
+    autoJingleTitle: "AI ile Otomatik Jingle",
+    autoJingleNote:
+      "2. adımdaki ürün/sanatçı adı ve detaylara uygun bir jingle üretir (Suno).",
+    autoJingleBtn: "🎵 Senaryoma Uygun Jingle Üret (AI)",
+    autoJingleBusy: "Üretiliyor...",
+    autoJingleGeneratingMsg: "Jingle üretiliyor, biraz zaman alabilir...",
+    autoJingleReadyLabel: "Hazır jingle önizlemesi:",
+    orDivider: "— veya —",
     jingleLibraryTitle: "Hazır Jingle Kütüphanesi",
     jingleLibraryEmpty: "Şu an hazır jingle yok.",
     jingleReadyTitle: "Hazırlanan özel jingle talepleri",
@@ -120,6 +141,16 @@ const T = {
     jingleQueuedMsg:
       "Talebin kuyruğa alındı, hazırlanınca kampanyana bağlanır.",
     // --- Adim 5 ---
+    mixStepTitle: "Reklamı Birleştir",
+    mixStepDesc:
+      "Müzik sesin altında çalar, reklam bitince yumuşak kapanır — radyoya gönderilecek hazır spot budur.",
+    mixBtn: "🎬 Reklamı Oluştur (müzik + ses)",
+    mixBusy: "Birleştiriliyor...",
+    mixNeedVoiceError: "Önce seslendirme üret (3. adım)",
+    mixNeedJingleError: "Önce jingle seç/üret (4. adım)",
+    mixReadyLabel: "Hazır reklam:",
+    mixDownloadBtn: "İndir",
+    // --- Adim 6 ---
     summaryTitle: "Özet",
     summaryCity: "Şehir",
     summaryCityAll: "Tüm şehirler",
@@ -135,6 +166,9 @@ const T = {
     summaryJingle: "Jingle",
     summaryJingleYes: "Seçildi",
     summaryJingleNo: "Yok",
+    summaryMix: "Birleştirilmiş Reklam",
+    summaryMixYes: "Hazır (indirilebilir)",
+    summaryMixNo: "Yok",
     couponNote:
       "Kampanya onaylandığında benzersiz bir kupon kodu oluşturulur ve spot metnine eklenir.",
     commissionNote: "Toplam bedele %18 MüzikSEO komisyonu dahildir.",
@@ -184,8 +218,15 @@ const T = {
     logo: "MuzikSEO",
     heading: "Campaign Wizard",
     intro:
-      "Set up your own radio ad campaign in 5 steps: pick a target, write your spot with AI, optionally add voice + jingle, then confirm once to go live.",
-    steps: ["Target", "Spot Script", "Voice", "Jingle", "Summary + Confirm"],
+      "Set up your own radio ad campaign in 6 steps: pick a target, write your spot with AI, optionally add voice + jingle, merge the music and voice, then confirm once to go live.",
+    steps: [
+      "Target",
+      "Spot Script",
+      "Voice",
+      "Jingle",
+      "Merge Ad",
+      "Summary + Confirm",
+    ],
     cityLabel: "City (optional — leave blank for all cities)",
     cityPlaceholder: "e.g. Istanbul",
     daypartsLabel: "Dayparts",
@@ -245,6 +286,14 @@ const T = {
     audioReadyLabel: "Preview ready:",
     skipBtn: "Skip This Step",
     jingleStepTitle: "Jingle (optional)",
+    autoJingleTitle: "AI Auto-Generated Jingle",
+    autoJingleNote:
+      "Generates a jingle matching the product/artist name and details from step 2 (Suno).",
+    autoJingleBtn: "🎵 Generate a Jingle for My Script (AI)",
+    autoJingleBusy: "Generating...",
+    autoJingleGeneratingMsg: "Generating jingle, this may take a moment...",
+    autoJingleReadyLabel: "Jingle preview ready:",
+    orDivider: "— or —",
     jingleLibraryTitle: "Ready-Made Jingle Library",
     jingleLibraryEmpty: "No jingles ready right now.",
     jingleReadyTitle: "Custom jingle requests ready",
@@ -260,6 +309,15 @@ const T = {
     briefRequiredError: "Brief cannot be empty",
     jingleQueuedMsg:
       "Your request has been queued — it will be linked to your campaign once ready.",
+    mixStepTitle: "Merge the Ad",
+    mixStepDesc:
+      "The music plays under the voice, and the ad fades out softly at the end — this is the finished spot ready to send to radio stations.",
+    mixBtn: "🎬 Create the Ad (music + voice)",
+    mixBusy: "Merging...",
+    mixNeedVoiceError: "Generate a voice-over first (step 3)",
+    mixNeedJingleError: "Select/generate a jingle first (step 4)",
+    mixReadyLabel: "Finished ad:",
+    mixDownloadBtn: "Download",
     summaryTitle: "Summary",
     summaryCity: "City",
     summaryCityAll: "All cities",
@@ -275,6 +333,9 @@ const T = {
     summaryJingle: "Jingle",
     summaryJingleYes: "Selected",
     summaryJingleNo: "None",
+    summaryMix: "Merged Ad",
+    summaryMixYes: "Ready (downloadable)",
+    summaryMixNo: "None",
     couponNote:
       "A unique coupon code is generated once the campaign is confirmed and added to the spot script.",
     commissionNote: "The total includes an 18% MuzikSEO commission.",
@@ -362,6 +423,7 @@ export default function CampaignWizardPage() {
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [voiceError, setVoiceError] = useState("");
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [voiceAssetId, setVoiceAssetId] = useState<number | null>(null);
 
   // --- Adim 4: jingle (opsiyonel) -------------------------------------------
   const [jingleLibrary, setJingleLibrary] = useState<JingleLibraryItem[]>([]);
@@ -370,13 +432,33 @@ export default function CampaignWizardPage() {
   const [selectedJingleUrl, setSelectedJingleUrl] = useState<string | null>(
     null
   );
+  /** Secili jingle bir talep kaydiysa (auto/hazir) id'si — mixAd'de
+   *  jingle_request_id olarak gonderilir. Kutuphane dosyasi secilince null
+   *  olur, o zaman jingle_file (selectedJingleUrl) kullanilir. */
+  const [selectedJingleRequestId, setSelectedJingleRequestId] = useState<
+    number | null
+  >(null);
   const [jingleBrief, setJingleBrief] = useState("");
   const [jingleStyle, setJingleStyle] = useState("");
   const [jingleBusy, setJingleBusy] = useState(false);
   const [jingleMsg, setJingleMsg] = useState("");
   const [jingleError, setJingleError] = useState("");
 
-  // --- Adim 5: ozet + onay --------------------------------------------------
+  // --- Adim 4: AI otomatik jingle (Suno) -------------------------------------
+  const [autoJingleBusy, setAutoJingleBusy] = useState(false);
+  const [autoJingleError, setAutoJingleError] = useState("");
+  const [autoJingleId, setAutoJingleId] = useState<number | null>(null);
+  const [autoJingleStatus, setAutoJingleStatus] = useState<
+    AutoJingle["status"] | null
+  >(null);
+
+  // --- Adim 5: reklami birlestir (mix) ---------------------------------------
+  const [mixBusy, setMixBusy] = useState(false);
+  const [mixError, setMixError] = useState("");
+  const [mixAudioUrl, setMixAudioUrl] = useState<string | null>(null);
+  const [mixAssetId, setMixAssetId] = useState<number | null>(null);
+
+  // --- Adim 6: ozet + onay --------------------------------------------------
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerKind, setBuyerKind] = useState<BuyerKind>("artist");
@@ -417,6 +499,36 @@ export default function CampaignWizardPage() {
       });
     }
   }, [step, jinglesLoaded]);
+
+  /** AI otomatik jingle uretimini ~5 sn'de bir yoklar; 'ready'/'failed' olunca
+   *  durur. Component unmount olursa (veya id/status degisirse) interval
+   *  temizlenir. */
+  useEffect(() => {
+    if (
+      autoJingleId === null ||
+      autoJingleStatus === "ready" ||
+      autoJingleStatus === "failed"
+    ) {
+      return;
+    }
+    const interval = setInterval(async () => {
+      const result = await pollJingle(autoJingleId);
+      if (result.error || !result.data) {
+        setAutoJingleStatus("failed");
+        setAutoJingleError(result.error ?? t.genericError);
+        return;
+      }
+      setAutoJingleStatus(result.data.status);
+      if (result.data.status === "ready") {
+        const url = jingleFileUrl(autoJingleId);
+        setSelectedJingleUrl(url);
+        setSelectedJingleRequestId(autoJingleId);
+      } else if (result.data.status === "failed") {
+        setAutoJingleError(result.data.error ?? t.genericError);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [autoJingleId, autoJingleStatus, t.genericError]);
 
   function toggleDaypart(d: Daypart) {
     setDayparts((prev) =>
@@ -496,19 +608,40 @@ export default function CampaignWizardPage() {
       return;
     }
     setAudioUrl(result.data.full_url);
+    setVoiceAssetId(result.data.asset.id);
   }
 
   function selectLibraryJingle(item: JingleLibraryItem) {
-    setSelectedJingleUrl((prev) =>
-      prev === item.path ? null : item.path
-    );
+    const isSame = selectedJingleUrl === item.path;
+    setSelectedJingleUrl(isSame ? null : item.path);
+    setSelectedJingleRequestId(null);
   }
 
   function selectReadyJingle(item: JingleRequest) {
     if (!item.file_path) return;
-    setSelectedJingleUrl((prev) =>
-      prev === item.file_path ? null : item.file_path
-    );
+    const isSame = selectedJingleUrl === item.file_path;
+    setSelectedJingleUrl(isSame ? null : item.file_path);
+    setSelectedJingleRequestId(isSame ? null : item.id);
+  }
+
+  /** AI ile senaryoya (2. adimdaki urun/detay/ton) uygun jingle uretimini
+   *  baslatir; sonuc pollJingle useEffect'i tarafindan izlenir. */
+  async function handleAutoJingle() {
+    setAutoJingleError("");
+    setAutoJingleBusy(true);
+    const result = await autoJingle({
+      product_name: productName.trim() || undefined,
+      details: details.trim() || undefined,
+      tone,
+      seconds,
+    });
+    setAutoJingleBusy(false);
+    if (result.error || !result.data) {
+      setAutoJingleError(result.error ?? t.genericError);
+      return;
+    }
+    setAutoJingleId(result.data.id);
+    setAutoJingleStatus(result.data.status);
   }
 
   async function handleRequestJingle() {
@@ -533,6 +666,42 @@ export default function CampaignWizardPage() {
     setJingleStyle("");
   }
 
+  /** Seslendirme (3. adim) + secili jingle'i (4. adim) tek reklam dosyasinda
+   *  birlestirir. Ikisi de sart — eksikse Turkce uyari gosterip cikar. */
+  async function handleMixAd() {
+    setMixError("");
+    if (!voiceAssetId) {
+      setMixError(t.mixNeedVoiceError);
+      return;
+    }
+    if (!selectedJingleRequestId && !selectedJingleUrl) {
+      setMixError(t.mixNeedJingleError);
+      return;
+    }
+    setMixBusy(true);
+    const payload: {
+      voice_asset_id: number;
+      jingle_request_id?: number;
+      jingle_file?: string;
+      campaign_hint?: string;
+    } = { voice_asset_id: voiceAssetId };
+    if (selectedJingleRequestId) {
+      payload.jingle_request_id = selectedJingleRequestId;
+    } else if (selectedJingleUrl) {
+      payload.jingle_file = selectedJingleUrl;
+    }
+    if (productName.trim()) payload.campaign_hint = productName.trim();
+
+    const result = await mixAd(payload);
+    setMixBusy(false);
+    if (result.error || !result.data) {
+      setMixError(result.error ?? t.genericError);
+      return;
+    }
+    setMixAudioUrl(apiFileUrl(result.data.file_url));
+    setMixAssetId(result.data.asset.id);
+  }
+
   async function handleSubmitCampaign(e: FormEvent) {
     e.preventDefault();
     if (submitBusy) return;
@@ -552,7 +721,9 @@ export default function CampaignWizardPage() {
       dayparts: effectiveDayparts(),
       weeks: effectiveWeeks(),
       budget_try: Number(budget) || 0,
-      audio_url: audioUrl ?? undefined,
+      // Birlestirilmis reklam varsa (muzik + ses) o gonderilir — radyoya
+      // yayinlanacak hazir spot budur; yoksa sadece seslendirmeye duser.
+      audio_url: mixAudioUrl ?? audioUrl ?? undefined,
       jingle_url: selectedJingleUrl ?? undefined,
     });
     setSubmitBusy(false);
@@ -612,8 +783,18 @@ export default function CampaignWizardPage() {
     setVoices(null);
     setSelectedVoiceId(null);
     setAudioUrl(null);
+    setVoiceAssetId(null);
     setJinglesLoaded(false);
     setSelectedJingleUrl(null);
+    setSelectedJingleRequestId(null);
+    setAutoJingleBusy(false);
+    setAutoJingleError("");
+    setAutoJingleId(null);
+    setAutoJingleStatus(null);
+    setMixBusy(false);
+    setMixError("");
+    setMixAudioUrl(null);
+    setMixAssetId(null);
     setBuyerName("");
     setBuyerEmail("");
     setCampaign(null);
@@ -953,6 +1134,40 @@ export default function CampaignWizardPage() {
         <div className={`nb-card ${styles.panel}`}>
           <h2 className="nb-h">{t.jingleStepTitle}</h2>
 
+          <h3 className={styles.subheading}>{t.autoJingleTitle}</h3>
+          <p className={styles.note}>{t.autoJingleNote}</p>
+          <button
+            type="button"
+            className="nb-btn nb-btn--purple"
+            onClick={handleAutoJingle}
+            disabled={autoJingleBusy || autoJingleStatus === "generating"}
+          >
+            {autoJingleBusy || autoJingleStatus === "generating"
+              ? t.autoJingleBusy
+              : t.autoJingleBtn}
+          </button>
+          {(autoJingleStatus === "generating" ||
+            autoJingleStatus === "queued") && (
+            <div className={styles.note}>{t.autoJingleGeneratingMsg}</div>
+          )}
+          {autoJingleError && (
+            <div className={styles.error}>{autoJingleError}</div>
+          )}
+          {autoJingleStatus === "ready" && autoJingleId !== null && (
+            <div className={styles.audioBox}>
+              <span>{t.autoJingleReadyLabel}</span>
+              <audio
+                controls
+                src={jingleFileUrl(autoJingleId)}
+                className={styles.audioPlayer}
+              />
+            </div>
+          )}
+
+          <p className={styles.note} style={{ textAlign: "center" }}>
+            {t.orDivider}
+          </p>
+
           <h3 className={styles.subheading}>{t.jingleLibraryTitle}</h3>
           {jingleLibrary.length === 0 ? (
             <p className={styles.note}>{t.jingleLibraryEmpty}</p>
@@ -1045,6 +1260,57 @@ export default function CampaignWizardPage() {
 
       {!campaign && step === 5 && (
         <div className={`nb-card ${styles.panel}`}>
+          <h2 className="nb-h">{t.mixStepTitle}</h2>
+          <p className={styles.note}>{t.mixStepDesc}</p>
+
+          {!voiceAssetId && (
+            <div className={styles.note}>{t.mixNeedVoiceError}</div>
+          )}
+          {voiceAssetId && !selectedJingleRequestId && !selectedJingleUrl && (
+            <div className={styles.note}>{t.mixNeedJingleError}</div>
+          )}
+
+          <button
+            type="button"
+            className="nb-btn nb-btn--purple"
+            onClick={handleMixAd}
+            disabled={
+              mixBusy ||
+              !voiceAssetId ||
+              (!selectedJingleRequestId && !selectedJingleUrl)
+            }
+          >
+            {mixBusy ? t.mixBusy : t.mixBtn}
+          </button>
+          {mixError && <div className={styles.error}>{mixError}</div>}
+
+          {mixAudioUrl && (
+            <div className={styles.audioBox}>
+              <span>{t.mixReadyLabel}</span>
+              <audio controls src={mixAudioUrl} className={styles.audioPlayer} />
+              <a
+                href={mixAudioUrl}
+                download
+                className="nb-btn nb-btn--outline"
+              >
+                {t.mixDownloadBtn}
+              </a>
+            </div>
+          )}
+
+          <div className={styles.navRow}>
+            <button type="button" className="nb-btn nb-btn--outline" onClick={() => setStep(4)}>
+              {t.backBtn}
+            </button>
+            <button type="button" className="nb-btn" onClick={() => setStep(6)}>
+              {mixAudioUrl ? t.nextBtn : t.skipBtn}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!campaign && step === 6 && (
+        <div className={`nb-card ${styles.panel}`}>
           <h2 className="nb-h">{t.summaryTitle}</h2>
           <div className={styles.summaryBox}>
             <div className={styles.summaryRow}>
@@ -1082,6 +1348,10 @@ export default function CampaignWizardPage() {
               <strong>
                 {selectedJingleUrl ? t.summaryJingleYes : t.summaryJingleNo}
               </strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.summaryMix}</span>
+              <strong>{mixAudioUrl ? t.summaryMixYes : t.summaryMixNo}</strong>
             </div>
           </div>
 
@@ -1130,7 +1400,7 @@ export default function CampaignWizardPage() {
               <button
                 type="button"
                 className="nb-btn nb-btn--outline"
-                onClick={() => setStep(4)}
+                onClick={() => setStep(5)}
               >
                 {t.backBtn}
               </button>

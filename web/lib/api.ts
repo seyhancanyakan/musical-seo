@@ -1555,3 +1555,66 @@ export type FingerprintDetection = {
 /** O siparisin zaman damgali tespit loglari — sipariş kanıt paneli. */
 export const getCampaignProof = (orderId: number) =>
   j<FingerprintDetection[]>(`/public/campaigns-proof/${orderId}`);
+
+/* --- AI otomatik jingle (Suno) + reklami birlestirme (mix) --------------------- */
+
+/** Herhangi bir backend-relatif yolu (or. '/spot-file/12') tam URL'e cevirir —
+ *  sayfalar API sabitine dogrudan erisemedigi icin oynatma/indirme linkleri
+ *  bu yardimciyi kullanir. */
+export function apiFileUrl(path: string): string {
+  return `${API}${path}`;
+}
+
+export type AutoJingle = {
+  id: number;
+  status: "generating" | "queued" | "ready" | "failed";
+  brief: string;
+  task_id: string | null;
+  file_path: string | null;
+  duration?: number | null;
+  error?: string | null;
+  file_url?: string | null;
+};
+
+/** Suno ile otomatik jingle uretimini baslatir (kuyruga alip hemen doner —
+ *  jingle_requests satiri). Sonuc pollJingle ile izlenir. Bakiye bitmesi gibi
+ *  hatalar (or. 402) jd.error alaninda Turkce gorunur olur. */
+export const autoJingle = (payload: {
+  product_name?: string;
+  details?: string;
+  tone?: string;
+  seconds?: number;
+  brief?: string;
+  style?: string;
+  instrumental?: boolean;
+}) =>
+  jd<AutoJingle>(`/public/spot/jingle/auto`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+/** Otomatik jingle durumunu yoklar — 'ready' olunca file_url alani dolar. */
+export const pollJingle = (id: number) => jd<AutoJingle>(`/public/spot/jingle/${id}`);
+
+/** Otomatik/hazir jingle dosyasinin oynatma/indirme URL'i. */
+export const jingleFileUrl = (id: number) => apiFileUrl(`/spot-jingle-file/${id}`);
+
+export type MixResult = {
+  file_url: string;
+  asset: { id: number; kind: "mix"; duration?: number | null };
+};
+
+/** Seslendirme + jingle'i tek reklam spotunda birlestirir (ffmpeg tarafinda
+ *  calisir). jingle_request_id (auto/hazir talep) VEYA jingle_file (kutuphane
+ *  dosya yolu) verilir — ikisi birden gerekmez. Hata (or. ffmpeg/dosya) jd ile
+ *  gorunur olur. */
+export const mixAd = (payload: {
+  voice_asset_id: number;
+  jingle_request_id?: number;
+  jingle_file?: string;
+  campaign_hint?: string;
+}) =>
+  jd<MixResult>(`/public/spot/mix`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
