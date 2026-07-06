@@ -54,6 +54,7 @@ const T = {
     commissionNote: "%18 komisyon dahil",
     successMsg: "Talebin radyoya iletildi — onay sonrası ödeme bilgisi e-postana gelir",
     nameRequiredError: "Ad ve e-posta zorunlu.",
+    wizardCta: "🚀 Kampanya Başlat — şehrini seç, AI spotunu üret",
   },
   en: {
     logo: "MuzikSEO",
@@ -92,6 +93,7 @@ const T = {
     commissionNote: "18% commission included",
     successMsg: "Your request has been sent to the station — payment details arrive by email after approval",
     nameRequiredError: "Name and email are required.",
+    wizardCta: "🚀 Start a Campaign — pick your city, generate your AI spot",
   },
 } as const;
 
@@ -185,6 +187,10 @@ export default function RadioAdsCatalogPage() {
 
       <h1 className="nb-h">{t.heading}</h1>
       <p className={styles.intro}>{t.intro}</p>
+
+      <Link href="/reklam/kampanya" className="nb-btn nb-btn--purple">
+        {t.wizardCta}
+      </Link>
 
       <div className={styles.filters}>
         <select

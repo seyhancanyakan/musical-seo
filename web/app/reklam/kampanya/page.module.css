@@ -1,0 +1,423 @@
+/* Radyo kampanya sihirbazi — 5 adimli public self-servis akis (mor-mavi neo-brutal) */
+
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--purple);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.intro {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  max-width: 680px;
+}
+
+/* --- Adim gostergesi ---------------------------------------------------- */
+
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 8px 12px;
+  opacity: 0.5;
+}
+
+.stepItemActive {
+  opacity: 1;
+  background: var(--lightblue);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+.stepItemDone {
+  opacity: 1;
+  background: var(--green);
+}
+
+.stepNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ink);
+  background: #fff;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.stepLabel {
+  font-weight: 800;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+/* --- Panel + alan gruplari ------------------------------------------------ */
+
+.panel {
+  padding: 26px 26px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.subheading {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 15px;
+  margin-top: 6px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.rowFields {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.rowFields > * {
+  flex: 1;
+  min-width: 200px;
+}
+
+.textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.scriptTextarea {
+  min-height: 140px;
+  resize: vertical;
+  font-weight: 600;
+}
+
+.note {
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+  line-height: 1.5;
+}
+
+/* --- Cip secimleri (kusaklar, sure, ton) ---------------------------------- */
+
+.chipRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  border: 2px solid var(--ink);
+  background: #fff;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.chipActive {
+  background: var(--blue);
+  color: #fff;
+}
+
+/* --- Paket kartlari --------------------------------------------------------- */
+
+.packageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.packageCard {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.packageCardActive {
+  outline: 3px solid var(--green);
+}
+
+.packageLabel {
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.packageStats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.packageTotal {
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.packageTotal span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #555;
+  margin-left: 4px;
+}
+
+.packageEmpty {
+  font-size: 12px;
+  font-weight: 700;
+  color: #777;
+}
+
+.customOptionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.customActive {
+  background: var(--green) !important;
+  color: var(--ink) !important;
+}
+
+.customOptionNote {
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+}
+
+/* --- Ses / jingle kartlari --------------------------------------------------- */
+
+.voiceGrid,
+.jingleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.voiceCard,
+.jingleCard {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.voiceName,
+.jingleName {
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.audioBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.audioPlayer {
+  width: 100%;
+}
+
+/* --- Ozet ---------------------------------------------------------------- */
+
+.summaryBox {
+  border: 2px solid var(--ink);
+  background: var(--lightblue);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  flex-wrap: wrap;
+}
+
+.scriptPreview {
+  border: 2px solid var(--ink);
+  background: #fff;
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.totalBox {
+  border: 2px solid var(--ink);
+  background: var(--lightblue);
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.commissionNote {
+  font-size: 11px;
+  font-weight: 700;
+  color: #444;
+}
+
+/* --- Navigasyon + hata/basari kutulari -------------------------------------- */
+
+.navRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.error {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--red);
+  background: #fff;
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.successBox {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--green);
+  background: #fff;
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* --- Takip: siparis kirilimi + kanit paneli --------------------------------- */
+
+.ordersBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.orderRow {
+  border: 2px solid var(--ink);
+  background: #fff;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.orderMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.orderCity {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+}
+
+.proofPanel {
+  border-top: 2px dashed var(--ink);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.proofItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.reportBox {
+  border: 2px solid var(--ink);
+  background: #fff;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perStationRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 700;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 6px;
+}
+
+@media (max-width: 640px) {
+  .rowFields {
+    flex-direction: column;
+  }
+  .rowFields > * {
+    min-width: 0;
+  }
+}

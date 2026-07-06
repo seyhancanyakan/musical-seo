@@ -1,0 +1,1264 @@
+"use client";
+
+import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
+import {
+  suggestAdPackages,
+  createAdCampaign,
+  getAdCampaign,
+  getAdCampaignReport,
+  generateSpotScript,
+  listSpotVoices,
+  synthesizeSpotVoice,
+  requestJingle,
+  listJingles,
+  getCampaignProof,
+  type AdPackage,
+  type AdCampaign,
+  type AdCampaignOrderBreakdown,
+  type AdCampaignReport,
+  type SpotVoice,
+  type JingleLibraryItem,
+  type JingleRequest,
+  type FingerprintDetection,
+} from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
+import styles from "./page.module.css";
+
+type Daypart = "sabah" | "gunduz" | "drive" | "aksam" | "gece";
+type BuyerKind = "artist" | "business";
+type PackageKey = "opening" | "weekend" | "monthly" | "custom";
+
+/** Backend enum sirasi ile ayni (bkz. web/app/reklam/page.tsx). */
+const DAYPARTS: Daypart[] = ["sabah", "gunduz", "drive", "aksam", "gece"];
+const SECONDS_OPTIONS = [15, 20, 30] as const;
+const TONE_OPTIONS = ["enerjik", "samimi", "profesyonel", "eglenceli"] as const;
+
+const T = {
+  tr: {
+    logo: "MuzikSEO",
+    heading: "Kampanya Sihirbazı",
+    intro:
+      "5 adımda kendi radyo reklam kampanyanı kur: hedefini seç, spotunu AI ile yaz, istersen seslendir ve jingle ekle, sonra tek onayla yayına al.",
+    steps: ["Hedef", "Spot Metni", "Seslendirme", "Jingle", "Özet + Onay"],
+    // --- Adim 1 ---
+    cityLabel: "Şehir (opsiyonel — boş bırakırsan tüm şehirler)",
+    cityPlaceholder: "Örn. İstanbul",
+    daypartsLabel: "Kuşaklar",
+    daypartLabels: {
+      sabah: "Sabah",
+      gunduz: "Gündüz",
+      drive: "Drive-Time",
+      aksam: "Akşam",
+      gece: "Gece",
+    } as Record<Daypart, string>,
+    weeksLabel: "Hafta sayısı (1-12)",
+    budgetLabel: "Bütçe (TL)",
+    budgetPlaceholder: "Örn. 5000",
+    budgetRequiredError: "Önce pozitif bir bütçe gir",
+    suggestBtn: "Paketleri Gör",
+    suggestBusy: "Paketler hazırlanıyor...",
+    packageLabels: {
+      opening: "Açılış Paketi",
+      weekend: "Hafta Sonu Kampanyası",
+      monthly: "1 Aylık Bilinirlik",
+    } as Record<"opening" | "weekend" | "monthly", string>,
+    packageStations: "istasyon",
+    packageWeeklySpots: "haftalık tahmini spot",
+    packageTotal: "toplam",
+    packageEmpty: "Bu filtrelerle eşleşen ilan yok.",
+    selectBtn: "Bu Paketi Seç",
+    selectedBtn: "Seçildi",
+    customOption: "Özel: filtrelerimle devam et",
+    customOptionNote: "Girdiğin hafta sayısı ve kuşaklarla devam eder.",
+    // --- Adim 2 ---
+    productNameLabel: "Ürün / Sanatçı adı",
+    productNamePlaceholder: "Örn. Yeni albüm 'Gece Yarısı'",
+    detailsLabel: "Detaylar",
+    detailsPlaceholder: "Ürünün/etkinliğin öne çıkan özellikleri, tarih, yer...",
+    secondsLabel: "Süre",
+    toneLabel: "Ton",
+    toneLabels: {
+      enerjik: "Enerjik",
+      samimi: "Samimi",
+      profesyonel: "Profesyonel",
+      eglenceli: "Eğlenceli",
+    } as Record<(typeof TONE_OPTIONS)[number], string>,
+    generateBtn: "AI ile Metin Üret",
+    generateBusy: "Üretiliyor...",
+    productNameRequiredError: "Önce ürün/sanatçı adını gir",
+    scriptEditableLabel: "Spot metni (düzenlenebilir)",
+    scriptTemplateNote:
+      "ANTHROPIC_API_KEY tanımlı değil — şablon metin üretildi (yine de kullanılabilir).",
+    kuponNote:
+      "Metindeki {KUPON} yer tutucusu — kampanya onaylandığında gerçek kupon koduyla değişir.",
+    scriptRequiredError: "Devam etmek için bir spot metni gerekli",
+    // --- Adim 3 ---
+    voiceStepTitle: "Seslendirme (opsiyonel)",
+    voiceStepNote:
+      "Bu adımı atlayabilirsin — spot metnini radyo kendi sunucusuyla da okuyabilir.",
+    voicesLoading: "Sesler yükleniyor...",
+    voiceBtn: "Seslendir",
+    voiceBusy: "Seslendiriliyor...",
+    audioReadyLabel: "Hazır önizleme:",
+    skipBtn: "Bu Adımı Atla",
+    // --- Adim 4 ---
+    jingleStepTitle: "Jingle (opsiyonel)",
+    jingleLibraryTitle: "Hazır Jingle Kütüphanesi",
+    jingleLibraryEmpty: "Şu an hazır jingle yok.",
+    jingleReadyTitle: "Hazırlanan özel jingle talepleri",
+    selectJingleBtn: "Bu Jingle'ı Seç",
+    selectedJingleBtn: "Seçildi",
+    customJingleTitle: "Özel Jingle İste",
+    briefLabel: "Brief",
+    briefPlaceholder: "Marka/ürün, mesaj, istenen atmosfer...",
+    styleLabel: "Stil (opsiyonel)",
+    stylePlaceholder: "Örn. akustik, elektronik, epik...",
+    requestBtn: "Jingle Talep Et",
+    requestBusy: "Gönderiliyor...",
+    briefRequiredError: "Brief boş olamaz",
+    jingleQueuedMsg:
+      "Talebin kuyruğa alındı, hazırlanınca kampanyana bağlanır.",
+    // --- Adim 5 ---
+    summaryTitle: "Özet",
+    summaryCity: "Şehir",
+    summaryCityAll: "Tüm şehirler",
+    summaryDayparts: "Kuşaklar",
+    summaryDaypartsAll: "Tüm kuşaklar",
+    summaryWeeks: "Hafta",
+    summaryBudget: "Bütçe",
+    summaryProduct: "Ürün/Sanatçı",
+    summaryScript: "Spot metni",
+    summaryVoice: "Seslendirme",
+    summaryVoiceYes: "Hazır (önizleme mevcut)",
+    summaryVoiceNo: "Yok — radyo kendi sunucusuyla okuyacak",
+    summaryJingle: "Jingle",
+    summaryJingleYes: "Seçildi",
+    summaryJingleNo: "Yok",
+    couponNote:
+      "Kampanya onaylandığında benzersiz bir kupon kodu oluşturulur ve spot metnine eklenir.",
+    commissionNote: "Toplam bedele %18 MüzikSEO komisyonu dahildir.",
+    buyerNameLabel: "Adın / Şirket adın",
+    buyerNamePlaceholder: "Ad Soyad veya şirket adı",
+    buyerEmailLabel: "E-posta",
+    buyerKindLabel: "Alıcı türü",
+    buyerKindLabels: { artist: "Sanatçı", business: "İşletme" } as Record<
+      BuyerKind,
+      string
+    >,
+    buyerRequiredError: "Ad ve e-posta zorunlu",
+    submitBtn: "Kampanyayı Başlat",
+    submitBusy: "Kampanya oluşturuluyor...",
+    backBtn: "Geri",
+    nextBtn: "İleri",
+    genericError: "Sunucuya ulaşılamadı, tekrar dene.",
+    // --- Basari + takip ---
+    successHeading: "Kampanya oluşturuldu",
+    campaignNoLabel: "Kampanya No",
+    couponLabel: "Kupon Kodu",
+    totalLabel: "Toplam",
+    trackingTitle: "Kampanyanı Takip Et",
+    trackEmailLabel: "Kampanyayı oluştururken kullandığın e-posta",
+    checkStatusBtn: "Durumu Sorgula",
+    checkBusy: "Sorgulanıyor...",
+    ordersTitle: "Sipariş Kırılımı",
+    orderStatusLabels: {
+      pending: "Bekliyor",
+      accepted: "Kabul Edildi",
+      rejected: "Reddedildi",
+      paid: "Ödendi",
+      airing: "Yayında",
+    } as Record<AdCampaignOrderBreakdown["status"], string>,
+    reportTitle: "Denetim Raporu",
+    plannedSpotsLabel: "Planlanan toplam spot",
+    verifiedPlaysLabel: "Teyitli yayın",
+    perStationTitle: "İstasyon Kırılımı",
+    proofBtn: "Kanıt Loglarını Göster",
+    proofHideBtn: "Gizle",
+    proofLoading: "Kanıt logları yükleniyor...",
+    proofEmpty: "Henüz bir tespit kaydı yok.",
+    proofScoreLabel: "eşleşme skoru",
+    newCampaignBtn: "Yeni Kampanya Başlat",
+  },
+  en: {
+    logo: "MuzikSEO",
+    heading: "Campaign Wizard",
+    intro:
+      "Set up your own radio ad campaign in 5 steps: pick a target, write your spot with AI, optionally add voice + jingle, then confirm once to go live.",
+    steps: ["Target", "Spot Script", "Voice", "Jingle", "Summary + Confirm"],
+    cityLabel: "City (optional — leave blank for all cities)",
+    cityPlaceholder: "e.g. Istanbul",
+    daypartsLabel: "Dayparts",
+    daypartLabels: {
+      sabah: "Morning",
+      gunduz: "Daytime",
+      drive: "Drive-Time",
+      aksam: "Evening",
+      gece: "Night",
+    } as Record<Daypart, string>,
+    weeksLabel: "Number of weeks (1-12)",
+    budgetLabel: "Budget (TRY)",
+    budgetPlaceholder: "e.g. 5000",
+    budgetRequiredError: "Enter a positive budget first",
+    suggestBtn: "See Packages",
+    suggestBusy: "Preparing packages...",
+    packageLabels: {
+      opening: "Opening Package",
+      weekend: "Weekend Campaign",
+      monthly: "1-Month Awareness",
+    } as Record<"opening" | "weekend" | "monthly", string>,
+    packageStations: "stations",
+    packageWeeklySpots: "est. weekly spots",
+    packageTotal: "total",
+    packageEmpty: "No listings match these filters.",
+    selectBtn: "Select This Package",
+    selectedBtn: "Selected",
+    customOption: "Custom: continue with my filters",
+    customOptionNote: "Continues with the weeks and dayparts you entered.",
+    productNameLabel: "Product / Artist name",
+    productNamePlaceholder: "e.g. New album 'Midnight'",
+    detailsLabel: "Details",
+    detailsPlaceholder: "Key features, date, venue...",
+    secondsLabel: "Duration",
+    toneLabel: "Tone",
+    toneLabels: {
+      enerjik: "Energetic",
+      samimi: "Warm",
+      profesyonel: "Professional",
+      eglenceli: "Playful",
+    } as Record<(typeof TONE_OPTIONS)[number], string>,
+    generateBtn: "Generate with AI",
+    generateBusy: "Generating...",
+    productNameRequiredError: "Enter the product/artist name first",
+    scriptEditableLabel: "Spot script (editable)",
+    scriptTemplateNote:
+      "ANTHROPIC_API_KEY is not set — a template script was generated (still usable).",
+    kuponNote:
+      "The {KUPON} placeholder in the text is replaced with the real coupon code once the campaign is confirmed.",
+    scriptRequiredError: "A spot script is required to continue",
+    voiceStepTitle: "Voice-over (optional)",
+    voiceStepNote:
+      "You can skip this step — the radio station's own presenter can read the script too.",
+    voicesLoading: "Loading voices...",
+    voiceBtn: "Synthesize",
+    voiceBusy: "Synthesizing...",
+    audioReadyLabel: "Preview ready:",
+    skipBtn: "Skip This Step",
+    jingleStepTitle: "Jingle (optional)",
+    jingleLibraryTitle: "Ready-Made Jingle Library",
+    jingleLibraryEmpty: "No jingles ready right now.",
+    jingleReadyTitle: "Custom jingle requests ready",
+    selectJingleBtn: "Select This Jingle",
+    selectedJingleBtn: "Selected",
+    customJingleTitle: "Request a Custom Jingle",
+    briefLabel: "Brief",
+    briefPlaceholder: "Brand/product, message, desired mood...",
+    styleLabel: "Style (optional)",
+    stylePlaceholder: "e.g. acoustic, electronic, epic...",
+    requestBtn: "Request Jingle",
+    requestBusy: "Sending...",
+    briefRequiredError: "Brief cannot be empty",
+    jingleQueuedMsg:
+      "Your request has been queued — it will be linked to your campaign once ready.",
+    summaryTitle: "Summary",
+    summaryCity: "City",
+    summaryCityAll: "All cities",
+    summaryDayparts: "Dayparts",
+    summaryDaypartsAll: "All dayparts",
+    summaryWeeks: "Weeks",
+    summaryBudget: "Budget",
+    summaryProduct: "Product/Artist",
+    summaryScript: "Spot script",
+    summaryVoice: "Voice-over",
+    summaryVoiceYes: "Ready (preview available)",
+    summaryVoiceNo: "None — the station will read it live",
+    summaryJingle: "Jingle",
+    summaryJingleYes: "Selected",
+    summaryJingleNo: "None",
+    couponNote:
+      "A unique coupon code is generated once the campaign is confirmed and added to the spot script.",
+    commissionNote: "The total includes an 18% MuzikSEO commission.",
+    buyerNameLabel: "Your name / Company",
+    buyerNamePlaceholder: "Full name or company name",
+    buyerEmailLabel: "Email",
+    buyerKindLabel: "Buyer type",
+    buyerKindLabels: { artist: "Artist", business: "Business" } as Record<
+      BuyerKind,
+      string
+    >,
+    buyerRequiredError: "Name and email are required",
+    submitBtn: "Start Campaign",
+    submitBusy: "Creating campaign...",
+    backBtn: "Back",
+    nextBtn: "Next",
+    genericError: "Could not reach the server, try again.",
+    successHeading: "Campaign created",
+    campaignNoLabel: "Campaign No",
+    couponLabel: "Coupon Code",
+    totalLabel: "Total",
+    trackingTitle: "Track Your Campaign",
+    trackEmailLabel: "The email you used to create the campaign",
+    checkStatusBtn: "Check Status",
+    checkBusy: "Checking...",
+    ordersTitle: "Order Breakdown",
+    orderStatusLabels: {
+      pending: "Pending",
+      accepted: "Accepted",
+      rejected: "Rejected",
+      paid: "Paid",
+      airing: "Airing",
+    } as Record<AdCampaignOrderBreakdown["status"], string>,
+    reportTitle: "Audit Report",
+    plannedSpotsLabel: "Total planned spots",
+    verifiedPlaysLabel: "Verified plays",
+    perStationTitle: "Per-Station Breakdown",
+    proofBtn: "Show Proof Logs",
+    proofHideBtn: "Hide",
+    proofLoading: "Loading proof logs...",
+    proofEmpty: "No detections recorded yet.",
+    proofScoreLabel: "match score",
+    newCampaignBtn: "Start a New Campaign",
+  },
+} as const;
+
+function statusPillClass(status: AdCampaignOrderBreakdown["status"]): string {
+  if (status === "paid" || status === "airing") return "nb-pill nb-pill--green";
+  if (status === "rejected") return "nb-pill nb-pill--red";
+  if (status === "accepted") return "nb-pill nb-pill--purple";
+  return "nb-pill nb-pill--blue";
+}
+
+export default function CampaignWizardPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
+  const [step, setStep] = useState(1);
+
+  // --- Adim 1: hedef -----------------------------------------------------
+  const [city, setCity] = useState("");
+  const [dayparts, setDayparts] = useState<Daypart[]>([]);
+  const [weeks, setWeeks] = useState(2);
+  const [budget, setBudget] = useState("");
+  const [packages, setPackages] = useState<AdPackage[] | null>(null);
+  const [packagesBusy, setPackagesBusy] = useState(false);
+  const [packagesError, setPackagesError] = useState("");
+  const [selectedPackageKey, setSelectedPackageKey] =
+    useState<PackageKey | null>(null);
+
+  // --- Adim 2: spot metni --------------------------------------------------
+  const [productName, setProductName] = useState("");
+  const [details, setDetails] = useState("");
+  const [seconds, setSeconds] = useState<(typeof SECONDS_OPTIONS)[number]>(20);
+  const [tone, setTone] = useState<(typeof TONE_OPTIONS)[number]>("enerjik");
+  const [scriptBusy, setScriptBusy] = useState(false);
+  const [scriptError, setScriptError] = useState("");
+  const [scriptText, setScriptText] = useState("");
+  const [scriptSource, setScriptSource] = useState<string | null>(null);
+
+  // --- Adim 3: seslendirme (opsiyonel) -------------------------------------
+  const [voices, setVoices] = useState<SpotVoice[] | null>(null);
+  const [voicesLoading, setVoicesLoading] = useState(false);
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string | null>(null);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  // --- Adim 4: jingle (opsiyonel) -------------------------------------------
+  const [jingleLibrary, setJingleLibrary] = useState<JingleLibraryItem[]>([]);
+  const [readyJingles, setReadyJingles] = useState<JingleRequest[]>([]);
+  const [jinglesLoaded, setJinglesLoaded] = useState(false);
+  const [selectedJingleUrl, setSelectedJingleUrl] = useState<string | null>(
+    null
+  );
+  const [jingleBrief, setJingleBrief] = useState("");
+  const [jingleStyle, setJingleStyle] = useState("");
+  const [jingleBusy, setJingleBusy] = useState(false);
+  const [jingleMsg, setJingleMsg] = useState("");
+  const [jingleError, setJingleError] = useState("");
+
+  // --- Adim 5: ozet + onay --------------------------------------------------
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerEmail, setBuyerEmail] = useState("");
+  const [buyerKind, setBuyerKind] = useState<BuyerKind>("artist");
+  const [submitBusy, setSubmitBusy] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [campaign, setCampaign] = useState<AdCampaign | null>(null);
+
+  // --- Kampanya takibi (basari sonrasi) --------------------------------------
+  const [trackEmail, setTrackEmail] = useState("");
+  const [trackBusy, setTrackBusy] = useState(false);
+  const [trackError, setTrackError] = useState("");
+  const [orders, setOrders] = useState<AdCampaignOrderBreakdown[] | null>(
+    null
+  );
+  const [report, setReport] = useState<AdCampaignReport | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const [proofByOrder, setProofByOrder] = useState<
+    Record<number, FingerprintDetection[]>
+  >({});
+  const [proofBusy, setProofBusy] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (step === 3 && voices === null && !voicesLoading) {
+      setVoicesLoading(true);
+      listSpotVoices().then((v) => {
+        setVoices(v ?? []);
+        setVoicesLoading(false);
+      });
+    }
+  }, [step, voices, voicesLoading]);
+
+  useEffect(() => {
+    if (step === 4 && !jinglesLoaded) {
+      listJingles().then((res) => {
+        setJingleLibrary(res?.library ?? []);
+        setReadyJingles(res?.ready_requests ?? []);
+        setJinglesLoaded(true);
+      });
+    }
+  }, [step, jinglesLoaded]);
+
+  function toggleDaypart(d: Daypart) {
+    setDayparts((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]
+    );
+    setSelectedPackageKey(null);
+  }
+
+  function effectiveDayparts(): string[] {
+    if (selectedPackageKey === "weekend") return ["drive", "aksam"];
+    return dayparts;
+  }
+
+  function effectiveWeeks(): number {
+    if (selectedPackageKey === "opening" || selectedPackageKey === "weekend")
+      return 1;
+    if (selectedPackageKey === "monthly") return 4;
+    return weeks;
+  }
+
+  async function handleSuggestPackages() {
+    setPackagesError("");
+    const budgetNum = Number(budget);
+    if (!budgetNum || budgetNum <= 0) {
+      setPackagesError(t.budgetRequiredError);
+      return;
+    }
+    setPackagesBusy(true);
+    const result = await suggestAdPackages({
+      city: city.trim() || undefined,
+      budget_try: budgetNum,
+      dayparts: dayparts.length ? dayparts : undefined,
+    });
+    setPackagesBusy(false);
+    if (!result) {
+      setPackagesError(t.genericError);
+      return;
+    }
+    setPackages(result);
+    setSelectedPackageKey(null);
+  }
+
+  async function handleGenerateScript() {
+    setScriptError("");
+    if (!productName.trim()) {
+      setScriptError(t.productNameRequiredError);
+      return;
+    }
+    setScriptBusy(true);
+    const result = await generateSpotScript({
+      product_name: productName.trim(),
+      details: details.trim(),
+      seconds,
+      tone,
+    });
+    setScriptBusy(false);
+    if (result.error || !result.data) {
+      setScriptError(result.error ?? t.genericError);
+      return;
+    }
+    setScriptText(result.data.text);
+    setScriptSource(result.data.source);
+  }
+
+  async function handleSynthesize(voiceId: string) {
+    if (!scriptText.trim()) return;
+    setSelectedVoiceId(voiceId);
+    setVoiceError("");
+    setVoiceBusy(true);
+    const result = await synthesizeSpotVoice({
+      text: scriptText.trim(),
+      voice_id: voiceId,
+    });
+    setVoiceBusy(false);
+    if (result.error || !result.data) {
+      setVoiceError(result.error ?? t.genericError);
+      return;
+    }
+    setAudioUrl(result.data.full_url);
+  }
+
+  function selectLibraryJingle(item: JingleLibraryItem) {
+    setSelectedJingleUrl((prev) =>
+      prev === item.path ? null : item.path
+    );
+  }
+
+  function selectReadyJingle(item: JingleRequest) {
+    if (!item.file_path) return;
+    setSelectedJingleUrl((prev) =>
+      prev === item.file_path ? null : item.file_path
+    );
+  }
+
+  async function handleRequestJingle() {
+    setJingleError("");
+    setJingleMsg("");
+    if (!jingleBrief.trim()) {
+      setJingleError(t.briefRequiredError);
+      return;
+    }
+    setJingleBusy(true);
+    const result = await requestJingle({
+      brief: jingleBrief.trim(),
+      style: jingleStyle.trim() || undefined,
+    });
+    setJingleBusy(false);
+    if (result.error || !result.data) {
+      setJingleError(result.error ?? t.genericError);
+      return;
+    }
+    setJingleMsg(t.jingleQueuedMsg);
+    setJingleBrief("");
+    setJingleStyle("");
+  }
+
+  async function handleSubmitCampaign(e: FormEvent) {
+    e.preventDefault();
+    if (submitBusy) return;
+    setSubmitError("");
+    if (!buyerName.trim() || !buyerEmail.trim()) {
+      setSubmitError(t.buyerRequiredError);
+      return;
+    }
+    setSubmitBusy(true);
+    const result = await createAdCampaign({
+      buyer_name: buyerName.trim(),
+      buyer_email: buyerEmail.trim(),
+      buyer_kind: buyerKind,
+      product_name: productName.trim(),
+      spot_text: scriptText.trim(),
+      cities: city.trim() ? [city.trim()] : [],
+      dayparts: effectiveDayparts(),
+      weeks: effectiveWeeks(),
+      budget_try: Number(budget) || 0,
+      audio_url: audioUrl ?? undefined,
+      jingle_url: selectedJingleUrl ?? undefined,
+    });
+    setSubmitBusy(false);
+    if (result.error || !result.data) {
+      setSubmitError(result.error ?? t.genericError);
+      return;
+    }
+    setCampaign(result.data);
+    setTrackEmail(result.data.buyer_email);
+  }
+
+  async function handleCheckStatus() {
+    if (!campaign || !trackEmail.trim()) return;
+    setTrackError("");
+    setTrackBusy(true);
+    const statusResult = await getAdCampaign(campaign.id, trackEmail.trim());
+    if (statusResult.error || !statusResult.data) {
+      setTrackBusy(false);
+      setTrackError(statusResult.error ?? t.genericError);
+      return;
+    }
+    setOrders(statusResult.data.orders);
+    const reportResult = await getAdCampaignReport(
+      campaign.id,
+      trackEmail.trim()
+    );
+    setTrackBusy(false);
+    if (reportResult.data) setReport(reportResult.data);
+  }
+
+  async function handleToggleProof(orderId: number) {
+    if (expandedOrderId === orderId) {
+      setExpandedOrderId(null);
+      return;
+    }
+    setExpandedOrderId(orderId);
+    if (!proofByOrder[orderId]) {
+      setProofBusy(orderId);
+      const detections = await getCampaignProof(orderId);
+      setProofByOrder((prev) => ({ ...prev, [orderId]: detections ?? [] }));
+      setProofBusy(null);
+    }
+  }
+
+  function resetWizard() {
+    setStep(1);
+    setCity("");
+    setDayparts([]);
+    setWeeks(2);
+    setBudget("");
+    setPackages(null);
+    setSelectedPackageKey(null);
+    setProductName("");
+    setDetails("");
+    setScriptText("");
+    setScriptSource(null);
+    setVoices(null);
+    setSelectedVoiceId(null);
+    setAudioUrl(null);
+    setJinglesLoaded(false);
+    setSelectedJingleUrl(null);
+    setBuyerName("");
+    setBuyerEmail("");
+    setCampaign(null);
+    setOrders(null);
+    setReport(null);
+    setExpandedOrderId(null);
+    setProofByOrder({});
+  }
+
+  const canAdvanceStep1 = selectedPackageKey !== null;
+  const canAdvanceStep2 = scriptText.trim().length > 0;
+
+  return (
+    <div className={styles.wrap}>
+      <div className={styles.top}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link href="/" className={styles.logo}>
+            {t.logo}
+          </Link>
+          <LangToggle />
+        </div>
+      </div>
+
+      <h1 className="nb-h">{t.heading}</h1>
+      <p className={styles.intro}>{t.intro}</p>
+
+      {!campaign && (
+        <div className={styles.stepper}>
+          {t.steps.map((label, i) => {
+            const idx = i + 1;
+            const done = idx < step;
+            const active = idx === step;
+            return (
+              <div
+                key={label}
+                className={`${styles.stepItem} ${
+                  active ? styles.stepItemActive : ""
+                } ${done ? styles.stepItemDone : ""}`}
+              >
+                <span className={styles.stepNumber}>{idx}</span>
+                <span className={styles.stepLabel}>{label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {!campaign && step === 1 && (
+        <div className={`nb-card ${styles.panel}`}>
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.cityLabel}</label>
+            <input
+              className="nb-input"
+              placeholder={t.cityPlaceholder}
+              value={city}
+              onChange={(e) => {
+                setCity(e.target.value);
+                setSelectedPackageKey(null);
+              }}
+            />
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.daypartsLabel}</label>
+            <div className={styles.chipRow}>
+              {DAYPARTS.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={`${styles.chip} ${
+                    dayparts.includes(d) ? styles.chipActive : ""
+                  }`}
+                  onClick={() => toggleDaypart(d)}
+                >
+                  {t.daypartLabels[d]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.rowFields}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>{t.weeksLabel}</label>
+              <input
+                className="nb-input"
+                type="number"
+                min={1}
+                max={12}
+                value={weeks}
+                onChange={(e) => {
+                  setWeeks(Math.min(12, Math.max(1, Number(e.target.value) || 1)));
+                  setSelectedPackageKey(null);
+                }}
+              />
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>{t.budgetLabel}</label>
+              <input
+                className="nb-input"
+                type="number"
+                min={0}
+                placeholder={t.budgetPlaceholder}
+                value={budget}
+                onChange={(e) => {
+                  setBudget(e.target.value);
+                  setSelectedPackageKey(null);
+                }}
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="nb-btn"
+            onClick={handleSuggestPackages}
+            disabled={packagesBusy}
+          >
+            {packagesBusy ? t.suggestBusy : t.suggestBtn}
+          </button>
+          {packagesError && <div className={styles.error}>{packagesError}</div>}
+
+          {packages && (
+            <div className={styles.packageGrid}>
+              {packages.map((pkg) => (
+                <div
+                  key={pkg.key}
+                  className={`nb-card ${styles.packageCard} ${
+                    selectedPackageKey === pkg.key ? styles.packageCardActive : ""
+                  }`}
+                >
+                  <div className={styles.packageLabel}>
+                    {t.packageLabels[pkg.key]}
+                  </div>
+                  <div className={styles.packageStats}>
+                    <span className="nb-chip">
+                      {pkg.listings.length} {t.packageStations}
+                    </span>
+                    <span className="nb-chip">
+                      {pkg.est_weekly_spots} {t.packageWeeklySpots}
+                    </span>
+                  </div>
+                  <div className={styles.packageTotal}>
+                    {pkg.total_try} TL <span>{t.packageTotal}</span>
+                  </div>
+                  {pkg.listings.length === 0 ? (
+                    <div className={styles.packageEmpty}>{t.packageEmpty}</div>
+                  ) : (
+                    <button
+                      type="button"
+                      className={`nb-btn ${
+                        selectedPackageKey === pkg.key ? "nb-btn--green" : ""
+                      }`}
+                      onClick={() => setSelectedPackageKey(pkg.key)}
+                    >
+                      {selectedPackageKey === pkg.key ? t.selectedBtn : t.selectBtn}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {packages && (
+            <div className={styles.customOptionBox}>
+              <button
+                type="button"
+                className={`nb-btn nb-btn--outline ${
+                  selectedPackageKey === "custom" ? styles.customActive : ""
+                }`}
+                onClick={() => setSelectedPackageKey("custom")}
+              >
+                {selectedPackageKey === "custom" ? t.selectedBtn : t.customOption}
+              </button>
+              <p className={styles.customOptionNote}>{t.customOptionNote}</p>
+            </div>
+          )}
+
+          <div className={styles.navRow}>
+            <span />
+            <button
+              type="button"
+              className="nb-btn"
+              disabled={!canAdvanceStep1}
+              onClick={() => setStep(2)}
+            >
+              {t.nextBtn}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!campaign && step === 2 && (
+        <div className={`nb-card ${styles.panel}`}>
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.productNameLabel}</label>
+            <input
+              className="nb-input"
+              placeholder={t.productNamePlaceholder}
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+            />
+          </div>
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.detailsLabel}</label>
+            <textarea
+              className={`nb-input ${styles.textarea}`}
+              placeholder={t.detailsPlaceholder}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.rowFields}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>{t.secondsLabel}</label>
+              <div className={styles.chipRow}>
+                {SECONDS_OPTIONS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`${styles.chip} ${
+                      seconds === s ? styles.chipActive : ""
+                    }`}
+                    onClick={() => setSeconds(s)}
+                  >
+                    {s} sn
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>{t.toneLabel}</label>
+              <div className={styles.chipRow}>
+                {TONE_OPTIONS.map((tn) => (
+                  <button
+                    key={tn}
+                    type="button"
+                    className={`${styles.chip} ${
+                      tone === tn ? styles.chipActive : ""
+                    }`}
+                    onClick={() => setTone(tn)}
+                  >
+                    {t.toneLabels[tn]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="nb-btn nb-btn--purple"
+            onClick={handleGenerateScript}
+            disabled={scriptBusy}
+          >
+            {scriptBusy ? t.generateBusy : t.generateBtn}
+          </button>
+          {scriptError && <div className={styles.error}>{scriptError}</div>}
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.scriptEditableLabel}</label>
+            <textarea
+              className={`nb-input ${styles.scriptTextarea}`}
+              value={scriptText}
+              onChange={(e) => setScriptText(e.target.value)}
+            />
+            {scriptSource === "template" && (
+              <p className={styles.note}>{t.scriptTemplateNote}</p>
+            )}
+            <p className={styles.note}>{t.kuponNote}</p>
+          </div>
+
+          <div className={styles.navRow}>
+            <button type="button" className="nb-btn nb-btn--outline" onClick={() => setStep(1)}>
+              {t.backBtn}
+            </button>
+            <button
+              type="button"
+              className="nb-btn"
+              disabled={!canAdvanceStep2}
+              onClick={() => setStep(3)}
+              title={!canAdvanceStep2 ? t.scriptRequiredError : undefined}
+            >
+              {t.nextBtn}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!campaign && step === 3 && (
+        <div className={`nb-card ${styles.panel}`}>
+          <h2 className="nb-h">{t.voiceStepTitle}</h2>
+          <p className={styles.note}>{t.voiceStepNote}</p>
+
+          {voicesLoading && <div className={styles.note}>{t.voicesLoading}</div>}
+
+          <div className={styles.voiceGrid}>
+            {voices?.map((v) => (
+              <div key={v.voice_id} className={`nb-card ${styles.voiceCard}`}>
+                <div className={styles.voiceName}>{v.name}</div>
+                {v.category && <span className="nb-chip">{v.category}</span>}
+                <button
+                  type="button"
+                  className="nb-btn"
+                  disabled={voiceBusy && selectedVoiceId === v.voice_id}
+                  onClick={() => handleSynthesize(v.voice_id)}
+                >
+                  {voiceBusy && selectedVoiceId === v.voice_id
+                    ? t.voiceBusy
+                    : t.voiceBtn}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {voiceError && <div className={styles.error}>{voiceError}</div>}
+
+          {audioUrl && (
+            <div className={styles.audioBox}>
+              <span>{t.audioReadyLabel}</span>
+              <audio controls src={audioUrl} className={styles.audioPlayer} />
+            </div>
+          )}
+
+          <div className={styles.navRow}>
+            <button type="button" className="nb-btn nb-btn--outline" onClick={() => setStep(2)}>
+              {t.backBtn}
+            </button>
+            <button type="button" className="nb-btn" onClick={() => setStep(4)}>
+              {audioUrl ? t.nextBtn : t.skipBtn}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!campaign && step === 4 && (
+        <div className={`nb-card ${styles.panel}`}>
+          <h2 className="nb-h">{t.jingleStepTitle}</h2>
+
+          <h3 className={styles.subheading}>{t.jingleLibraryTitle}</h3>
+          {jingleLibrary.length === 0 ? (
+            <p className={styles.note}>{t.jingleLibraryEmpty}</p>
+          ) : (
+            <div className={styles.jingleGrid}>
+              {jingleLibrary.map((item) => (
+                <div key={item.path} className={`nb-card ${styles.jingleCard}`}>
+                  <div className={styles.jingleName}>{item.file_name}</div>
+                  <button
+                    type="button"
+                    className={`nb-btn ${
+                      selectedJingleUrl === item.path ? "nb-btn--green" : ""
+                    }`}
+                    onClick={() => selectLibraryJingle(item)}
+                  >
+                    {selectedJingleUrl === item.path
+                      ? t.selectedJingleBtn
+                      : t.selectJingleBtn}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {readyJingles.length > 0 && (
+            <>
+              <h3 className={styles.subheading}>{t.jingleReadyTitle}</h3>
+              <div className={styles.jingleGrid}>
+                {readyJingles.map((item) => (
+                  <div key={item.id} className={`nb-card ${styles.jingleCard}`}>
+                    <div className={styles.jingleName}>{item.brief}</div>
+                    {item.style && <span className="nb-chip">{item.style}</span>}
+                    <button
+                      type="button"
+                      className={`nb-btn ${
+                        selectedJingleUrl === item.file_path ? "nb-btn--green" : ""
+                      }`}
+                      onClick={() => selectReadyJingle(item)}
+                    >
+                      {selectedJingleUrl === item.file_path
+                        ? t.selectedJingleBtn
+                        : t.selectJingleBtn}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <h3 className={styles.subheading}>{t.customJingleTitle}</h3>
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.briefLabel}</label>
+            <textarea
+              className={`nb-input ${styles.textarea}`}
+              placeholder={t.briefPlaceholder}
+              value={jingleBrief}
+              onChange={(e) => setJingleBrief(e.target.value)}
+            />
+          </div>
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.styleLabel}</label>
+            <input
+              className="nb-input"
+              placeholder={t.stylePlaceholder}
+              value={jingleStyle}
+              onChange={(e) => setJingleStyle(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            className="nb-btn nb-btn--purple"
+            onClick={handleRequestJingle}
+            disabled={jingleBusy}
+          >
+            {jingleBusy ? t.requestBusy : t.requestBtn}
+          </button>
+          {jingleError && <div className={styles.error}>{jingleError}</div>}
+          {jingleMsg && <div className={styles.successBox}>{jingleMsg}</div>}
+
+          <div className={styles.navRow}>
+            <button type="button" className="nb-btn nb-btn--outline" onClick={() => setStep(3)}>
+              {t.backBtn}
+            </button>
+            <button type="button" className="nb-btn" onClick={() => setStep(5)}>
+              {selectedJingleUrl ? t.nextBtn : t.skipBtn}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!campaign && step === 5 && (
+        <div className={`nb-card ${styles.panel}`}>
+          <h2 className="nb-h">{t.summaryTitle}</h2>
+          <div className={styles.summaryBox}>
+            <div className={styles.summaryRow}>
+              <span>{t.summaryCity}</span>
+              <strong>{city.trim() || t.summaryCityAll}</strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.summaryDayparts}</span>
+              <strong>
+                {effectiveDayparts().length
+                  ? effectiveDayparts()
+                      .map((d) => t.daypartLabels[d as Daypart] ?? d)
+                      .join(", ")
+                  : t.summaryDaypartsAll}
+              </strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.summaryWeeks}</span>
+              <strong>{effectiveWeeks()}</strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.summaryBudget}</span>
+              <strong>{Number(budget) || 0} TL</strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.summaryProduct}</span>
+              <strong>{productName || "—"}</strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.summaryVoice}</span>
+              <strong>{audioUrl ? t.summaryVoiceYes : t.summaryVoiceNo}</strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.summaryJingle}</span>
+              <strong>
+                {selectedJingleUrl ? t.summaryJingleYes : t.summaryJingleNo}
+              </strong>
+            </div>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.summaryScript}</label>
+            <p className={styles.scriptPreview}>{scriptText}</p>
+          </div>
+
+          <form onSubmit={handleSubmitCampaign} className={styles.form}>
+            <input
+              className="nb-input"
+              placeholder={t.buyerNamePlaceholder}
+              value={buyerName}
+              onChange={(e) => setBuyerName(e.target.value)}
+              required
+            />
+            <input
+              className="nb-input"
+              type="email"
+              placeholder={t.buyerEmailLabel}
+              value={buyerEmail}
+              onChange={(e) => setBuyerEmail(e.target.value)}
+              required
+            />
+            <select
+              className="nb-input"
+              value={buyerKind}
+              onChange={(e) => setBuyerKind(e.target.value as BuyerKind)}
+              aria-label={t.buyerKindLabel}
+            >
+              <option value="artist">{t.buyerKindLabels.artist}</option>
+              <option value="business">{t.buyerKindLabels.business}</option>
+            </select>
+
+            <div className={styles.totalBox}>
+              <span>
+                {t.totalLabel}: <strong>{Number(budget) || 0} TL</strong>
+              </span>
+              <span className={styles.commissionNote}>{t.commissionNote}</span>
+            </div>
+            <p className={styles.note}>{t.couponNote}</p>
+
+            {submitError && <div className={styles.error}>{submitError}</div>}
+
+            <div className={styles.navRow}>
+              <button
+                type="button"
+                className="nb-btn nb-btn--outline"
+                onClick={() => setStep(4)}
+              >
+                {t.backBtn}
+              </button>
+              <button type="submit" className="nb-btn nb-btn--green" disabled={submitBusy}>
+                {submitBusy ? t.submitBusy : t.submitBtn}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {campaign && (
+        <div className={`nb-card ${styles.panel}`}>
+          <h2 className="nb-h">{t.successHeading}</h2>
+          <div className={styles.summaryBox}>
+            <div className={styles.summaryRow}>
+              <span>{t.campaignNoLabel}</span>
+              <strong>#{campaign.id}</strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.couponLabel}</span>
+              <strong>{campaign.coupon_code}</strong>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>{t.totalLabel}</span>
+              <strong>{campaign.total_try} TL</strong>
+            </div>
+          </div>
+
+          <h3 className={styles.subheading}>{t.trackingTitle}</h3>
+          <div className={styles.rowFields}>
+            <input
+              className="nb-input"
+              type="email"
+              placeholder={t.trackEmailLabel}
+              value={trackEmail}
+              onChange={(e) => setTrackEmail(e.target.value)}
+            />
+            <button
+              type="button"
+              className="nb-btn"
+              onClick={handleCheckStatus}
+              disabled={trackBusy || !trackEmail.trim()}
+            >
+              {trackBusy ? t.checkBusy : t.checkStatusBtn}
+            </button>
+          </div>
+          {trackError && <div className={styles.error}>{trackError}</div>}
+
+          {orders && orders.length > 0 && (
+            <div className={styles.ordersBox}>
+              <h3 className={styles.subheading}>{t.ordersTitle}</h3>
+              {orders.map((o) => (
+                <div key={o.order_id} className={styles.orderRow}>
+                  <div className={styles.orderMain}>
+                    <strong>{o.station}</strong>
+                    {o.city && <span className={styles.orderCity}>{o.city}</span>}
+                    <span className={statusPillClass(o.status)}>
+                      {t.orderStatusLabels[o.status]}
+                    </span>
+                    <span className="nb-chip">
+                      {o.verified_plays} {t.verifiedPlaysLabel.toLowerCase()}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="nb-btn nb-btn--outline"
+                    onClick={() => handleToggleProof(o.order_id)}
+                  >
+                    {expandedOrderId === o.order_id ? t.proofHideBtn : t.proofBtn}
+                  </button>
+                  {expandedOrderId === o.order_id && (
+                    <div className={styles.proofPanel}>
+                      {proofBusy === o.order_id && (
+                        <div className={styles.note}>{t.proofLoading}</div>
+                      )}
+                      {proofBusy !== o.order_id &&
+                        (proofByOrder[o.order_id]?.length ?? 0) === 0 && (
+                          <div className={styles.note}>{t.proofEmpty}</div>
+                        )}
+                      {proofBusy !== o.order_id &&
+                        proofByOrder[o.order_id]?.map((d) => (
+                          <div key={d.id} className={styles.proofItem}>
+                            <span>{d.detected_at}</span>
+                            <span>
+                              {t.proofScoreLabel}: {(d.confidence * 100).toFixed(0)}%
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {report && (
+            <div className={styles.reportBox}>
+              <h3 className={styles.subheading}>{t.reportTitle}</h3>
+              <div className={styles.summaryRow}>
+                <span>{t.plannedSpotsLabel}</span>
+                <strong>{report.planned_spots}</strong>
+              </div>
+              <div className={styles.summaryRow}>
+                <span>{t.verifiedPlaysLabel}</span>
+                <strong>{report.verified_plays}</strong>
+              </div>
+              <h4 className={styles.subheading}>{t.perStationTitle}</h4>
+              {report.per_station.map((s, i) => (
+                <div key={`${s.station}-${i}`} className={styles.perStationRow}>
+                  <span>
+                    {s.station}
+                    {s.city ? ` (${s.city})` : ""}
+                  </span>
+                  <span>{s.verified_plays}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className={styles.navRow}>
+            <span />
+            <button type="button" className="nb-btn nb-btn--outline" onClick={resetWizard}>
+              {t.newCampaignBtn}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

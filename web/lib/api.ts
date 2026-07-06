@@ -1339,3 +1339,219 @@ export const createFeedbackDigest = () =>
 /** En son uretilmis sentez raporu; hic yoksa null. */
 export const latestFeedbackDigest = () =>
   j<FeedbackDigest>(`/me/feedback-digest`, { headers: authHeaders() });
+
+/* --- Radyo kampanya sihirbazi: paket onerici + fan-out siparis + rapor ---------- */
+
+/** suggest_packages / create_campaign icindeki _fill_budget ciktisi (ham ilan
+ *  DTO'su radio_ad_listings satiridir — kampanya baglaminda alt kume alanlar). */
+export type AdPackageListing = {
+  id: number;
+  curator_id: number;
+  station_name: string;
+  city?: string | null;
+  slot_seconds: number;
+  daypart: "sabah" | "gunduz" | "drive" | "aksam" | "gece";
+  weekly_spots: number;
+  price_week_try: number;
+  description?: string;
+  status?: "active" | "paused";
+};
+
+export type AdPackage = {
+  key: "opening" | "weekend" | "monthly";
+  label: string;
+  listings: AdPackageListing[];
+  weeks: number;
+  total_try: number;
+  est_weekly_spots: number;
+};
+
+export const suggestAdPackages = (payload: {
+  city?: string;
+  budget_try?: number;
+  dayparts?: string[];
+}) =>
+  j<AdPackage[]>(`/public/campaigns/suggest`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export type AdCampaign = {
+  id: number;
+  created_at: string;
+  buyer_name: string;
+  buyer_email: string;
+  buyer_kind: "artist" | "business";
+  product_name: string;
+  spot_text: string;
+  audio_url: string | null;
+  jingle_url: string | null;
+  coupon_code: string;
+  cities: string; // virgulle ayrilmis (backend ",".join(...) ile yazar)
+  dayparts: string; // virgulle ayrilmis
+  weeks: number;
+  budget_try: number;
+  status: "draft" | "pending" | "active";
+  total_try: number;
+  commission_try: number;
+  contract_text: string | null;
+};
+
+/** Fan-out kampanya olustur — eslesen aktif ilanlara butce dolana kadar
+ *  otomatik siparis verir. Hata (or. "bütçeye uyan ilan bulunamadı") gorunur
+ *  olsun diye jd kullanilir. */
+export const createAdCampaign = (payload: {
+  buyer_name: string;
+  buyer_email: string;
+  buyer_kind: "artist" | "business";
+  product_name: string;
+  spot_text: string;
+  cities?: string[];
+  dayparts?: string[];
+  weeks: number;
+  budget_try: number;
+  audio_url?: string;
+  jingle_url?: string;
+}) =>
+  jd<AdCampaign>(`/public/campaigns`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export type AdCampaignOrderBreakdown = {
+  order_id: number;
+  station: string;
+  city: string | null;
+  status: "pending" | "accepted" | "rejected" | "paid" | "airing";
+  verified_plays: number;
+  price_try: number;
+  commission_try: number;
+};
+
+/** Alici kendi e-postasiyla kampanya durumunu gorur (yanlis e-posta/yok ayni
+ *  "Kampanya bulunamadı" hatasini dondurur — varlik maskesi). */
+export const getAdCampaign = (id: number, email: string) =>
+  jd<{ campaign: AdCampaign; orders: AdCampaignOrderBreakdown[] }>(
+    `/public/campaigns/${id}?email=${encodeURIComponent(email)}`
+  );
+
+export type AdCampaignReport = {
+  planned_spots: number;
+  verified_plays: number;
+  per_station: {
+    station: string;
+    city: string | null;
+    status: string;
+    verified_plays: number;
+    son_yayinlar: number;
+  }[];
+  coupon_code: string;
+};
+
+export const getAdCampaignReport = (id: number, email: string) =>
+  jd<AdCampaignReport>(
+    `/public/campaigns/${id}/report?email=${encodeURIComponent(email)}`
+  );
+
+/* --- AI reklam spotu: Claude metin + ElevenLabs seslendirme + jingle kuyrugu --- */
+
+export type SpotScript = {
+  id: number;
+  text: string;
+  word_count: number;
+  seconds: number;
+  source: "claude" | "template";
+  notes: string;
+};
+
+/** ANTHROPIC_API_KEY yoksa backend sablon metne duser (source: 'template',
+ *  notes'ta aciklanir) — hata degil, bilgilendirme. */
+export const generateSpotScript = (payload: {
+  product_name: string;
+  details?: string;
+  seconds?: number;
+  tone?: string;
+}) =>
+  jd<SpotScript>(`/public/spot/script`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export type SpotVoice = {
+  voice_id: string;
+  name: string;
+  category: string | null;
+};
+
+/** ELEVENLABS_API_KEY yoksa backend 3 sabit ornek ses doner (UI bozulmasin). */
+export const listSpotVoices = () => j<SpotVoice[]>(`/public/spot/voices`);
+
+export type SpotVoiceAsset = {
+  id: number;
+  created_at: string;
+  kind: "voice";
+  text: string | null;
+  file_path: string | null;
+  voice_id: string | null;
+  status: string;
+};
+
+/** Seslendirme uretir. Backend gorece yol doner (/spot-file/{id}); oynatma/
+ *  indirme icin API tabaniyla birlestirilmis full_url de eklenir.
+ *  ELEVENLABS_API_KEY tanimli degilse backend 400 + Turkce hata doner (jd ile
+ *  aynen gosterilir, adim atlanabilir). */
+export const synthesizeSpotVoice = async (payload: {
+  text: string;
+  voice_id?: string;
+}): Promise<{
+  data: { file_url: string; full_url: string; asset: SpotVoiceAsset } | null;
+  error: string | null;
+}> => {
+  const result = await jd<{ file_url: string; asset: SpotVoiceAsset }>(
+    `/public/spot/voice`,
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+  if (!result.data) return { data: null, error: result.error };
+  return {
+    data: { ...result.data, full_url: `${API}${result.data.file_url}` },
+    error: null,
+  };
+};
+
+export type JingleRequest = {
+  id: number;
+  created_at: string;
+  brief: string;
+  style: string | null;
+  status: "queued" | "ready";
+  file_path: string | null;
+};
+
+/** Suno'nun resmi API'si yok — talep kuyruga alinir, operator elle uretip
+ *  admin panelinden baglar ('ready' olunca file_path dolar). */
+export const requestJingle = (payload: { brief: string; style?: string }) =>
+  jd<JingleRequest>(`/public/spot/jingle`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export type JingleLibraryItem = { file_name: string; path: string };
+
+export const listJingles = () =>
+  j<{ library: JingleLibraryItem[]; ready_requests: JingleRequest[] }>(
+    `/public/spot/jingles`
+  );
+
+/* --- Ses parmak izi (fingerprint) yayin kaniti — public, auth yok -------------- */
+
+export type FingerprintDetection = {
+  id: number;
+  detected_at: string;
+  order_id: number;
+  station_id: number;
+  confidence: number;
+};
+
+/** O siparisin zaman damgali tespit loglari — sipariş kanıt paneli. */
+export const getCampaignProof = (orderId: number) =>
+  j<FingerprintDetection[]>(`/public/campaigns-proof/${orderId}`);
