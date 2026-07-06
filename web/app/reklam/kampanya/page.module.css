@@ -12,7 +12,45 @@
 .top {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 6px;
+}
+
+/* --- Mod secimi (Yonetmen / Adim Adim) -------------------------------------- */
+
+.modeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.modeCard {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.modeCardDirector {
+  background: var(--green);
+}
+
+.modeTitle {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 16px;
+}
+
+.modeDesc {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 .logo {

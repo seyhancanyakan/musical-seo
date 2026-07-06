@@ -18,6 +18,8 @@ import {
   jingleFileUrl,
   mixAd,
   apiFileUrl,
+  planAd,
+  produceAd,
   type AdPackage,
   type AdCampaign,
   type AdCampaignOrderBreakdown,
@@ -27,6 +29,9 @@ import {
   type JingleRequest,
   type FingerprintDetection,
   type AutoJingle,
+  type AdPlan,
+  type AdPlanSfx,
+  type ProduceAdResult,
 } from "@/lib/api";
 import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
@@ -34,6 +39,8 @@ import styles from "./page.module.css";
 type Daypart = "sabah" | "gunduz" | "drive" | "aksam" | "gece";
 type BuyerKind = "artist" | "business";
 type PackageKey = "opening" | "weekend" | "monthly" | "custom";
+/** Sihirbaz giris modu: yonetmen = tek-tik tam otomatik, adim = mevcut 6 adim. */
+type WizardMode = "director" | "steps";
 
 /** Backend enum sirasi ile ayni (bkz. web/app/reklam/page.tsx). */
 const DAYPARTS: Daypart[] = ["sabah", "gunduz", "drive", "aksam", "gece"];
@@ -46,6 +53,43 @@ const T = {
     heading: "Kampanya Sihirbazı",
     intro:
       "6 adımda kendi radyo reklam kampanyanı kur: hedefini seç, spotunu AI ile yaz, istersen seslendir ve jingle ekle, müzik + sesi birleştir, sonra tek onayla yayına al.",
+    // --- Mod secimi ---
+    modeChooserTitle: "Nasıl ilerlemek istersin?",
+    directorModeTitle: "🎬 Reklam Yönetmeni (Tek Tık, Önerilen)",
+    directorModeDesc:
+      "Ürün adını ve birkaç detayı gir, gerisini AI halletsin: reklam planı, müzik, efektler, seslendirme — hepsi tek seferde üretilip birleştirilir.",
+    stepModeTitle: "🔧 Adım Adım (Gelişmiş)",
+    stepModeDesc:
+      "Her aşamayı kendin yönet: hedef seç, spot metnini yaz, sesi ve jingle'ı ayrı ayrı seç, sonra birleştir.",
+    backToModesBtn: "‹ Mod Seç",
+    // --- Reklam Yonetmeni (tek-tik otomatik) ---
+    directorHeading: "Reklam Yönetmeni",
+    directorIntro:
+      "Ürün/sanatçı adını ve detayları gir — AI önce bir reklam planı çıkarır (müzik, seslendirme metni, efektler), sen istersen düzenlersin, sonra tek tıkla tam reklamı üretirsin.",
+    directorVoiceLabel: "Seslendirme Sesi (ElevenLabs)",
+    directorStep1Btn: "1) Reklam Planı Oluştur",
+    directorStep1Busy: "Plan hazırlanıyor...",
+    directorPlanTitle: "Reklam Planı (düzenlenebilir)",
+    directorTotalSecondsLabel: "Toplam süre (sn)",
+    directorMusicPromptLabel: "Müzik Açıklaması",
+    directorVoiceoverLabel: "Seslendirme Metni",
+    directorVoiceDelayLabel: "Seslendirme gecikmesi (sn)",
+    directorSfxTitle: "Ses Efektleri",
+    directorSfxPromptLabel: "Efekt açıklaması",
+    directorSfxAtLabel: "Kaçıncı saniyede",
+    directorSfxDurationLabel: "Süre (sn)",
+    directorSfxAddBtn: "+ Efekt Ekle",
+    directorSfxRemoveBtn: "Sil",
+    directorSfxEmpty: "Efekt yok.",
+    directorNotesLabel: "Notlar",
+    directorStep2Btn: "2) Reklamı Üret",
+    directorStep2Busy: "Üretiliyor… (müzik+efekt+ses+mix)",
+    directorProduceNote:
+      "Üretim 1-2 dakika sürebilir — müzik, efektler ve seslendirme sırayla üretilip birleştirilir.",
+    directorResultTitle: "Nihai Reklam Hazır",
+    directorResultSummaryTemplate: "Müzik + {n} efekt + {sec} sn seslendirme",
+    directorContinueBtn: "Kampanya Oluşturmaya Devam Et →",
+    planRequiredError: "Önce bir reklam planı oluştur",
     steps: [
       "Hedef",
       "Spot Metni",
@@ -219,6 +263,41 @@ const T = {
     heading: "Campaign Wizard",
     intro:
       "Set up your own radio ad campaign in 6 steps: pick a target, write your spot with AI, optionally add voice + jingle, merge the music and voice, then confirm once to go live.",
+    modeChooserTitle: "How do you want to proceed?",
+    directorModeTitle: "🎬 Ad Director (One-Click, Recommended)",
+    directorModeDesc:
+      "Enter the product name and a few details, let AI handle the rest: ad plan, music, sound effects, voice-over — all generated and merged in one go.",
+    stepModeTitle: "🔧 Step by Step (Advanced)",
+    stepModeDesc:
+      "Manage every stage yourself: pick a target, write the spot script, choose voice and jingle separately, then merge.",
+    backToModesBtn: "‹ Choose Mode",
+    directorHeading: "Ad Director",
+    directorIntro:
+      "Enter the product/artist name and details — AI first drafts an ad plan (music, voice-over script, sound effects), you can edit it, then generate the full ad with one click.",
+    directorVoiceLabel: "Voice-over Voice (ElevenLabs)",
+    directorStep1Btn: "1) Create Ad Plan",
+    directorStep1Busy: "Preparing plan...",
+    directorPlanTitle: "Ad Plan (editable)",
+    directorTotalSecondsLabel: "Total duration (sec)",
+    directorMusicPromptLabel: "Music Description",
+    directorVoiceoverLabel: "Voice-over Script",
+    directorVoiceDelayLabel: "Voice-over delay (sec)",
+    directorSfxTitle: "Sound Effects",
+    directorSfxPromptLabel: "Effect description",
+    directorSfxAtLabel: "At second",
+    directorSfxDurationLabel: "Duration (sec)",
+    directorSfxAddBtn: "+ Add Effect",
+    directorSfxRemoveBtn: "Remove",
+    directorSfxEmpty: "No effects.",
+    directorNotesLabel: "Notes",
+    directorStep2Btn: "2) Produce the Ad",
+    directorStep2Busy: "Producing… (music+fx+voice+mix)",
+    directorProduceNote:
+      "Production can take 1-2 minutes — music, effects, and voice-over are generated in sequence, then merged.",
+    directorResultTitle: "Final Ad Ready",
+    directorResultSummaryTemplate: "Music + {n} effects + {sec}s voice-over",
+    directorContinueBtn: "Continue to Create Campaign →",
+    planRequiredError: "Create an ad plan first",
     steps: [
       "Target",
       "Spot Script",
@@ -394,6 +473,18 @@ export default function CampaignWizardPage() {
   const t = pick(T, locale);
 
   const [step, setStep] = useState(1);
+  // --- Mod secimi: yonetmen (tek-tik) vs adim adim -------------------------
+  const [wizardMode, setWizardMode] = useState<WizardMode | null>(null);
+
+  // --- Reklam Yonetmeni (tek-tik otomatik uretim) --------------------------
+  const [directorPlan, setDirectorPlan] = useState<AdPlan | null>(null);
+  const [directorPlanBusy, setDirectorPlanBusy] = useState(false);
+  const [directorPlanError, setDirectorPlanError] = useState("");
+  const [directorProduceBusy, setDirectorProduceBusy] = useState(false);
+  const [directorProduceError, setDirectorProduceError] = useState("");
+  const [directorResult, setDirectorResult] = useState<ProduceAdResult | null>(
+    null
+  );
 
   // --- Adim 1: hedef -----------------------------------------------------
   const [city, setCity] = useState("");
@@ -481,14 +572,16 @@ export default function CampaignWizardPage() {
   const [proofBusy, setProofBusy] = useState<number | null>(null);
 
   useEffect(() => {
-    if (step === 3 && voices === null && !voicesLoading) {
+    const needsVoices =
+      (wizardMode === "steps" && step === 3) || wizardMode === "director";
+    if (needsVoices && voices === null && !voicesLoading) {
       setVoicesLoading(true);
       listSpotVoices().then((v) => {
         setVoices(v ?? []);
         setVoicesLoading(false);
       });
     }
-  }, [step, voices, voicesLoading]);
+  }, [step, wizardMode, voices, voicesLoading]);
 
   useEffect(() => {
     if (step === 4 && !jinglesLoaded) {
@@ -591,6 +684,97 @@ export default function CampaignWizardPage() {
     }
     setScriptText(result.data.text);
     setScriptSource(result.data.source);
+  }
+
+  /** Yonetmen modu adim 1: urun/detay/ton/sureden tam bir reklam plani
+   *  cikarir (muzik + seslendirme metni + efektler). Sonuc duzenlenebilir. */
+  async function handleGeneratePlan() {
+    setDirectorPlanError("");
+    setDirectorResult(null);
+    if (!productName.trim()) {
+      setDirectorPlanError(t.productNameRequiredError);
+      return;
+    }
+    setDirectorPlanBusy(true);
+    const result = await planAd({
+      product_name: productName.trim(),
+      details: details.trim() || undefined,
+      tone,
+      seconds,
+    });
+    setDirectorPlanBusy(false);
+    if (result.error || !result.data) {
+      setDirectorPlanError(result.error ?? t.genericError);
+      return;
+    }
+    setDirectorPlan(result.data);
+    // Adim-adim moda gecilirse spot metni zaten dolu olsun diye senkronlanir.
+    setScriptText(result.data.voiceover);
+  }
+
+  function updatePlanField<K extends keyof AdPlan>(key: K, value: AdPlan[K]) {
+    setDirectorPlan((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }
+
+  function updateSfxField(
+    index: number,
+    field: keyof AdPlanSfx,
+    value: string | number
+  ) {
+    setDirectorPlan((prev) => {
+      if (!prev) return prev;
+      const sfx = prev.sfx.map((s, i) =>
+        i === index ? { ...s, [field]: value } : s
+      );
+      return { ...prev, sfx };
+    });
+  }
+
+  function addSfxRow() {
+    setDirectorPlan((prev) =>
+      prev
+        ? { ...prev, sfx: [...prev.sfx, { prompt: "", at_second: 0, duration: 1 }] }
+        : prev
+    );
+  }
+
+  function removeSfxRow(index: number) {
+    setDirectorPlan((prev) =>
+      prev ? { ...prev, sfx: prev.sfx.filter((_, i) => i !== index) } : prev
+    );
+  }
+
+  /** Yonetmen modu adim 2: (duzenlenmis) plani tek cagride tam reklama
+   *  cevirir. Basarili olunca mixAudioUrl/mixAssetId sihirbazin geri kalanina
+   *  (kampanya olusturma) baglanir — kullanici adim-adim moda gecerse hazir. */
+  async function handleProduceAd() {
+    if (!directorPlan) {
+      setDirectorProduceError(t.planRequiredError);
+      return;
+    }
+    setDirectorProduceError("");
+    setDirectorProduceBusy(true);
+    const result = await produceAd({
+      plan: directorPlan,
+      voice_id: selectedVoiceId ?? undefined,
+      campaign_hint: productName.trim() || undefined,
+    });
+    setDirectorProduceBusy(false);
+    if (result.error || !result.data) {
+      setDirectorProduceError(result.error ?? t.genericError);
+      return;
+    }
+    setDirectorResult(result.data);
+    setMixAudioUrl(apiFileUrl(result.data.mix_file_url));
+    setMixAssetId(result.data.mix.id);
+  }
+
+  /** Yonetmen sonucundan adim-adim moda gecip kampanya olusturmaya devam
+   *  eder — hedef (sehir/butce/kusak) secimi icin 1. adimdan baslar; urun
+   *  adi/spot metni/mix zaten dolu oldugundan sonraki adimlar hizli gecilir. */
+  function continueToCampaign() {
+    setWizardMode("steps");
+    setStep(1);
   }
 
   async function handleSynthesize(voiceId: string) {
@@ -770,6 +954,11 @@ export default function CampaignWizardPage() {
 
   function resetWizard() {
     setStep(1);
+    setWizardMode(null);
+    setDirectorPlan(null);
+    setDirectorPlanError("");
+    setDirectorProduceError("");
+    setDirectorResult(null);
     setCity("");
     setDayparts([]);
     setWeeks(2);
@@ -816,12 +1005,333 @@ export default function CampaignWizardPage() {
           </Link>
           <LangToggle />
         </div>
+        {!campaign && wizardMode !== null && (
+          <button
+            type="button"
+            className="nb-btn nb-btn--outline"
+            onClick={() => setWizardMode(null)}
+          >
+            {t.backToModesBtn}
+          </button>
+        )}
       </div>
 
       <h1 className="nb-h">{t.heading}</h1>
       <p className={styles.intro}>{t.intro}</p>
 
-      {!campaign && (
+      {!campaign && wizardMode === null && (
+        <div className={`nb-card ${styles.panel}`}>
+          <h2 className="nb-h">{t.modeChooserTitle}</h2>
+          <div className={styles.modeGrid}>
+            <button
+              type="button"
+              className={`nb-card ${styles.modeCard} ${styles.modeCardDirector}`}
+              onClick={() => setWizardMode("director")}
+            >
+              <div className={styles.modeTitle}>{t.directorModeTitle}</div>
+              <p className={styles.modeDesc}>{t.directorModeDesc}</p>
+            </button>
+            <button
+              type="button"
+              className={`nb-card ${styles.modeCard}`}
+              onClick={() => setWizardMode("steps")}
+            >
+              <div className={styles.modeTitle}>{t.stepModeTitle}</div>
+              <p className={styles.modeDesc}>{t.stepModeDesc}</p>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!campaign && wizardMode === "director" && (
+        <div className={`nb-card ${styles.panel}`}>
+          <h2 className="nb-h">{t.directorHeading}</h2>
+          <p className={styles.note}>{t.directorIntro}</p>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.productNameLabel}</label>
+            <input
+              className="nb-input"
+              placeholder={t.productNamePlaceholder}
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+            />
+          </div>
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.detailsLabel}</label>
+            <textarea
+              className={`nb-input ${styles.textarea}`}
+              placeholder={t.detailsPlaceholder}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.rowFields}>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>{t.toneLabel}</label>
+              <div className={styles.chipRow}>
+                {TONE_OPTIONS.map((tn) => (
+                  <button
+                    key={tn}
+                    type="button"
+                    className={`${styles.chip} ${
+                      tone === tn ? styles.chipActive : ""
+                    }`}
+                    onClick={() => setTone(tn)}
+                  >
+                    {t.toneLabels[tn]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={styles.fieldGroup}>
+              <label className={styles.fieldLabel}>{t.secondsLabel}</label>
+              <div className={styles.chipRow}>
+                {SECONDS_OPTIONS.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className={`${styles.chip} ${
+                      seconds === s ? styles.chipActive : ""
+                    }`}
+                    onClick={() => setSeconds(s)}
+                  >
+                    {s} sn
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>{t.directorVoiceLabel}</label>
+            {voicesLoading && (
+              <div className={styles.note}>{t.voicesLoading}</div>
+            )}
+            <select
+              className="nb-input"
+              value={selectedVoiceId ?? ""}
+              onChange={(e) => setSelectedVoiceId(e.target.value || null)}
+              aria-label={t.directorVoiceLabel}
+            >
+              <option value="">—</option>
+              {voices?.map((v) => (
+                <option key={v.voice_id} value={v.voice_id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            className="nb-btn nb-btn--purple"
+            onClick={handleGeneratePlan}
+            disabled={directorPlanBusy}
+          >
+            {directorPlanBusy ? t.directorStep1Busy : t.directorStep1Btn}
+          </button>
+          {directorPlanError && (
+            <div className={styles.error}>{directorPlanError}</div>
+          )}
+
+          {directorPlan && (
+            <div className={styles.summaryBox}>
+              <h3 className={styles.subheading}>{t.directorPlanTitle}</h3>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>
+                  {t.directorTotalSecondsLabel}
+                </label>
+                <input
+                  className="nb-input"
+                  type="number"
+                  min={1}
+                  value={directorPlan.total_seconds}
+                  onChange={(e) =>
+                    updatePlanField(
+                      "total_seconds",
+                      Number(e.target.value) || 0
+                    )
+                  }
+                />
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>
+                  {t.directorMusicPromptLabel}
+                </label>
+                <input
+                  className="nb-input"
+                  value={directorPlan.music_prompt}
+                  onChange={(e) =>
+                    updatePlanField("music_prompt", e.target.value)
+                  }
+                />
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>
+                  {t.directorVoiceoverLabel}
+                </label>
+                <textarea
+                  className={`nb-input ${styles.scriptTextarea}`}
+                  value={directorPlan.voiceover}
+                  onChange={(e) =>
+                    updatePlanField("voiceover", e.target.value)
+                  }
+                />
+                <p className={styles.note}>{t.kuponNote}</p>
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>
+                  {t.directorVoiceDelayLabel}
+                </label>
+                <input
+                  className="nb-input"
+                  type="number"
+                  min={0}
+                  value={directorPlan.voice_delay_seconds}
+                  onChange={(e) =>
+                    updatePlanField(
+                      "voice_delay_seconds",
+                      Number(e.target.value) || 0
+                    )
+                  }
+                />
+              </div>
+
+              <h4 className={styles.subheading}>{t.directorSfxTitle}</h4>
+              {directorPlan.sfx.length === 0 && (
+                <p className={styles.note}>{t.directorSfxEmpty}</p>
+              )}
+              {directorPlan.sfx.map((s, i) => (
+                <div key={i} className={styles.rowFields}>
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.fieldLabel}>
+                      {t.directorSfxPromptLabel}
+                    </label>
+                    <input
+                      className="nb-input"
+                      value={s.prompt}
+                      onChange={(e) =>
+                        updateSfxField(i, "prompt", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.fieldLabel}>
+                      {t.directorSfxAtLabel}
+                    </label>
+                    <input
+                      className="nb-input"
+                      type="number"
+                      min={0}
+                      value={s.at_second}
+                      onChange={(e) =>
+                        updateSfxField(
+                          i,
+                          "at_second",
+                          Number(e.target.value) || 0
+                        )
+                      }
+                    />
+                  </div>
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.fieldLabel}>
+                      {t.directorSfxDurationLabel}
+                    </label>
+                    <input
+                      className="nb-input"
+                      type="number"
+                      min={0}
+                      value={s.duration}
+                      onChange={(e) =>
+                        updateSfxField(
+                          i,
+                          "duration",
+                          Number(e.target.value) || 0
+                        )
+                      }
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="nb-btn nb-btn--outline"
+                    onClick={() => removeSfxRow(i)}
+                  >
+                    {t.directorSfxRemoveBtn}
+                  </button>
+                </div>
+              ))}
+              <button type="button" className="nb-btn" onClick={addSfxRow}>
+                {t.directorSfxAddBtn}
+              </button>
+
+              <div className={styles.fieldGroup}>
+                <label className={styles.fieldLabel}>
+                  {t.directorNotesLabel}
+                </label>
+                <p className={styles.note}>{directorPlan.notes}</p>
+              </div>
+
+              <button
+                type="button"
+                className="nb-btn nb-btn--green"
+                onClick={handleProduceAd}
+                disabled={directorProduceBusy}
+              >
+                {directorProduceBusy
+                  ? t.directorStep2Busy
+                  : t.directorStep2Btn}
+              </button>
+              {directorProduceBusy && (
+                <div className={styles.note}>{t.directorProduceNote}</div>
+              )}
+              {directorProduceError && (
+                <div className={styles.error}>{directorProduceError}</div>
+              )}
+
+              {directorResult && mixAudioUrl && (
+                <div className={styles.audioBox}>
+                  <span>{t.directorResultTitle}</span>
+                  <audio
+                    controls
+                    src={mixAudioUrl}
+                    className={styles.audioPlayer}
+                  />
+                  <a
+                    href={mixAudioUrl}
+                    download
+                    className="nb-btn nb-btn--outline"
+                  >
+                    {t.mixDownloadBtn}
+                  </a>
+                  <span className="nb-chip">
+                    {t.directorResultSummaryTemplate
+                      .replace("{n}", String(directorResult.sfx.length))
+                      .replace(
+                        "{sec}",
+                        String(directorResult.voice.duration ?? "?")
+                      )}
+                  </span>
+                  <button
+                    type="button"
+                    className="nb-btn nb-btn--green"
+                    onClick={continueToCampaign}
+                  >
+                    {t.directorContinueBtn}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!campaign && wizardMode === "steps" && (
         <div className={styles.stepper}>
           {t.steps.map((label, i) => {
             const idx = i + 1;
@@ -842,7 +1352,7 @@ export default function CampaignWizardPage() {
         </div>
       )}
 
-      {!campaign && step === 1 && (
+      {!campaign && wizardMode === "steps" && step === 1 && (
         <div className={`nb-card ${styles.panel}`}>
           <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel}>{t.cityLabel}</label>
@@ -986,7 +1496,7 @@ export default function CampaignWizardPage() {
         </div>
       )}
 
-      {!campaign && step === 2 && (
+      {!campaign && wizardMode === "steps" && step === 2 && (
         <div className={`nb-card ${styles.panel}`}>
           <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel}>{t.productNameLabel}</label>
@@ -1084,7 +1594,7 @@ export default function CampaignWizardPage() {
         </div>
       )}
 
-      {!campaign && step === 3 && (
+      {!campaign && wizardMode === "steps" && step === 3 && (
         <div className={`nb-card ${styles.panel}`}>
           <h2 className="nb-h">{t.voiceStepTitle}</h2>
           <p className={styles.note}>{t.voiceStepNote}</p>
@@ -1130,7 +1640,7 @@ export default function CampaignWizardPage() {
         </div>
       )}
 
-      {!campaign && step === 4 && (
+      {!campaign && wizardMode === "steps" && step === 4 && (
         <div className={`nb-card ${styles.panel}`}>
           <h2 className="nb-h">{t.jingleStepTitle}</h2>
 
@@ -1258,7 +1768,7 @@ export default function CampaignWizardPage() {
         </div>
       )}
 
-      {!campaign && step === 5 && (
+      {!campaign && wizardMode === "steps" && step === 5 && (
         <div className={`nb-card ${styles.panel}`}>
           <h2 className="nb-h">{t.mixStepTitle}</h2>
           <p className={styles.note}>{t.mixStepDesc}</p>
@@ -1309,7 +1819,7 @@ export default function CampaignWizardPage() {
         </div>
       )}
 
-      {!campaign && step === 6 && (
+      {!campaign && wizardMode === "steps" && step === 6 && (
         <div className={`nb-card ${styles.panel}`}>
           <h2 className="nb-h">{t.summaryTitle}</h2>
           <div className={styles.summaryBox}>

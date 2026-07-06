@@ -1618,3 +1618,113 @@ export const mixAd = (payload: {
     method: "POST",
     body: JSON.stringify(payload),
   });
+
+/* --- Reklam Yonetmeni: tek-cagrida plan + tam otomatik uretim (Claude+ElevenLabs) --- */
+
+export type AdPlanSfx = {
+  prompt: string;
+  at_second: number;
+  duration: number;
+};
+
+/** POST /public/spot/plan yaniti — duzenlenebilir reklam plani. voiceover
+ *  metni {KUPON} yer tutucusu icerir (kampanya onaylaninca gercek kodla degisir). */
+export type AdPlan = {
+  total_seconds: number;
+  music_prompt: string;
+  voiceover: string;
+  voice_delay_seconds: number;
+  sfx: AdPlanSfx[];
+  notes: string;
+};
+
+/** Reklam Yonetmeni adim 1: urun/detay/ton/sureden tam bir reklam plani uretir. */
+export const planAd = (payload: {
+  product_name: string;
+  details?: string;
+  tone?: string;
+  seconds?: number;
+}) =>
+  jd<AdPlan>(`/public/spot/plan`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+/** produce yanitindaki mix/voice/music alt kayitlari — ORM satirinin alt kumesi. */
+export type ProducedAsset = {
+  id: number;
+  status?: string;
+  duration?: number | null;
+  text?: string | null;
+  file_path?: string | null;
+};
+
+export type ProducedSfxAsset = ProducedAsset & { text?: string | null };
+
+export type ProduceAdResult = {
+  mix_file_url: string;
+  mix: ProducedAsset;
+  voice: ProducedAsset;
+  music: ProducedAsset;
+  sfx: ProducedSfxAsset[];
+  plan: AdPlan;
+};
+
+/** Reklam Yonetmeni adim 2: (duzenlenmis) plani tek cagride tam reklama
+ *  cevirir — muzik + efektler + seslendirme uretilip mixlenir. 1-2 dk surebilir. */
+export const produceAd = (payload: {
+  plan: AdPlan;
+  voice_id?: string;
+  campaign_hint?: string;
+}) =>
+  jd<ProduceAdResult>(`/public/spot/produce`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+/** ElevenLabs muzik uretimi (senkron) — Suno'nun autoJingle'ina alternatif;
+ *  kuyruklanmaz, dogrudan 'ready' + file_url ile doner. */
+export type SpotMusicResult = {
+  id: number;
+  status: "ready";
+  file_url: string;
+  brief?: string | null;
+  style?: string | null;
+  duration?: number | null;
+};
+
+export const makeMusic = (payload: {
+  product_name?: string;
+  details?: string;
+  tone?: string;
+  seconds?: number;
+  prompt?: string;
+}) =>
+  jd<SpotMusicResult>(`/public/spot/music`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export type SpotSfxAsset = {
+  id: number;
+  created_at?: string;
+  kind?: string;
+  text?: string | null;
+  file_path?: string | null;
+  status?: string;
+};
+
+export type SpotSfxResult = {
+  file_url: string;
+  asset: SpotSfxAsset;
+};
+
+/** Tek bir ses efekti uretir (or. "kapi kapanma sesi", 2 sn). */
+export const makeSfx = (payload: {
+  description: string;
+  duration_seconds?: number;
+}) =>
+  jd<SpotSfxResult>(`/public/spot/sfx`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
