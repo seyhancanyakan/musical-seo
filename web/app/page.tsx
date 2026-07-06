@@ -28,6 +28,18 @@ export default function HomePage() {
                 <Link href="/gonder" className={styles.dropdownLink}>
                   🎵 Şarkını Şimdi Gönder
                 </Link>
+                <Link href="/panel" className={styles.dropdownLink}>
+                  📊 A&amp;R Kariyer Panosu
+                </Link>
+                <Link href="/takvim" className={styles.dropdownLink}>
+                  🗓️ Yayın Planı
+                </Link>
+                <Link href="/lig" className={styles.dropdownLink}>
+                  🏆 Karne Ligi
+                </Link>
+                <Link href="/pro" className={styles.dropdownLink}>
+                  ⭐ Artist Pro
+                </Link>
               </div>
             </div>
             <div className={styles.menuGroup}>
@@ -219,11 +231,15 @@ export default function HomePage() {
             <Link href="/playlistler">Playlist Eşleştirme</Link>
             <Link href="/gonder">Şarkı Gönder</Link>
             <Link href="/kanit">Kanıt Panosu</Link>
+            <Link href="/lig">Karne Ligi</Link>
+            <Link href="/pro">Artist Pro</Link>
           </div>
           <div className={styles.footerCol}>
             <h4>Sanatçılar</h4>
             <Link href="/giris">Kayıt Ol</Link>
             <Link href="/kampanyalar">Kampanyalarım</Link>
+            <Link href="/panel">Kariyer Panosu</Link>
+            <Link href="/takvim">Yayın Planı</Link>
             <a href="#nasil-calisir">Nasıl Çalışır</a>
           </div>
           <div className={styles.footerCol}>
