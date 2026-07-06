@@ -12,18 +12,102 @@ import {
   type Dashboard,
   type User,
 } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
 
 type FunnelKey = "total" | "pending" | "accepted" | "rejected" | "expired" | "verified_placements";
 
-const FUNNEL_CARDS: { key: FunnelKey; label: string }[] = [
-  { key: "total", label: "Toplam Gönderim" },
-  { key: "pending", label: "Bekleyen" },
-  { key: "accepted", label: "Kabul" },
-  { key: "rejected", label: "Red" },
-  { key: "expired", label: "Süresi Dolmuş" },
-  { key: "verified_placements", label: "Doğrulanmış Yerleşim" },
+const FUNNEL_KEYS: FunnelKey[] = [
+  "total",
+  "pending",
+  "accepted",
+  "rejected",
+  "expired",
+  "verified_placements",
 ];
+
+const T = {
+  tr: {
+    loginRequired: "Giriş gerekli",
+    loginRequiredText: "Kariyer panonu görmek için sanatçı hesabınla giriş yap.",
+    loginCta: "Giriş / Kayıt",
+    creditsWord: "kredi",
+    title: "A&R Kariyer Panosu",
+    promise: "Gönderim huninden skor trendlerine kadar kariyerinin tüm verisi burada.",
+    loading: "Yükleniyor...",
+    funnel: {
+      total: "Toplam Gönderim",
+      pending: "Bekleyen",
+      accepted: "Kabul",
+      rejected: "Red",
+      expired: "Süresi Dolmuş",
+      verified_placements: "Doğrulanmış Yerleşim",
+    } as Record<FunnelKey, string>,
+    creditsSpent: "Harcanan kredi",
+    notifications: "Bildirimler",
+    markAllRead: "Tümünü Okundu İşaretle",
+    tracksTitle: "Parçalarım",
+    noTracks: "Henüz izlenen parça yok — gönderim yaptığında burada görünür.",
+    scoreLabel: "Skor:",
+    trendEmpty: "Trend için yeterli veri yok",
+    cohortTitle: "Kohort Kıyaslaması",
+    cohortLockedTitle: "🔒 Kohort kıyaslaması Artist Pro'ya özel",
+    cohortLockedText: "Aynı havuzdaki diğer sanatçıların ortalama skoruyla kendini kıyasla.",
+    seeProCta: "Artist Pro'yu Gör",
+    yourAvg: "Senin Ortalaman",
+    cohortAvg: "Kohort Ortalaması",
+    cohortArtists: (n: number) => `${n} sanatçı`,
+    referralTitle: "🎁 Referans Kodun",
+    copied: "✓ Kopyalandı",
+    copyInvite: "Davet Linkini Kopyala",
+    epkTitle: "📄 EPK Oluştur",
+    epkNotePro: "Artist Pro'da ücretsiz.",
+    epkNoteFree: "Pro'ya ücretsiz — değilse 2 kredi düşer.",
+    epkError: "EPK oluşturulamadı — kredin yetersiz olabilir, tekrar dene.",
+    epkCta: "EPK Oluştur",
+    busy: "...",
+  },
+  en: {
+    loginRequired: "Login required",
+    loginRequiredText: "Log in with your artist account to see your career dashboard.",
+    loginCta: "Log In / Sign Up",
+    creditsWord: "credits",
+    title: "A&R Career Dashboard",
+    promise: "Everything about your career, from the submission funnel to score trends.",
+    loading: "Loading...",
+    funnel: {
+      total: "Total Submissions",
+      pending: "Pending",
+      accepted: "Accepted",
+      rejected: "Rejected",
+      expired: "Expired",
+      verified_placements: "Verified Placements",
+    } as Record<FunnelKey, string>,
+    creditsSpent: "Credits spent",
+    notifications: "Notifications",
+    markAllRead: "Mark All as Read",
+    tracksTitle: "My Tracks",
+    noTracks: "No tracked songs yet — they'll show up here once you submit.",
+    scoreLabel: "Score:",
+    trendEmpty: "Not enough data for a trend",
+    cohortTitle: "Cohort Comparison",
+    cohortLockedTitle: "🔒 Cohort comparison is Artist Pro only",
+    cohortLockedText: "Compare yourself to the average score of other artists in the same pool.",
+    seeProCta: "See Artist Pro",
+    yourAvg: "Your Average",
+    cohortAvg: "Cohort Average",
+    cohortArtists: (n: number) => `${n} artists`,
+    referralTitle: "🎁 Your Referral Code",
+    copied: "✓ Copied",
+    copyInvite: "Copy Invite Link",
+    epkTitle: "📄 Create EPK",
+    epkNotePro: "Free on Artist Pro.",
+    epkNoteFree: "Free on Pro — otherwise costs 2 credits.",
+    epkError: "Couldn't create EPK — you may be low on credits, try again.",
+    epkCta: "Create EPK",
+    busy: "...",
+  },
+} as const;
 
 /** Parca trendinden kucuk bir SVG polyline uretir (viewBox 0 0 200 60). */
 function buildSparkline(trend: { score: number | null }[]): string | null {
@@ -54,6 +138,9 @@ function trackAverage(tracks: Dashboard["tracks"]): number | null {
 /** A&R Kariyer Panosu — sanatcinin tum gonderim performansini tek ekranda gosterir:
  *  huni + skor trendleri + kohort kiyaslamasi (pro) + referans + EPK. */
 export default function PanelPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [user, setUser] = useState<User | null>(null);
   const [checked, setChecked] = useState(false);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
@@ -104,7 +191,7 @@ export default function PanelPage() {
     if (url) {
       window.open(url, "_blank");
     } else {
-      setEpkError("EPK oluşturulamadı — kredin yetersiz olabilir, tekrar dene.");
+      setEpkError(t.epkError);
     }
   }
 
@@ -121,11 +208,12 @@ export default function PanelPage() {
     return (
       <div className={styles.gate}>
         <div className="nb-card" style={{ padding: 28, maxWidth: 460 }}>
-          <h2 className="nb-h">Giriş gerekli</h2>
-          <p className={styles.gateText}>
-            Kariyer panonu görmek için sanatçı hesabınla giriş yap.
-          </p>
-          <Link href="/giris" className="nb-btn">Giriş / Kayıt</Link>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <LangToggle />
+          </div>
+          <h2 className="nb-h">{t.loginRequired}</h2>
+          <p className={styles.gateText}>{t.loginRequiredText}</p>
+          <Link href="/giris" className="nb-btn">{t.loginCta}</Link>
         </div>
       </div>
     );
@@ -137,38 +225,39 @@ export default function PanelPage() {
     <div className={styles.wrap}>
       <div className={styles.top}>
         <Link href="/" className={styles.logo}>MuzikSEO</Link>
-        {user && (
-          <div className={styles.wallet}>💳 {user.credits} kredi · {user.name}</div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {user && (
+            <div className={styles.wallet}>💳 {user.credits} {t.creditsWord} · {user.name}</div>
+          )}
+          <LangToggle />
+        </div>
       </div>
 
-      <h1 className="nb-h">A&amp;R Kariyer Panosu</h1>
-      <p className={styles.promise}>
-        Gönderim huninden skor trendlerine kadar kariyerinin tüm verisi burada.
-      </p>
+      <h1 className="nb-h">{t.title}</h1>
+      <p className={styles.promise}>{t.promise}</p>
 
-      {loading && <div className={styles.empty}>Yükleniyor...</div>}
+      {loading && <div className={styles.empty}>{t.loading}</div>}
 
       {!loading && dashboard && (
         <>
           <div className={styles.funnelGrid}>
-            {FUNNEL_CARDS.map((f) => (
-              <div key={f.key} className={`nb-card ${styles.funnelCard}`}>
-                <div className={styles.funnelValue}>{dashboard.funnel[f.key] ?? 0}</div>
-                <div className={styles.funnelLabel}>{f.label}</div>
+            {FUNNEL_KEYS.map((key) => (
+              <div key={key} className={`nb-card ${styles.funnelCard}`}>
+                <div className={styles.funnelValue}>{dashboard.funnel[key] ?? 0}</div>
+                <div className={styles.funnelLabel}>{t.funnel[key]}</div>
               </div>
             ))}
           </div>
 
           <div className={`nb-card ${styles.creditsCard}`}>
-            <span>Harcanan kredi</span>
+            <span>{t.creditsSpent}</span>
             <b>{dashboard.credits_spent}</b>
           </div>
 
           {dashboard.notifications.length > 0 && (
             <div className={styles.notifSection}>
               <div className={styles.sectionHead}>
-                <h2 className="nb-h" style={{ fontSize: 18 }}>Bildirimler</h2>
+                <h2 className="nb-h" style={{ fontSize: 18 }}>{t.notifications}</h2>
                 <button
                   type="button"
                   className="nb-btn nb-btn--outline"
@@ -176,7 +265,7 @@ export default function PanelPage() {
                   onClick={handleMarkRead}
                   disabled={notifBusy}
                 >
-                  {notifBusy ? "..." : "Tümünü Okundu İşaretle"}
+                  {notifBusy ? t.busy : t.markAllRead}
                 </button>
               </div>
               <div className={styles.notifList}>
@@ -196,21 +285,19 @@ export default function PanelPage() {
             </div>
           )}
 
-          <h2 className="nb-h" style={{ fontSize: 18, marginTop: 8 }}>Parçalarım</h2>
+          <h2 className="nb-h" style={{ fontSize: 18, marginTop: 8 }}>{t.tracksTitle}</h2>
           <div className={styles.trackList}>
             {dashboard.tracks.length === 0 && (
-              <div className={styles.empty}>
-                Henüz izlenen parça yok — gönderim yaptığında burada görünür.
-              </div>
+              <div className={styles.empty}>{t.noTracks}</div>
             )}
-            {dashboard.tracks.map((t, i) => {
-              const points = buildSparkline(t.trend);
+            {dashboard.tracks.map((tr, i) => {
+              const points = buildSparkline(tr.trend);
               return (
-                <div key={`${t.artist}-${t.title}-${i}`} className={`nb-card ${styles.trackCard}`}>
+                <div key={`${tr.artist}-${tr.title}-${i}`} className={`nb-card ${styles.trackCard}`}>
                   <div className={styles.trackInfo}>
-                    <div className={styles.trackTitle}>{t.artist} — {t.title}</div>
+                    <div className={styles.trackTitle}>{tr.artist} — {tr.title}</div>
                     <div className={styles.trackScore}>
-                      Skor: <b>{t.latest_score ?? "—"}</b>
+                      {t.scoreLabel} <b>{tr.latest_score ?? "—"}</b>
                     </div>
                   </div>
                   <div className={styles.sparkWrap}>
@@ -226,7 +313,7 @@ export default function PanelPage() {
                         />
                       </svg>
                     ) : (
-                      <span className={styles.sparkEmpty}>Trend için yeterli veri yok</span>
+                      <span className={styles.sparkEmpty}>{t.trendEmpty}</span>
                     )}
                   </div>
                 </div>
@@ -234,38 +321,36 @@ export default function PanelPage() {
             })}
           </div>
 
-          <h2 className="nb-h" style={{ fontSize: 18, marginTop: 8 }}>Kohort Kıyaslaması</h2>
+          <h2 className="nb-h" style={{ fontSize: 18, marginTop: 8 }}>{t.cohortTitle}</h2>
           {dashboard.cohort === null ? (
             <div className={`nb-card ${styles.lockedCard}`}>
-              <div className={styles.lockedTitle}>🔒 Kohort kıyaslaması Artist Pro&apos;ya özel</div>
-              <p className={styles.lockedText}>
-                Aynı havuzdaki diğer sanatçıların ortalama skoruyla kendini kıyasla.
-              </p>
-              <Link href="/pro" className="nb-btn nb-btn--purple">Artist Pro&apos;yu Gör</Link>
+              <div className={styles.lockedTitle}>{t.cohortLockedTitle}</div>
+              <p className={styles.lockedText}>{t.cohortLockedText}</p>
+              <Link href="/pro" className="nb-btn nb-btn--purple">{t.seeProCta}</Link>
             </div>
           ) : (
             <div className={`nb-card ${styles.cohortCard}`}>
               <div className={styles.cohortBox}>
-                <div className={styles.cohortLabel}>Senin Ortalaman</div>
+                <div className={styles.cohortLabel}>{t.yourAvg}</div>
                 <div className={styles.cohortValue}>{avgScore ?? "—"}</div>
               </div>
               <div className={styles.cohortSep}>vs</div>
               <div className={styles.cohortBox}>
-                <div className={styles.cohortLabel}>Kohort Ortalaması</div>
+                <div className={styles.cohortLabel}>{t.cohortAvg}</div>
                 <div className={styles.cohortValue}>{dashboard.cohort.avg_score ?? "—"}</div>
-                <div className={styles.cohortSub}>{dashboard.cohort.artists} sanatçı</div>
+                <div className={styles.cohortSub}>{t.cohortArtists(dashboard.cohort.artists)}</div>
               </div>
             </div>
           )}
 
           {referral && (
             <div className={`nb-card ${styles.referralCard}`}>
-              <div className={styles.referralHead}>🎁 Referans Kodun</div>
+              <div className={styles.referralHead}>{t.referralTitle}</div>
               <p className={styles.referralNote}>{referral.note}</p>
               <div className={styles.referralRow}>
                 <code className={styles.referralCode}>{referral.code}</code>
                 <button type="button" className="nb-btn" onClick={handleCopyInvite}>
-                  {copied ? "✓ Kopyalandı" : "Davet Linkini Kopyala"}
+                  {copied ? t.copied : t.copyInvite}
                 </button>
               </div>
             </div>
@@ -273,16 +358,14 @@ export default function PanelPage() {
 
           <div className={`nb-card ${styles.epkCard}`}>
             <div>
-              <div className={styles.epkTitle}>📄 EPK Oluştur</div>
+              <div className={styles.epkTitle}>{t.epkTitle}</div>
               <p className={styles.epkNote}>
-                {dashboard.pro
-                  ? "Artist Pro'da ücretsiz."
-                  : "Pro'ya ücretsiz — değilse 2 kredi düşer."}
+                {dashboard.pro ? t.epkNotePro : t.epkNoteFree}
               </p>
               {epkError && <div className={styles.error}>{epkError}</div>}
             </div>
             <button type="button" className="nb-btn nb-btn--purple" onClick={handleEpk} disabled={epkBusy}>
-              {epkBusy ? "..." : "EPK Oluştur"}
+              {epkBusy ? t.busy : t.epkCta}
             </button>
           </div>
         </>

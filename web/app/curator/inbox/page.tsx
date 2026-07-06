@@ -21,26 +21,263 @@ import {
   type Submission,
   type User,
 } from "@/lib/api";
+import { LangToggle, pick, useLocale } from "@/lib/locale";
 import styles from "./page.module.css";
 
-/** Firsat secenekleri — backend PRIMARY_KINDS/SECONDARY_KINDS ile ayni. */
-const OPPORTUNITY_OPTIONS: {
-  value: string;
-  level: OpportunityLevel;
-  label: string;
-}[] = [
-  { value: "playlist_ekleme", level: "primary", label: "Playlist'e ekleyeceğim" },
-  { value: "radyo_calma", level: "primary", label: "Radyoda çalacağım" },
-  { value: "haber_yazi", level: "primary", label: "Haber / yazı yapacağım" },
-  { value: "label_degerlendirme", level: "primary", label: "Label olarak değerlendireceğim" },
-  { value: "menajerlik_gorusme", level: "primary", label: "Menajerlik görüşmesi" },
-  { value: "booking_teklif", level: "primary", label: "Booking teklifi" },
-  { value: "dj_set", level: "primary", label: "DJ setimde çalacağım" },
-  { value: "mentorluk_seansi", level: "primary", label: "Mentorluk seansı" },
-  { value: "sync_degerlendirme", level: "primary", label: "Sync için değerlendireceğim" },
-  { value: "sosyal_paylasim", level: "secondary", label: "Sosyal medyada paylaşacağım" },
-  { value: "tavsiye", level: "secondary", label: "Tavsiyede bulunacağım" },
-  { value: "iletisimde_kal", level: "secondary", label: "İletişimde kalalım" },
+const T = {
+  tr: {
+    opportunityLabels: {
+      playlist_ekleme: "Playlist'e ekleyeceğim",
+      radyo_calma: "Radyoda çalacağım",
+      haber_yazi: "Haber / yazı yapacağım",
+      label_degerlendirme: "Label olarak değerlendireceğim",
+      menajerlik_gorusme: "Menajerlik görüşmesi",
+      booking_teklif: "Booking teklifi",
+      dj_set: "DJ setimde çalacağım",
+      mentorluk_seansi: "Mentorluk seansı",
+      sync_degerlendirme: "Sync için değerlendireceğim",
+      sosyal_paylasim: "Sosyal medyada paylaşacağım",
+      tavsiye: "Tavsiyede bulunacağım",
+      iletisimde_kal: "İletişimde kalalım",
+    } as Record<string, string>,
+    slaExpired: "Süre doldu",
+    slaRemaining: (h: number, m: number) => `${h} sa ${String(m).padStart(2, "0")} dk`,
+    statusAccepted: "Kabul edildi",
+    statusRejected: "Reddedildi",
+    statusExpired: "Süresi doldu",
+    gateTitle: "Curator Gelen Kutusu",
+    gateText: "Gelen kutunu görmek için küratör hesabınla giriş yap.",
+    loginBtn: "Giriş / Kayıt",
+    curatorPanel: "Curator Paneli",
+    userChip: (name: string) => `👤 ${name} — Curator Paneli`,
+    pageTitle: "Gelen Kutusu",
+    apiFailedStrong: "API'ye ulaşılamadı",
+    apiFailedRest: " — tekrar dene.",
+    playlistNotLinkedStrong: "Playlist bağlı değil.",
+    playlistNotLinkedRest: " Deezer veya Spotify playlist linkini ekle:",
+    playlistUrlPlaceholder: "https://open.spotify.com/playlist/... veya deezer.com/playlist/...",
+    linkBtn: "Bağla",
+    linkFailed: "Liste bağlanamadı — linki kontrol et (Deezer veya Spotify, herkese açık).",
+    verifyOwnershipStrong: "Liste sahipliğini doğrula",
+    verifyOwnershipRest: " — doğrulanana kadar gönderim alamazsın.",
+    verifyStep1: "1. Bu kodu playlist açıklamasına ekle:",
+    verifyStep2: "2. Kaydettikten sonra doğrula:",
+    verifyBtn: "Doğrula",
+    getCodeBtn: "Doğrulama kodu al",
+    codeGenFailed: "Kod üretilemedi — tekrar dene.",
+    ownershipVerified: "✅ Sahiplik doğrulandı — listen onaylandı, kodu açıklamadan silebilirsin.",
+    codeNotFound: "Kod açıklamada bulunamadı — ekledikten 1-2 dk sonra tekrar dene.",
+    acceptRateLabel: "Kabul oranı",
+    weekCountLabel: (n: string) => `Bu hafta ${n} gönderim`,
+    earningsLabel: (total: string, pending: string) => `Kazanç ${total} (bekleyen ${pending})`,
+    percentFmt: (n: number) => `%${n}`,
+    payoutTitle: "Ödeme",
+    payoutPendingLabel: "Bekleyen kazanç",
+    payoutStandardBtn: "Standart Ödeme İste",
+    payoutInstantBtn: (pct: number) => `Anında Ödeme (%${pct} kesinti)`,
+    payoutHint: (min: number, balance: string) =>
+      `Standart ödeme eşiği $${min} — bakiyen $${balance}. Eşiğe ulaşana kadar anında ödemeyi kullanabilirsin.`,
+    payoutFailed: "Ödeme talebi oluşturulamadı — tekrar dene.",
+    payoutRequested: (amount: string, fee: string | null) =>
+      fee ? `Talep oluşturuldu: $${amount} (kesinti $${fee})` : `Talep oluşturuldu: $${amount}`,
+    tableDate: "Tarih",
+    tableAmount: "Tutar",
+    tableFee: "Kesinti",
+    tableStatus: "Durum",
+    payoutPaid: "Ödendi",
+    payoutRequestedStatus: "Talep edildi",
+    loading: "Yükleniyor...",
+    emptyInbox: "Henüz gönderim yok — sanatçılar şarkı gönderince burada görünür.",
+    previewAria: (title: string) => `${title} — önizlemeyi oynat`,
+    priorityBadge: "Öne çıkan (+$0.50 bonus)",
+    acceptBtn: "Kabul Et",
+    rejectBtn: "Reddet",
+    feedbackLabelAccepted:
+      "Geri bildirim (opsiyonel — 120+ karakter nitelikli sayılır ve $1 kazandırır)",
+    feedbackLabelRejected:
+      "Red nedeni (zorunlu — 120+ karakter nitelikli sayılır ve $1 kazandırır)",
+    feedbackPlaceholder:
+      "Örn: Miks temiz ama nakarat listenin tempo profiline göre yavaş kalıyor; ikinci verse'teki vokal katmanı güçlü...",
+    opportunityLabel: "Fırsat sun (opsiyonel — sanatçıya ekstra değer)",
+    opportunityAutoAccepted: "Otomatik (kabul = birincil fırsat)",
+    opportunityNone: "Fırsat yok",
+    opportunityPrimaryGroup: "Birincil fırsat (somut sonuç)",
+    opportunitySecondaryGroup: "İkincil fırsat (dolaylı değer)",
+    gateWait: (n: number) => `Şarkıyı dinle — yanıt ${n} saniye sonra açılır`,
+    charCount: (n: number, qualified: boolean) =>
+      qualified ? `${n} karakter — nitelikli ✓ ($1)` : `${n} karakter`,
+    sendAccepted: "Kabul + Gönder",
+    sendRejected: "Reddet + Gönder",
+    dateLocale: "tr-TR",
+  },
+  en: {
+    opportunityLabels: {
+      playlist_ekleme: "I'll add it to a playlist",
+      radyo_calma: "I'll play it on the radio",
+      haber_yazi: "I'll write a news piece / article",
+      label_degerlendirme: "I'll review it as a label",
+      menajerlik_gorusme: "Management conversation",
+      booking_teklif: "Booking offer",
+      dj_set: "I'll play it in my DJ set",
+      mentorluk_seansi: "Mentorship session",
+      sync_degerlendirme: "I'll review it for sync",
+      sosyal_paylasim: "I'll share it on social media",
+      tavsiye: "I'll recommend it",
+      iletisimde_kal: "Let's stay in touch",
+    } as Record<string, string>,
+    slaExpired: "Expired",
+    slaRemaining: (h: number, m: number) => `${h}h ${String(m).padStart(2, "0")}m`,
+    statusAccepted: "Accepted",
+    statusRejected: "Rejected",
+    statusExpired: "Expired",
+    gateTitle: "Curator Inbox",
+    gateText: "Log in with your curator account to see your inbox.",
+    loginBtn: "Log in / Sign up",
+    curatorPanel: "Curator Panel",
+    userChip: (name: string) => `👤 ${name} — Curator Panel`,
+    pageTitle: "Inbox",
+    apiFailedStrong: "Couldn't reach the API",
+    apiFailedRest: " — try again.",
+    playlistNotLinkedStrong: "Playlist not linked.",
+    playlistNotLinkedRest: " Add your Deezer or Spotify playlist link:",
+    playlistUrlPlaceholder: "https://open.spotify.com/playlist/... or deezer.com/playlist/...",
+    linkBtn: "Link",
+    linkFailed: "Couldn't link the playlist — check the link (Deezer or Spotify, must be public).",
+    verifyOwnershipStrong: "Verify playlist ownership",
+    verifyOwnershipRest: " — you can't receive submissions until it's verified.",
+    verifyStep1: "1. Add this code to the playlist description:",
+    verifyStep2: "2. Verify after saving:",
+    verifyBtn: "Verify",
+    getCodeBtn: "Get verification code",
+    codeGenFailed: "Couldn't generate a code — try again.",
+    ownershipVerified: "✅ Ownership verified — your playlist is confirmed, you can remove the code from the description now.",
+    codeNotFound: "Code not found in the description — try again 1-2 minutes after adding it.",
+    acceptRateLabel: "Accept rate",
+    weekCountLabel: (n: string) => `${n} submissions this week`,
+    earningsLabel: (total: string, pending: string) => `Earnings ${total} (pending ${pending})`,
+    percentFmt: (n: number) => `${n}%`,
+    payoutTitle: "Payout",
+    payoutPendingLabel: "Pending earnings",
+    payoutStandardBtn: "Request Standard Payout",
+    payoutInstantBtn: (pct: number) => `Instant Payout (${pct}% fee)`,
+    payoutHint: (min: number, balance: string) =>
+      `Standard payout threshold is $${min} — your balance is $${balance}. You can use instant payout until you reach the threshold.`,
+    payoutFailed: "Couldn't create the payout request — try again.",
+    payoutRequested: (amount: string, fee: string | null) =>
+      fee ? `Request created: $${amount} (fee $${fee})` : `Request created: $${amount}`,
+    tableDate: "Date",
+    tableAmount: "Amount",
+    tableFee: "Fee",
+    tableStatus: "Status",
+    payoutPaid: "Paid",
+    payoutRequestedStatus: "Requested",
+    loading: "Loading...",
+    emptyInbox: "No submissions yet — they'll show up here once artists submit songs.",
+    previewAria: (title: string) => `${title} — play preview`,
+    priorityBadge: "Priority (+$0.50 bonus)",
+    acceptBtn: "Accept",
+    rejectBtn: "Reject",
+    feedbackLabelAccepted:
+      "Feedback (optional — 120+ characters counts as qualified and earns $1)",
+    feedbackLabelRejected:
+      "Rejection reason (required — 120+ characters counts as qualified and earns $1)",
+    feedbackPlaceholder:
+      "E.g.: The mix is clean but the chorus feels slow for the playlist's tempo profile; the vocal layer in the second verse is strong...",
+    opportunityLabel: "Offer an opportunity (optional — extra value for the artist)",
+    opportunityAutoAccepted: "Automatic (accept = primary opportunity)",
+    opportunityNone: "No opportunity",
+    opportunityPrimaryGroup: "Primary opportunity (concrete outcome)",
+    opportunitySecondaryGroup: "Secondary opportunity (indirect value)",
+    gateWait: (n: number) => `Listen to the track — the response opens in ${n}s`,
+    charCount: (n: number, qualified: boolean) =>
+      qualified ? `${n} characters — qualified ✓ ($1)` : `${n} characters`,
+    sendAccepted: "Accept + Send",
+    sendRejected: "Reject + Send",
+    dateLocale: "en-US",
+  },
+} as const;
+
+type TDict = {
+  opportunityLabels: Record<string, string>;
+  slaExpired: string;
+  slaRemaining: (h: number, m: number) => string;
+  statusAccepted: string;
+  statusRejected: string;
+  statusExpired: string;
+  gateTitle: string;
+  gateText: string;
+  loginBtn: string;
+  curatorPanel: string;
+  userChip: (name: string) => string;
+  pageTitle: string;
+  apiFailedStrong: string;
+  apiFailedRest: string;
+  playlistNotLinkedStrong: string;
+  playlistNotLinkedRest: string;
+  playlistUrlPlaceholder: string;
+  linkBtn: string;
+  linkFailed: string;
+  verifyOwnershipStrong: string;
+  verifyOwnershipRest: string;
+  verifyStep1: string;
+  verifyStep2: string;
+  verifyBtn: string;
+  getCodeBtn: string;
+  codeGenFailed: string;
+  ownershipVerified: string;
+  codeNotFound: string;
+  acceptRateLabel: string;
+  weekCountLabel: (n: string) => string;
+  earningsLabel: (total: string, pending: string) => string;
+  percentFmt: (n: number) => string;
+  payoutTitle: string;
+  payoutPendingLabel: string;
+  payoutStandardBtn: string;
+  payoutInstantBtn: (pct: number) => string;
+  payoutHint: (min: number, balance: string) => string;
+  payoutFailed: string;
+  payoutRequested: (amount: string, fee: string | null) => string;
+  tableDate: string;
+  tableAmount: string;
+  tableFee: string;
+  tableStatus: string;
+  payoutPaid: string;
+  payoutRequestedStatus: string;
+  loading: string;
+  emptyInbox: string;
+  previewAria: (title: string) => string;
+  priorityBadge: string;
+  acceptBtn: string;
+  rejectBtn: string;
+  feedbackLabelAccepted: string;
+  feedbackLabelRejected: string;
+  feedbackPlaceholder: string;
+  opportunityLabel: string;
+  opportunityAutoAccepted: string;
+  opportunityNone: string;
+  opportunityPrimaryGroup: string;
+  opportunitySecondaryGroup: string;
+  gateWait: (n: number) => string;
+  charCount: (n: number, qualified: boolean) => string;
+  sendAccepted: string;
+  sendRejected: string;
+  dateLocale: string;
+};
+
+/** Firsat secenekleri — backend PRIMARY_KINDS/SECONDARY_KINDS ile ayni (value/level backend'e gonderilir, degismez). */
+const OPPORTUNITY_VALUES: { value: string; level: OpportunityLevel }[] = [
+  { value: "playlist_ekleme", level: "primary" },
+  { value: "radyo_calma", level: "primary" },
+  { value: "haber_yazi", level: "primary" },
+  { value: "label_degerlendirme", level: "primary" },
+  { value: "menajerlik_gorusme", level: "primary" },
+  { value: "booking_teklif", level: "primary" },
+  { value: "dj_set", level: "primary" },
+  { value: "mentorluk_seansi", level: "primary" },
+  { value: "sync_degerlendirme", level: "primary" },
+  { value: "sosyal_paylasim", level: "secondary" },
+  { value: "tavsiye", level: "secondary" },
+  { value: "iletisimde_kal", level: "secondary" },
 ];
 
 const SLA_URGENT_HOURS = 6;
@@ -88,7 +325,7 @@ function gateRemainingSeconds(gate: GateInfo | undefined, nowMs: number): number
 
 type SlaDisplay = { text: string; percent: number; urgent: boolean };
 
-function formatSla(row: Row, now: number): SlaDisplay {
+function formatSla(row: Row, now: number, t: TDict): SlaDisplay {
   if (!row.deadline) {
     return { text: "—", percent: 0, urgent: false };
   }
@@ -98,7 +335,7 @@ function formatSla(row: Row, now: number): SlaDisplay {
   const remainingMs = deadlineMs - now;
 
   if (remainingMs <= 0) {
-    return { text: "Süre doldu", percent: 0, urgent: true };
+    return { text: t.slaExpired, percent: 0, urgent: true };
   }
 
   const totalMs = deadlineMs - createdMs;
@@ -108,16 +345,16 @@ function formatSla(row: Row, now: number): SlaDisplay {
   const percent = totalMs > 0 ? Math.min(100, Math.max(0, (remainingMs / totalMs) * 100)) : 0;
 
   return {
-    text: `${hours} sa ${String(minutes).padStart(2, "0")} dk`,
+    text: t.slaRemaining(hours, minutes),
     percent,
     urgent: remainingMs <= SLA_URGENT_HOURS * MS_PER_HOUR,
   };
 }
 
-function statusLabel(status: RowStatus): string {
-  if (status === "accepted") return "Kabul edildi";
-  if (status === "rejected") return "Reddedildi";
-  if (status === "expired") return "Süresi doldu";
+function statusLabel(status: RowStatus, t: TDict): string {
+  if (status === "accepted") return t.statusAccepted;
+  if (status === "rejected") return t.statusRejected;
+  if (status === "expired") return t.statusExpired;
   return status;
 }
 
@@ -128,6 +365,18 @@ function statusClass(status: RowStatus): string {
 }
 
 export default function CuratorInboxPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
+  const OPPORTUNITY_OPTIONS = useMemo(
+    () =>
+      OPPORTUNITY_VALUES.map((o) => ({
+        ...o,
+        label: t.opportunityLabels[o.value] ?? o.value,
+      })),
+    [t]
+  );
+
   const [user, setUser] = useState<User | null>(null);
   const [checked, setChecked] = useState(false);
   const [earnings, setEarnings] = useState<Earnings | null>(null);
@@ -161,7 +410,7 @@ export default function CuratorInboxPage() {
     setVerifyMsg("");
     const curator = await linkCuratorPlaylist(linkDraft.trim());
     if (!curator) {
-      setVerifyMsg("Liste bağlanamadı — linki kontrol et (Deezer veya Spotify, herkese açık).");
+      setVerifyMsg(t.linkFailed);
       return;
     }
     setCuratorRec(curator);
@@ -172,7 +421,7 @@ export default function CuratorInboxPage() {
     setVerifyMsg("");
     const result = await verifyOwnershipStart();
     if (result) setVerifyCode(result.code);
-    else setVerifyMsg("Kod üretilemedi — tekrar dene.");
+    else setVerifyMsg(t.codeGenFailed);
   }
 
   async function handleVerifyCheck() {
@@ -181,9 +430,9 @@ export default function CuratorInboxPage() {
     if (curator) {
       setCuratorRec(curator);
       setVerifyCode(null);
-      setVerifyMsg("✅ Sahiplik doğrulandı — listen onaylandı, kodu açıklamadan silebilirsin.");
+      setVerifyMsg(t.ownershipVerified);
     } else {
-      setVerifyMsg("Kod açıklamada bulunamadı — ekledikten 1-2 dk sonra tekrar dene.");
+      setVerifyMsg(t.codeNotFound);
     }
   }
 
@@ -245,8 +494,8 @@ export default function CuratorInboxPage() {
     const weekCount = rows.filter(
       (r) => r.createdAt && new Date(r.createdAt).getTime() >= weekAgo
     ).length;
-    return { acceptRate: `%${acceptRatePct}`, weekCount: String(weekCount) };
-  }, [rows, now]);
+    return { acceptRate: t.percentFmt(acceptRatePct), weekCount: String(weekCount) };
+  }, [rows, now, t]);
 
   function updateRow(id: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -277,16 +526,17 @@ export default function CuratorInboxPage() {
     const result = await requestPayout(instant);
     setPayoutBusy(false);
     if (!result) {
-      setPayoutMsg("Ödeme talebi oluşturulamadı — tekrar dene.");
+      setPayoutMsg(t.payoutFailed);
       return;
     }
     setPayouts((prev) => [result, ...prev]);
     // Talep tum tahakkuk etmis bakiyeyi kapsar; bekleyen kazanci sifirla.
     setEarnings((prev) => (prev ? { ...prev, pending_usd: 0 } : prev));
     setPayoutMsg(
-      result.fee_usd > 0
-        ? `Talep oluşturuldu: $${result.amount_usd.toFixed(2)} (kesinti $${result.fee_usd.toFixed(2)})`
-        : `Talep oluşturuldu: $${result.amount_usd.toFixed(2)}`
+      t.payoutRequested(
+        result.amount_usd.toFixed(2),
+        result.fee_usd > 0 ? result.fee_usd.toFixed(2) : null
+      )
     );
   }
 
@@ -326,11 +576,12 @@ export default function CuratorInboxPage() {
   if (checked && !user) {
     return (
       <div className={styles.wrap} style={{ paddingTop: 80, textAlign: "center" }}>
-        <h1 className={styles.pageTitle}>Curator Gelen Kutusu</h1>
-        <p style={{ fontWeight: 600, margin: "16px 0 24px" }}>
-          Gelen kutunu görmek için küratör hesabınla giriş yap.
-        </p>
-        <Link href="/giris" className="nb-btn">Giriş / Kayıt</Link>
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <LangToggle />
+        </div>
+        <h1 className={styles.pageTitle}>{t.gateTitle}</h1>
+        <p style={{ fontWeight: 600, margin: "16px 0 24px" }}>{t.gateText}</p>
+        <Link href="/giris" className="nb-btn">{t.loginBtn}</Link>
       </div>
     );
   }
@@ -340,34 +591,38 @@ export default function CuratorInboxPage() {
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
           <Link href="/" className={styles.logo}>MuzikSEO</Link>
-          <div className={styles.userChip}>
-            👤 {user ? `${user.name} — Curator Paneli` : "Curator Paneli"}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div className={styles.userChip}>
+              {user ? t.userChip(user.name) : `👤 ${t.curatorPanel}`}
+            </div>
+            <LangToggle />
           </div>
         </div>
       </nav>
 
       <div className={styles.wrap}>
-        <h1 className={styles.pageTitle}>Gelen Kutusu</h1>
+        <h1 className={styles.pageTitle}>{t.pageTitle}</h1>
 
         {apiFailed && (
           <div className={styles.apiBanner} role="status">
-            <strong>API&apos;ye ulaşılamadı</strong> — tekrar dene.
+            <strong>{t.apiFailedStrong}</strong>
+            {t.apiFailedRest}
           </div>
         )}
 
         {user && !user.curator_id && (
           <div className={styles.apiBanner} role="status">
-            <strong>Playlist bağlı değil.</strong> Deezer veya Spotify playlist
-            linkini ekle:
+            <strong>{t.playlistNotLinkedStrong}</strong>
+            {t.playlistNotLinkedRest}
             <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
               <input
                 className="nb-input"
-                placeholder="https://open.spotify.com/playlist/... veya deezer.com/playlist/..."
+                placeholder={t.playlistUrlPlaceholder}
                 value={linkDraft}
                 onChange={(e) => setLinkDraft(e.target.value)}
               />
               <button type="button" className="nb-btn" onClick={handleLinkPlaylist}>
-                Bağla
+                {t.linkBtn}
               </button>
             </div>
             {verifyMsg && <div style={{ marginTop: 8, fontWeight: 800 }}>{verifyMsg}</div>}
@@ -376,26 +631,26 @@ export default function CuratorInboxPage() {
 
         {curatorRec && !curatorRec.ownership_verified && (
           <div className={styles.apiBanner} role="status">
-            <strong>Liste sahipliğini doğrula</strong> — doğrulanana kadar
-            gönderim alamazsın.
+            <strong>{t.verifyOwnershipStrong}</strong>
+            {t.verifyOwnershipRest}
             {verifyCode ? (
               <div style={{ marginTop: 10 }}>
-                1. Bu kodu playlist <b>açıklamasına</b> ekle:{" "}
+                {t.verifyStep1}{" "}
                 <code style={{ fontSize: 16, fontWeight: 900, background: "#fff",
                                padding: "2px 8px", border: "2px solid #000" }}>
                   {verifyCode}
                 </code>
                 <br />
-                2. Kaydettikten sonra doğrula:
+                {t.verifyStep2}
                 <button type="button" className="nb-btn" style={{ marginLeft: 10 }}
                         onClick={handleVerifyCheck}>
-                  Doğrula
+                  {t.verifyBtn}
                 </button>
               </div>
             ) : (
               <button type="button" className="nb-btn" style={{ marginLeft: 10 }}
                       onClick={handleVerifyStart}>
-                Doğrulama kodu al
+                {t.getCodeBtn}
               </button>
             )}
             {verifyMsg && <div style={{ marginTop: 8, fontWeight: 800 }}>{verifyMsg}</div>}
@@ -407,18 +662,18 @@ export default function CuratorInboxPage() {
 
         <div className={styles.statsBar}>
           <div className={styles.stat}>
-            Kabul oranı <b>{stats.acceptRate}</b>
+            {t.acceptRateLabel} <b>{stats.acceptRate}</b>
           </div>
           <div className={styles.sep} />
-          <div className={styles.stat}>
-            Bu hafta <b>{stats.weekCount}</b> gönderim
-          </div>
+          <div className={styles.stat}>{t.weekCountLabel(stats.weekCount)}</div>
           {earnings && (
             <>
               <div className={styles.sep} />
               <div className={styles.stat}>
-                Kazanç <b>${earnings.total_usd.toFixed(0)}</b> (bekleyen $
-                {earnings.pending_usd.toFixed(0)})
+                {t.earningsLabel(
+                  `$${earnings.total_usd.toFixed(0)}`,
+                  `$${earnings.pending_usd.toFixed(0)}`
+                )}
               </div>
             </>
           )}
@@ -426,9 +681,9 @@ export default function CuratorInboxPage() {
 
         {user && (
           <div className={styles.payoutPanel}>
-            <h2 className={styles.payoutTitle}>Ödeme</h2>
+            <h2 className={styles.payoutTitle}>{t.payoutTitle}</h2>
             <div className={styles.payoutPending}>
-              Bekleyen kazanç <b>${(earnings?.pending_usd ?? 0).toFixed(2)}</b>
+              {t.payoutPendingLabel} <b>${(earnings?.pending_usd ?? 0).toFixed(2)}</b>
             </div>
             <div className={styles.payoutButtons}>
               <button
@@ -437,7 +692,7 @@ export default function CuratorInboxPage() {
                 onClick={() => handlePayoutRequest(false)}
                 disabled={payoutBusy || (earnings?.pending_usd ?? 0) < PAYOUT_MIN_USD}
               >
-                Standart Ödeme İste
+                {t.payoutStandardBtn}
               </button>
               <button
                 type="button"
@@ -445,14 +700,12 @@ export default function CuratorInboxPage() {
                 onClick={() => handlePayoutRequest(true)}
                 disabled={payoutBusy || (earnings?.pending_usd ?? 0) <= 0}
               >
-                Anında Ödeme (%{INSTANT_PAYOUT_FEE_PCT} kesinti)
+                {t.payoutInstantBtn(INSTANT_PAYOUT_FEE_PCT)}
               </button>
             </div>
             {(earnings?.pending_usd ?? 0) < PAYOUT_MIN_USD && (
               <div className={styles.payoutHint}>
-                Standart ödeme eşiği ${PAYOUT_MIN_USD} — bakiyen $
-                {(earnings?.pending_usd ?? 0).toFixed(2)}. Eşiğe ulaşana kadar
-                anında ödemeyi kullanabilirsin.
+                {t.payoutHint(PAYOUT_MIN_USD, (earnings?.pending_usd ?? 0).toFixed(2))}
               </div>
             )}
             {payoutMsg && <div className={styles.payoutMsg}>{payoutMsg}</div>}
@@ -461,19 +714,19 @@ export default function CuratorInboxPage() {
               <table className={styles.payoutTable}>
                 <thead>
                   <tr>
-                    <th>Tarih</th>
-                    <th>Tutar</th>
-                    <th>Kesinti</th>
-                    <th>Durum</th>
+                    <th>{t.tableDate}</th>
+                    <th>{t.tableAmount}</th>
+                    <th>{t.tableFee}</th>
+                    <th>{t.tableStatus}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payouts.map((p) => (
                     <tr key={p.id}>
-                      <td>{new Date(p.created_at).toLocaleDateString("tr-TR")}</td>
+                      <td>{new Date(p.created_at).toLocaleDateString(t.dateLocale)}</td>
                       <td>${p.amount_usd.toFixed(2)}</td>
                       <td>{p.fee_usd > 0 ? `$${p.fee_usd.toFixed(2)}` : "—"}</td>
-                      <td>{p.status === "paid" ? "Ödendi" : "Talep edildi"}</td>
+                      <td>{p.status === "paid" ? t.payoutPaid : t.payoutRequestedStatus}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -482,17 +735,15 @@ export default function CuratorInboxPage() {
           </div>
         )}
 
-        {isLoading && <div className={styles.loading}>Yükleniyor...</div>}
+        {isLoading && <div className={styles.loading}>{t.loading}</div>}
 
         {!isLoading && rows.length === 0 && !apiFailed && (
-          <div className={styles.loading}>
-            Henüz gönderim yok — sanatçılar şarkı gönderince burada görünür.
-          </div>
+          <div className={styles.loading}>{t.emptyInbox}</div>
         )}
 
         {!isLoading &&
           rows.map((row) => {
-            const sla = formatSla(row, now);
+            const sla = formatSla(row, now, t);
             const isExpanded = expandedId === row.id;
             const isBusy = busyId === row.id;
             const draft = feedbackDrafts[row.id] ?? "";
@@ -507,7 +758,7 @@ export default function CuratorInboxPage() {
                   <button
                     type="button"
                     className={styles.playBtn}
-                    aria-label={`${row.title} — önizlemeyi oynat`}
+                    aria-label={t.previewAria(row.title)}
                   >
                     <span className={styles.playTri} />
                   </button>
@@ -516,9 +767,7 @@ export default function CuratorInboxPage() {
                     <div className={styles.name}>
                       {row.title}
                       {row.priority === 1 && (
-                        <span className={styles.priorityBadge}>
-                          Öne çıkan (+$0.50 bonus)
-                        </span>
+                        <span className={styles.priorityBadge}>{t.priorityBadge}</span>
                       )}
                     </div>
                     <div className={styles.artist}>{row.artist}</div>
@@ -547,7 +796,7 @@ export default function CuratorInboxPage() {
                           onClick={() => handleActionClick(row.id, "accepted")}
                           disabled={isBusy}
                         >
-                          Kabul Et
+                          {t.acceptBtn}
                         </button>
                         <button
                           type="button"
@@ -555,13 +804,13 @@ export default function CuratorInboxPage() {
                           onClick={() => handleActionClick(row.id, "rejected")}
                           disabled={isBusy}
                         >
-                          Reddet
+                          {t.rejectBtn}
                         </button>
                       </div>
                     </>
                   ) : (
                     <div className={`${styles.statusResult} ${statusClass(row.status)}`}>
-                      {statusLabel(row.status)}
+                      {statusLabel(row.status, t)}
                     </div>
                   )}
                 </div>
@@ -570,12 +819,12 @@ export default function CuratorInboxPage() {
                   <div className={styles.expanded}>
                     <label htmlFor={`reason-${row.id}`}>
                       {expandedAction === "accepted"
-                        ? "Geri bildirim (opsiyonel — 120+ karakter nitelikli sayılır ve $1 kazandırır)"
-                        : "Red nedeni (zorunlu — 120+ karakter nitelikli sayılır ve $1 kazandırır)"}
+                        ? t.feedbackLabelAccepted
+                        : t.feedbackLabelRejected}
                     </label>
                     <textarea
                       id={`reason-${row.id}`}
-                      placeholder="Örn: Miks temiz ama nakarat listenin tempo profiline göre yavaş kalıyor; ikinci verse'teki vokal katmanı güçlü..."
+                      placeholder={t.feedbackPlaceholder}
                       value={draft}
                       onChange={(e) =>
                         setFeedbackDrafts((prev) => ({ ...prev, [row.id]: e.target.value }))
@@ -586,7 +835,7 @@ export default function CuratorInboxPage() {
                         htmlFor={`opp-${row.id}`}
                         style={{ fontSize: 12, fontWeight: 800, display: "block" }}
                       >
-                        Fırsat sun (opsiyonel — sanatçıya ekstra değer)
+                        {t.opportunityLabel}
                       </label>
                       <select
                         id={`opp-${row.id}`}
@@ -601,10 +850,10 @@ export default function CuratorInboxPage() {
                       >
                         <option value="">
                           {expandedAction === "accepted"
-                            ? "Otomatik (kabul = birincil fırsat)"
-                            : "Fırsat yok"}
+                            ? t.opportunityAutoAccepted
+                            : t.opportunityNone}
                         </option>
-                        <optgroup label="Birincil fırsat (somut sonuç)">
+                        <optgroup label={t.opportunityPrimaryGroup}>
                           {OPPORTUNITY_OPTIONS.filter((o) => o.level === "primary").map(
                             (o) => (
                               <option key={o.value} value={o.value}>
@@ -613,7 +862,7 @@ export default function CuratorInboxPage() {
                             )
                           )}
                         </optgroup>
-                        <optgroup label="İkincil fırsat (dolaylı değer)">
+                        <optgroup label={t.opportunitySecondaryGroup}>
                           {OPPORTUNITY_OPTIONS.filter((o) => o.level === "secondary").map(
                             (o) => (
                               <option key={o.value} value={o.value}>
@@ -625,13 +874,11 @@ export default function CuratorInboxPage() {
                       </select>
                     </div>
                     {gateActive && (
-                      <div className={styles.gateNotice}>
-                        Şarkıyı dinle — yanıt {gateRemaining} saniye sonra açılır
-                      </div>
+                      <div className={styles.gateNotice}>{t.gateWait(gateRemaining)}</div>
                     )}
                     <div className={styles.sendRow}>
                       <span style={{ fontSize: 12, fontWeight: 700 }}>
-                        {draft.trim().length} karakter {qualified ? "— nitelikli ✓ ($1)" : ""}
+                        {t.charCount(draft.trim().length, qualified)}
                       </span>
                       <button
                         type="button"
@@ -643,7 +890,7 @@ export default function CuratorInboxPage() {
                           gateActive
                         }
                       >
-                        {expandedAction === "accepted" ? "Kabul + Gönder" : "Reddet + Gönder"}
+                        {expandedAction === "accepted" ? t.sendAccepted : t.sendRejected}
                       </button>
                     </div>
                   </div>

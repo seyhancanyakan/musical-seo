@@ -3,7 +3,57 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { applyCurator, type Curator } from "@/lib/api";
+import { LangToggle, pick, useLocale } from "@/lib/locale";
 import styles from "./page.module.css";
+
+const T = {
+  tr: {
+    heroTitle: "LİSTENLE PARA KAZAN",
+    heroSub: "Deezer playlist'ini bağla, otomatik doğrulama sonucunu 30 saniyede gör.",
+    namePlaceholder: "Adın Soyadın",
+    emailPlaceholder: "E-posta adresin",
+    urlPlaceholder: "Deezer playlist URL'ini yapıştır",
+    verifying: "Doğrulanıyor…",
+    verifyBtn: "Doğrula",
+    note: "Not: Listeni botlara karşı otomatik doğruluyoruz.",
+    demoBanner: "API'ye ulaşılamadı — demo sonuç gösteriliyor.",
+    stampApprovedLine1: "Otomatik",
+    stampApprovedLine2: "Onaylandı",
+    stampPending: "İncelemede",
+    resultMeta: (tracks: number, diversity: string, quality: string) =>
+      `${tracks} parça · Çeşitlilik ${diversity} · Kalite ${quality} / 100`,
+    checklistItems: [
+      "Playlist herkese açık ve aktif olarak güncelleniyor",
+      "Takipçi/fan oranı bot davranışı sınırının altında",
+      "Sanatçı çeşitliliği minimum eşiği karşılıyor",
+    ],
+    footnote:
+      "Doğrulama sonrası listenle eşleşen pitch'ler gelen kutuna düşmeye başlar. Her kabul ettiğin yerleşim için kazanç panelinden ödeme takip edebilirsin.",
+  },
+  en: {
+    heroTitle: "EARN WITH YOUR PLAYLIST",
+    heroSub: "Link your Deezer playlist and see the automatic verification result in 30 seconds.",
+    namePlaceholder: "Your name",
+    emailPlaceholder: "Your email address",
+    urlPlaceholder: "Paste your Deezer playlist URL",
+    verifying: "Verifying…",
+    verifyBtn: "Verify",
+    note: "Note: We automatically verify your playlist against bot behavior.",
+    demoBanner: "Couldn't reach the API — showing a demo result.",
+    stampApprovedLine1: "Automatically",
+    stampApprovedLine2: "Approved",
+    stampPending: "Under Review",
+    resultMeta: (tracks: number, diversity: string, quality: string) =>
+      `${tracks} tracks · Diversity ${diversity} · Quality ${quality} / 100`,
+    checklistItems: [
+      "Playlist is public and actively updated",
+      "Follower/fan ratio is below the bot-behavior threshold",
+      "Artist diversity meets the minimum threshold",
+    ],
+    footnote:
+      "Once verified, pitches matching your playlist start landing in your inbox. Track payouts for every placement you accept from the earnings panel.",
+  },
+} as const;
 
 /** Mockup'taki demo sonucu birebir yansitir (API'ye ulasilamadiginda gosterilir). */
 const DEMO_RESULT: Curator = {
@@ -21,13 +71,10 @@ const DEMO_RESULT: Curator = {
   status: "approved",
 };
 
-const CHECKLIST_ITEMS = [
-  "Playlist herkese açık ve aktif olarak güncelleniyor",
-  "Takipçi/fan oranı bot davranışı sınırının altında",
-  "Sanatçı çeşitliliği minimum eşiği karşılıyor",
-];
-
 export default function CuratorBasvuruPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [playlistUrl, setPlaylistUrl] = useState(
@@ -70,22 +117,20 @@ export default function CuratorBasvuruPage() {
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
           <Link href="/" className={styles.logo}>MuzikSEO</Link>
+          <LangToggle />
         </div>
       </nav>
 
       <div className={styles.centerWrap}>
-        <h1 className={styles.pageTitle}>LİSTENLE PARA KAZAN</h1>
-        <p className={styles.sub}>
-          Deezer playlist&apos;ini bağla, otomatik doğrulama sonucunu 30
-          saniyede gör.
-        </p>
+        <h1 className={styles.pageTitle}>{t.heroTitle}</h1>
+        <p className={styles.sub}>{t.heroSub}</p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <input
             className={styles.input}
             type="text"
             required
-            placeholder="Adın Soyadın"
+            placeholder={t.namePlaceholder}
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
@@ -93,7 +138,7 @@ export default function CuratorBasvuruPage() {
             className={styles.input}
             type="email"
             required
-            placeholder="E-posta adresin"
+            placeholder={t.emailPlaceholder}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />
@@ -102,23 +147,19 @@ export default function CuratorBasvuruPage() {
               className={styles.input}
               type="text"
               required
-              placeholder="Deezer playlist URL'ini yapıştır"
+              placeholder={t.urlPlaceholder}
               value={playlistUrl}
               onChange={(event) => setPlaylistUrl(event.target.value)}
             />
             <button className={styles.btn} type="submit" disabled={loading}>
-              {loading ? "Doğrulanıyor…" : "Doğrula"}
+              {loading ? t.verifying : t.verifyBtn}
             </button>
           </div>
         </form>
-        <div className={styles.note}>
-          Not: Listeni botlara karşı otomatik doğruluyoruz.
-        </div>
+        <div className={styles.note}>{t.note}</div>
 
         {isDemo && (
-          <div className={styles.demoBanner}>
-            API&apos;ye ulaşılamadı — demo sonuç gösteriliyor.
-          </div>
+          <div className={styles.demoBanner}>{t.demoBanner}</div>
         )}
 
         {result && (
@@ -126,12 +167,12 @@ export default function CuratorBasvuruPage() {
             <div className={stampClass}>
               {result.status === "approved" ? (
                 <>
-                  Otomatik
+                  {t.stampApprovedLine1}
                   <br />
-                  Onaylandı
+                  {t.stampApprovedLine2}
                 </>
               ) : result.status === "pending" ? (
-                "İncelemede"
+                t.stampPending
               ) : (
                 result.status
               )}
@@ -142,14 +183,16 @@ export default function CuratorBasvuruPage() {
                   &ldquo;{result.playlist_title}&rdquo;
                 </div>
                 <div className={styles.resultMeta}>
-                  {result.track_count} parça · Çeşitlilik{" "}
-                  {result.diversity.toFixed(2)} · Kalite{" "}
-                  {result.quality_score.toFixed(1)} / 100
+                  {t.resultMeta(
+                    result.track_count,
+                    result.diversity.toFixed(2),
+                    result.quality_score.toFixed(1)
+                  )}
                 </div>
               </div>
             </div>
             <div className={styles.checklist}>
-              {CHECKLIST_ITEMS.map((item, index) => (
+              {t.checklistItems.map((item, index) => (
                 <div className={styles.checkItem} key={item}>
                   <div className={styles.checkBox}>{index + 1}</div> {item}
                 </div>
@@ -158,11 +201,7 @@ export default function CuratorBasvuruPage() {
           </div>
         )}
 
-        <div className={styles.footnote}>
-          Doğrulama sonrası listenle eşleşen pitch&apos;ler gelen kutuna
-          düşmeye başlar. Her kabul ettiğin yerleşim için kazanç panelinden
-          ödeme takip edebilirsin.
-        </div>
+        <div className={styles.footnote}>{t.footnote}</div>
       </div>
     </>
   );

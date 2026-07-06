@@ -10,6 +10,7 @@ import {
   type Curator,
   type CuratorStatus,
 } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
 import { formatDate } from "./utils";
 import PurchaseRequestsTab from "./PurchaseRequestsTab";
@@ -63,34 +64,144 @@ const DEMO_CURATORS: Curator[] = [
 ];
 
 type Filter = "all" | CuratorStatus;
-
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "Tümü" },
-  { key: "lead", label: "Lead" },
-  { key: "pending", label: "Bekleyen" },
-  { key: "approved", label: "Onaylı" },
-  { key: "rejected", label: "Reddedilen" },
-];
-
 type SourceKey = "all" | "spotify" | "deezer";
+type TabKey = "curators" | "purchases" | "credits" | "pro" | "payouts";
 
-const SOURCE_FILTERS: { key: SourceKey; label: string }[] = [
-  { key: "all", label: "Tüm Kaynaklar" },
-  { key: "spotify", label: "Spotify" },
-  { key: "deezer", label: "Deezer" },
-];
+const T = {
+  tr: {
+    adminChip: "🛡️ Admin — Küratör Yönetimi",
+    pageTitle: "Admin Paneli",
+    keyBannerTitle: "Admin anahtarı gerekli",
+    keyBannerText: ".env'deki MARKETPLACE_ADMIN_KEY değerini gir:",
+    keyPlaceholder: "Admin anahtarı",
+    connect: "Bağlan",
+    tabs: {
+      curators: "Küratörler",
+      purchases: "Kredi Talepleri",
+      credits: "Kredi Yükle",
+      pro: "Pro Aktivasyon",
+      payouts: "Ödemeler",
+    } as Record<TabKey, string>,
+    filters: {
+      all: "Tümü",
+      lead: "Lead",
+      pending: "Bekleyen",
+      approved: "Onaylı",
+      rejected: "Reddedilen",
+    } as Record<Filter, string>,
+    sourceFilters: {
+      all: "Tüm Kaynaklar",
+      spotify: "Spotify",
+      deezer: "Deezer",
+    } as Record<SourceKey, string>,
+    loading: "Yükleniyor...",
+    empty: "Bu filtreye uyan küratör yok.",
+    columns: {
+      curator: "Küratör",
+      contact: "İletişim",
+      source: "Kaynak",
+      playlist: "Playlist",
+      fans: "Fan",
+      quality: "Kalite",
+      applied: "Başvuru",
+      status: "Durum",
+      action: "İşlem",
+    },
+    noContact: "iletişim yok",
+    openSource: "kaynağı aç ↗",
+    confidence: "güven",
+    tracksSuffix: "parça",
+    statusLabels: {
+      approved: "Onaylı",
+      rejected: "Reddedildi",
+      lead: "Lead",
+      pending: "Bekliyor",
+    } as Record<CuratorStatus, string>,
+    sourceLabels: {
+      deezer_owner_name: "Deezer görünen adı",
+      deezer_desc_email: "Deezer açıklama (email)",
+      deezer_desc_link: "Deezer açıklama (link)",
+      deezer_desc_instagram: "Deezer açıklama (IG)",
+      hermes_web: "Hermes AI web",
+    } as Record<string, string>,
+    approve: "Onayla",
+    reject: "Reddet",
+    hold: "Beklet",
+    sponsored: "Sponsorlu",
+    sponsorWeek: "Sponsor 7g",
+  },
+  en: {
+    adminChip: "🛡️ Admin — Curator Management",
+    pageTitle: "Admin Panel",
+    keyBannerTitle: "Admin key required",
+    keyBannerText: "Enter the MARKETPLACE_ADMIN_KEY value from .env:",
+    keyPlaceholder: "Admin key",
+    connect: "Connect",
+    tabs: {
+      curators: "Curators",
+      purchases: "Credit Requests",
+      credits: "Grant Credits",
+      pro: "Pro Activation",
+      payouts: "Payouts",
+    } as Record<TabKey, string>,
+    filters: {
+      all: "All",
+      lead: "Lead",
+      pending: "Pending",
+      approved: "Approved",
+      rejected: "Rejected",
+    } as Record<Filter, string>,
+    sourceFilters: {
+      all: "All Sources",
+      spotify: "Spotify",
+      deezer: "Deezer",
+    } as Record<SourceKey, string>,
+    loading: "Loading...",
+    empty: "No curators match this filter.",
+    columns: {
+      curator: "Curator",
+      contact: "Contact",
+      source: "Source",
+      playlist: "Playlist",
+      fans: "Fans",
+      quality: "Quality",
+      applied: "Applied",
+      status: "Status",
+      action: "Action",
+    },
+    noContact: "no contact",
+    openSource: "open source ↗",
+    confidence: "confidence",
+    tracksSuffix: "tracks",
+    statusLabels: {
+      approved: "Approved",
+      rejected: "Rejected",
+      lead: "Lead",
+      pending: "Pending",
+    } as Record<CuratorStatus, string>,
+    sourceLabels: {
+      deezer_owner_name: "Deezer display name",
+      deezer_desc_email: "Deezer description (email)",
+      deezer_desc_link: "Deezer description (link)",
+      deezer_desc_instagram: "Deezer description (IG)",
+      hermes_web: "Hermes AI web",
+    } as Record<string, string>,
+    approve: "Approve",
+    reject: "Reject",
+    hold: "Hold",
+    sponsored: "Sponsored",
+    sponsorWeek: "Sponsor 7d",
+  },
+} as const;
+
+const FILTER_KEYS: Filter[] = ["all", "lead", "pending", "approved", "rejected"];
+const SOURCE_KEYS: SourceKey[] = ["all", "spotify", "deezer"];
+const TAB_KEYS: TabKey[] = ["curators", "purchases", "credits", "pro", "payouts"];
 
 function curatorSource(c: Curator): Exclude<SourceKey, "all"> {
   const id = c.deezer_playlist_id || "";
   if (id.startsWith("sp_")) return "spotify";
   return "deezer";
-}
-
-function statusLabel(status: CuratorStatus): string {
-  if (status === "approved") return "Onaylı";
-  if (status === "rejected") return "Reddedildi";
-  if (status === "lead") return "Lead";
-  return "Bekliyor";
 }
 
 function statusClass(status: CuratorStatus): string {
@@ -100,30 +211,10 @@ function statusClass(status: CuratorStatus): string {
   return styles.badgePending;
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  deezer_owner_name: "Deezer görünen adı",
-  deezer_desc_email: "Deezer açıklama (email)",
-  deezer_desc_link: "Deezer açıklama (link)",
-  deezer_desc_instagram: "Deezer açıklama (IG)",
-  hermes_web: "Hermes AI web",
-};
-
-function sourceLabel(source?: string | null): string {
-  if (!source) return "—";
-  return SOURCE_LABELS[source] ?? source;
-}
-
-type TabKey = "curators" | "purchases" | "credits" | "pro" | "payouts";
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "curators", label: "Küratörler" },
-  { key: "purchases", label: "Kredi Talepleri" },
-  { key: "credits", label: "Kredi Yükle" },
-  { key: "pro", label: "Pro Aktivasyon" },
-  { key: "payouts", label: "Ödemeler" },
-];
-
 export default function AdminPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [curators, setCurators] = useState<Curator[]>([]);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -212,49 +303,54 @@ export default function AdminPage() {
     setSponsorBusyId(null);
   }
 
+  function sourceLabel(source?: string | null): string {
+    if (!source) return "—";
+    return t.sourceLabels[source] ?? source;
+  }
+
   return (
     <div>
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
           <Link href="/" className={styles.logo}>MuzikSEO</Link>
-          <div className={styles.userChip}>🛡️ Admin — Küratör Yönetimi</div>
+          <div className={styles.userChip}>{t.adminChip}</div>
+          <LangToggle />
         </div>
       </nav>
 
       <div className={styles.wrap}>
-        <h1 className={styles.pageTitle}>Admin Paneli</h1>
+        <h1 className={styles.pageTitle}>{t.pageTitle}</h1>
 
         {needsKey && (
           <div className={styles.apiBanner} role="status">
-            <strong>Admin anahtarı gerekli</strong> — .env&apos;deki
-            MARKETPLACE_ADMIN_KEY değerini gir:
+            <strong>{t.keyBannerTitle}</strong> — {t.keyBannerText}
             <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
               <input
                 className="nb-input"
                 type="password"
-                placeholder="Admin anahtarı"
+                placeholder={t.keyPlaceholder}
                 value={keyDraft}
                 onChange={(e) => setKeyDraft(e.target.value)}
                 style={{ maxWidth: 320 }}
               />
               <button type="button" className="nb-btn" onClick={handleSaveKey}>
-                Bağlan
+                {t.connect}
               </button>
             </div>
           </div>
         )}
 
         <div className={styles.tabBar}>
-          {TABS.map((t) => (
+          {TAB_KEYS.map((key) => (
             <button
-              key={t.key}
+              key={key}
               type="button"
               className={
-                tab === t.key ? `${styles.tabBtn} ${styles.tabActive}` : styles.tabBtn
+                tab === key ? `${styles.tabBtn} ${styles.tabActive}` : styles.tabBtn
               }
-              onClick={() => setTab(t.key)}
+              onClick={() => setTab(key)}
             >
-              {t.label}
+              {t.tabs[key]}
             </button>
           ))}
         </div>
@@ -262,41 +358,41 @@ export default function AdminPage() {
         {tab === "curators" && (
         <>
         <div className={styles.filters}>
-          {FILTERS.map((f) => (
+          {FILTER_KEYS.map((key) => (
             <button
-              key={f.key}
+              key={key}
               type="button"
               className={
-                filter === f.key ? `${styles.filterBtn} ${styles.filterActive}` : styles.filterBtn
+                filter === key ? `${styles.filterBtn} ${styles.filterActive}` : styles.filterBtn
               }
-              onClick={() => setFilter(f.key)}
+              onClick={() => setFilter(key)}
             >
-              {f.label} <span className={styles.count}>{counts[f.key]}</span>
+              {t.filters[key]} <span className={styles.count}>{counts[key]}</span>
             </button>
           ))}
         </div>
 
         <div className={styles.filters}>
-          {SOURCE_FILTERS.map((f) => (
+          {SOURCE_KEYS.map((key) => (
             <button
-              key={f.key}
+              key={key}
               type="button"
               className={
-                sourceFilter === f.key
+                sourceFilter === key
                   ? `${styles.filterBtn} ${styles.filterActive}`
                   : styles.filterBtn
               }
-              onClick={() => setSourceFilter(f.key)}
+              onClick={() => setSourceFilter(key)}
             >
-              {f.label} <span className={styles.count}>{sourceCounts[f.key]}</span>
+              {t.sourceFilters[key]} <span className={styles.count}>{sourceCounts[key]}</span>
             </button>
           ))}
         </div>
 
-        {isLoading && <div className={styles.loading}>Yükleniyor...</div>}
+        {isLoading && <div className={styles.loading}>{t.loading}</div>}
 
         {!isLoading && visible.length === 0 && (
-          <div className={styles.empty}>Bu filtreye uyan küratör yok.</div>
+          <div className={styles.empty}>{t.empty}</div>
         )}
 
         {!isLoading && visible.length > 0 && (
@@ -304,15 +400,15 @@ export default function AdminPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Küratör</th>
-                  <th>İletişim</th>
-                  <th>Kaynak</th>
-                  <th>Playlist</th>
-                  <th className={styles.num}>Fan</th>
-                  <th className={styles.num}>Kalite</th>
-                  <th>Başvuru</th>
-                  <th>Durum</th>
-                  <th>İşlem</th>
+                  <th>{t.columns.curator}</th>
+                  <th>{t.columns.contact}</th>
+                  <th>{t.columns.source}</th>
+                  <th>{t.columns.playlist}</th>
+                  <th className={styles.num}>{t.columns.fans}</th>
+                  <th className={styles.num}>{t.columns.quality}</th>
+                  <th>{t.columns.applied}</th>
+                  <th>{t.columns.status}</th>
+                  <th>{t.columns.action}</th>
                 </tr>
               </thead>
               <tbody>
@@ -330,7 +426,7 @@ export default function AdminPage() {
                             {c.email}
                           </a>
                         ) : (
-                          <span className={styles.sub}>iletişim yok</span>
+                          <span className={styles.sub}>{t.noContact}</span>
                         )}
                       </td>
                       <td>
@@ -342,12 +438,12 @@ export default function AdminPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            kaynağı aç ↗
+                            {t.openSource}
                           </a>
                         )}
                         {typeof c.contact_confidence === "number" && (
                           <div className={styles.sub}>
-                            güven %{Math.round(c.contact_confidence * 100)}
+                            {t.confidence} %{Math.round(c.contact_confidence * 100)}
                           </div>
                         )}
                       </td>
@@ -360,16 +456,18 @@ export default function AdminPage() {
                         >
                           {c.playlist_title}
                         </a>
-                        <div className={styles.sub}>{c.track_count} parça</div>
+                        <div className={styles.sub}>{c.track_count} {t.tracksSuffix}</div>
                       </td>
-                      <td className={styles.num}>{c.fans.toLocaleString("tr-TR")}</td>
+                      <td className={styles.num}>
+                        {c.fans.toLocaleString(locale === "tr" ? "tr-TR" : "en-US")}
+                      </td>
                       <td className={styles.num}>
                         <span className={styles.score}>{c.quality_score.toFixed(1)}</span>
                       </td>
                       <td className={styles.sub}>{formatDate(c.created_at)}</td>
                       <td>
                         <span className={`${styles.badge} ${statusClass(c.status)}`}>
-                          {statusLabel(c.status)}
+                          {t.statusLabels[c.status]}
                         </span>
                       </td>
                       <td>
@@ -381,7 +479,7 @@ export default function AdminPage() {
                               onClick={() => changeStatus(c.id, "approved")}
                               disabled={isBusy}
                             >
-                              Onayla
+                              {t.approve}
                             </button>
                           )}
                           {c.status !== "rejected" && (
@@ -391,7 +489,7 @@ export default function AdminPage() {
                               onClick={() => changeStatus(c.id, "rejected")}
                               disabled={isBusy}
                             >
-                              Reddet
+                              {t.reject}
                             </button>
                           )}
                           {c.status !== "pending" && (
@@ -401,12 +499,12 @@ export default function AdminPage() {
                               onClick={() => changeStatus(c.id, "pending")}
                               disabled={isBusy}
                             >
-                              Beklet
+                              {t.hold}
                             </button>
                           )}
                           {c.sponsored && (
                             <span className={`${styles.badge} ${styles.badgeSponsored}`}>
-                              Sponsorlu
+                              {t.sponsored}
                             </span>
                           )}
                           <button
@@ -415,7 +513,7 @@ export default function AdminPage() {
                             onClick={() => sponsorForWeek(c.id)}
                             disabled={sponsorBusyId === c.id}
                           >
-                            Sponsor 7g
+                            {t.sponsorWeek}
                           </button>
                         </div>
                       </td>

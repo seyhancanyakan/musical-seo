@@ -3,11 +3,21 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getAudit, type AuditResult } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
 
 const DEMO_QUERY = "Duman - Senden Daha Güzel";
 
-const DEMO_AUDIT: AuditResult = {
+/** Demo bulgularin sabit (locale-bagimsiz) kismi — severity/category. Metin T sozlugunden gelir. */
+const DEMO_FINDINGS_META: {
+  severity: AuditResult["findings"][number]["severity"];
+  category: string;
+}[] = [
+  { severity: "info", category: "presence" },
+  { severity: "ok", category: "keywords" },
+];
+
+const DEMO_AUDIT_BASE: Omit<AuditResult, "findings"> = {
   query: DEMO_QUERY,
   resolved_artist: "Duman",
   resolved_title: "Senden Daha Güzel",
@@ -59,21 +69,6 @@ const DEMO_AUDIT: AuditResult = {
     },
   ],
   keywords: [],
-  findings: [
-    {
-      severity: "info",
-      category: "presence",
-      message: "YouTube'da bulunamadı (API anahtarı yok).",
-      action:
-        "YouTube Data API anahtarını bağla, kanal senkronizasyonunu tekrar tetikle.",
-    },
-    {
-      severity: "ok",
-      category: "keywords",
-      message: "Sözleri aramasında görünüyor.",
-      action: "Yok — bu alan sağlıklı, izlemeye devam et.",
-    },
-  ],
   subscores: {
     metadata: 100,
     presence: 95,
@@ -83,21 +78,7 @@ const DEMO_AUDIT: AuditResult = {
   score: 99,
 };
 
-const SUBSCORE_LABELS: Record<string, string> = {
-  metadata: "Metadata",
-  presence: "Varlık",
-  consistency: "Tutarlılık",
-  keywords: "Anahtar Kelime",
-};
-
 const SUBSCORE_ORDER = ["metadata", "presence", "consistency", "keywords"];
-
-const SEVERITY_LABELS: Record<AuditResult["findings"][number]["severity"], string> = {
-  critical: "Kritik",
-  warn: "Uyarı",
-  info: "Bilgi",
-  ok: "OK",
-};
 
 const SEVERITY_TAG_CLASS: Record<AuditResult["findings"][number]["severity"], string> = {
   critical: styles.findingTagCritical,
@@ -106,32 +87,155 @@ const SEVERITY_TAG_CLASS: Record<AuditResult["findings"][number]["severity"], st
   ok: styles.findingTagOk,
 };
 
-const MONTHS_TR = [
-  "Oca",
-  "Şub",
-  "Mar",
-  "Nis",
-  "May",
-  "Haz",
-  "Tem",
-  "Ağu",
-  "Eyl",
-  "Eki",
-  "Kas",
-  "Ara",
-];
+const T = {
+  tr: {
+    months: [
+      "Oca",
+      "Şub",
+      "Mar",
+      "Nis",
+      "May",
+      "Haz",
+      "Tem",
+      "Ağu",
+      "Eyl",
+      "Eki",
+      "Kas",
+      "Ara",
+    ],
+    subscoreLabels: {
+      metadata: "Metadata",
+      presence: "Varlık",
+      consistency: "Tutarlılık",
+      keywords: "Anahtar Kelime",
+    } as Record<string, string>,
+    severityLabels: {
+      critical: "Kritik",
+      warn: "Uyarı",
+      info: "Bilgi",
+      ok: "OK",
+    },
+    overallLabels: { strong: "Güçlü", good: "İyi", medium: "Orta", weak: "Zayıf" },
+    nav: [
+      { href: "/karne", label: "Karne", icon: "📊" },
+      { href: "/playlistler", label: "Playlistler", icon: "🎧" },
+      { href: "/kanit", label: "Kanıt", icon: "✅" },
+      { href: "/curator/inbox", label: "Küratör Gelen Kutusu", icon: "📥" },
+    ],
+    userChipSuffix: "— Sanatçı Paneli",
+    searchPlaceholder: DEMO_QUERY,
+    searchAria: "Sanatçı - Şarkı",
+    analyzing: "Analiz Ediliyor...",
+    submit: "Karne Çıkar",
+    demoBanner: "API'ye ulaşılamadı — demo veri gösteriliyor",
+    lastAnalysis: "Son analiz:",
+    sourceCount: "Kaynak sayısı:",
+    overallStatus: "Genel Durum:",
+    scoreCardLabel: "SEO KARNESİ",
+    findingsTag: "Bulgular",
+    todoLabel: "Yapılacak:",
+    sourceTableTag: "Kaynak Tablosu",
+    th: {
+      source: "Kaynak",
+      found: "Bulundu",
+      isrc: "ISRC",
+      releaseDate: "Yayın Tarihi",
+      popularity: "Popülerlik",
+    },
+    yes: "Evet",
+    no: "Hayır",
+    demoFindingMessages: [
+      {
+        message: "YouTube'da bulunamadı (API anahtarı yok).",
+        action:
+          "YouTube Data API anahtarını bağla, kanal senkronizasyonunu tekrar tetikle.",
+      },
+      {
+        message: "Sözleri aramasında görünüyor.",
+        action: "Yok — bu alan sağlıklı, izlemeye devam et.",
+      },
+    ],
+  },
+  en: {
+    months: [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ],
+    subscoreLabels: {
+      metadata: "Metadata",
+      presence: "Presence",
+      consistency: "Consistency",
+      keywords: "Keywords",
+    } as Record<string, string>,
+    severityLabels: {
+      critical: "Critical",
+      warn: "Warning",
+      info: "Info",
+      ok: "OK",
+    },
+    overallLabels: { strong: "Strong", good: "Good", medium: "Fair", weak: "Weak" },
+    nav: [
+      { href: "/karne", label: "Scorecard", icon: "📊" },
+      { href: "/playlistler", label: "Playlists", icon: "🎧" },
+      { href: "/kanit", label: "Proof", icon: "✅" },
+      { href: "/curator/inbox", label: "Curator Inbox", icon: "📥" },
+    ],
+    userChipSuffix: "— Artist Panel",
+    searchPlaceholder: DEMO_QUERY,
+    searchAria: "Artist - Song",
+    analyzing: "Analyzing...",
+    submit: "Run Scorecard",
+    demoBanner: "API unreachable — showing demo data",
+    lastAnalysis: "Last analysis:",
+    sourceCount: "Source count:",
+    overallStatus: "Overall Status:",
+    scoreCardLabel: "SEO SCORECARD",
+    findingsTag: "Findings",
+    todoLabel: "To do:",
+    sourceTableTag: "Source Table",
+    th: {
+      source: "Source",
+      found: "Found",
+      isrc: "ISRC",
+      releaseDate: "Release Date",
+      popularity: "Popularity",
+    },
+    yes: "Yes",
+    no: "No",
+    demoFindingMessages: [
+      {
+        message: "Not found on YouTube (no API key).",
+        action: "Connect a YouTube Data API key, retrigger channel sync.",
+      },
+      {
+        message: "Appears in lyrics search.",
+        action: "None — this field is healthy, keep monitoring.",
+      },
+    ],
+  },
+};
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, months: string[]): string {
   if (!iso) return "—";
   const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return iso;
   const [, y, m, d] = match;
-  const month = MONTHS_TR[parseInt(m, 10) - 1] ?? m;
+  const month = months[parseInt(m, 10) - 1] ?? m;
   return `${parseInt(d, 10)} ${month} ${y}`;
 }
 
-function formatDateTime(iso: string): string {
-  const datePart = formatDate(iso);
+function formatDateTime(iso: string, months: string[]): string {
+  const datePart = formatDate(iso, months);
   const match = iso.match(/T(\d{2}):(\d{2})/);
   if (!match) return datePart;
   return `${datePart}, ${match[1]}:${match[2]}`;
@@ -141,11 +245,14 @@ function formatPopularity(popularity: number | null): string {
   return popularity != null ? `${popularity} / 100` : "—";
 }
 
-function getOverallLabel(score: number): string {
-  if (score >= 90) return "Güçlü";
-  if (score >= 70) return "İyi";
-  if (score >= 50) return "Orta";
-  return "Zayıf";
+function getOverallLabel(
+  score: number,
+  labels: { strong: string; good: string; medium: string; weak: string }
+): string {
+  if (score >= 90) return labels.strong;
+  if (score >= 70) return labels.good;
+  if (score >= 50) return labels.medium;
+  return labels.weak;
 }
 
 function getOrderedSubscoreEntries(
@@ -166,20 +273,22 @@ function subscoreBarClass(index: number): string {
   return "";
 }
 
-const NAV_LINKS = [
-  { href: "/karne", label: "Karne", icon: "📊" },
-  { href: "/playlistler", label: "Playlistler", icon: "🎧" },
-  { href: "/kanit", label: "Kanıt", icon: "✅" },
-  { href: "/curator/inbox", label: "Küratör Gelen Kutusu", icon: "📥" },
-];
-
 export default function KarnePage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<AuditResult | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const demoFindings = DEMO_FINDINGS_META.map((meta, i) => ({
+    ...meta,
+    ...t.demoFindingMessages[i],
+  }));
+  const demoAudit: AuditResult = { ...DEMO_AUDIT_BASE, findings: demoFindings };
+
   const isDemo = result === null;
-  const data = result ?? DEMO_AUDIT;
+  const data = result ?? demoAudit;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -202,12 +311,13 @@ export default function KarnePage() {
       <div className={styles.topbar}>
         <Link href="/" className={styles.logo}>MuzikSEO</Link>
         <div className={styles.userChip}>
-          👤 {data.resolved_artist} — Sanatçı Paneli
+          👤 {data.resolved_artist} {t.userChipSuffix}
         </div>
+        <LangToggle />
       </div>
 
       <div className={styles.sidebar}>
-        {NAV_LINKS.map((link) => (
+        {t.nav.map((link) => (
           <Link
             key={link.href}
             href={link.href}
@@ -229,8 +339,8 @@ export default function KarnePage() {
                 type="text"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Duman - Senden Daha Güzel"
-                aria-label="Sanatçı - Şarkı"
+                placeholder={t.searchPlaceholder}
+                aria-label={t.searchAria}
               />
             </div>
             <button
@@ -238,13 +348,11 @@ export default function KarnePage() {
               className={`nb-btn ${styles.searchButton}`}
               disabled={loading}
             >
-              {loading ? "Analiz Ediliyor..." : "Karne Çıkar"}
+              {loading ? t.analyzing : t.submit}
             </button>
           </form>
           {isDemo && (
-            <div className={styles.demoBanner}>
-              API&apos;ye ulaşılamadı — demo veri gösteriliyor
-            </div>
+            <div className={styles.demoBanner}>{t.demoBanner}</div>
           )}
         </div>
 
@@ -254,12 +362,12 @@ export default function KarnePage() {
               {data.resolved_artist} — {data.resolved_title}
             </h1>
             <div className={styles.trackSub}>
-              Son analiz: {formatDateTime(data.created_at)} · Kaynak sayısı:{" "}
-              {data.sources.length}
+              {t.lastAnalysis} {formatDateTime(data.created_at, t.months)} ·{" "}
+              {t.sourceCount} {data.sources.length}
             </div>
           </div>
           <span className={styles.pill}>
-            Genel Durum: {getOverallLabel(data.score)}
+            {t.overallStatus} {getOverallLabel(data.score, t.overallLabels)}
           </span>
         </div>
 
@@ -274,14 +382,14 @@ export default function KarnePage() {
               <div className={styles.num}>{data.score}</div>
               <div className={styles.lbl}>/ 100</div>
             </div>
-            <div className={styles.trackName}>SEO KARNESİ</div>
+            <div className={styles.trackName}>{t.scoreCardLabel}</div>
           </div>
 
           <div className={`${styles.hard} ${styles.subscores}`}>
             {orderedSubscores.map(([key, value], index) => (
               <div key={key} className={styles.subscoreRow}>
                 <div className={styles.subscoreLbl}>
-                  {SUBSCORE_LABELS[key] ?? key}
+                  {t.subscoreLabels[key] ?? key}
                 </div>
                 <div className={styles.barTrack}>
                   <div
@@ -295,34 +403,34 @@ export default function KarnePage() {
           </div>
         </div>
 
-        <span className={styles.sectionTag}>Bulgular</span>
+        <span className={styles.sectionTag}>{t.findingsTag}</span>
         <div className={styles.findings}>
           {data.findings.map((finding, index) => (
             <div key={index} className={`${styles.hard} ${styles.finding}`}>
               <span
                 className={`${styles.findingTag} ${SEVERITY_TAG_CLASS[finding.severity]}`}
               >
-                {SEVERITY_LABELS[finding.severity]}
+                {t.severityLabels[finding.severity]}
               </span>
               <div className={styles.findingText}>{finding.message}</div>
               {finding.action && (
                 <div className={styles.findingTodo}>
-                  <b>Yapılacak:</b> {finding.action}
+                  <b>{t.todoLabel}</b> {finding.action}
                 </div>
               )}
             </div>
           ))}
         </div>
 
-        <span className={styles.sectionTag}>Kaynak Tablosu</span>
+        <span className={styles.sectionTag}>{t.sourceTableTag}</span>
         <table className={`${styles.hard} ${styles.table}`}>
           <thead>
             <tr>
-              <th>Kaynak</th>
-              <th>Bulundu</th>
-              <th>ISRC</th>
-              <th>Yayın Tarihi</th>
-              <th>Popülerlik</th>
+              <th>{t.th.source}</th>
+              <th>{t.th.found}</th>
+              <th>{t.th.isrc}</th>
+              <th>{t.th.releaseDate}</th>
+              <th>{t.th.popularity}</th>
             </tr>
           </thead>
           <tbody>
@@ -331,13 +439,13 @@ export default function KarnePage() {
                 <td>{source.source}</td>
                 <td>
                   {source.found ? (
-                    <span className={styles.badgeFound}>Evet</span>
+                    <span className={styles.badgeFound}>{t.yes}</span>
                   ) : (
-                    <span className={styles.badgeMissing}>Hayır</span>
+                    <span className={styles.badgeMissing}>{t.no}</span>
                   )}
                 </td>
                 <td>{source.isrc ?? "—"}</td>
-                <td>{formatDate(source.release_date)}</td>
+                <td>{formatDate(source.release_date, t.months)}</td>
                 <td>{formatPopularity(source.popularity)}</td>
               </tr>
             ))}

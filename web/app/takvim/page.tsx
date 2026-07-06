@@ -14,7 +14,97 @@ import {
   type ScheduledSubmission,
   type User,
 } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
+
+const T = {
+  tr: {
+    loginRequired: "Giriş gerekli",
+    gateText: "Yayın planı oluşturmak için sanatçı hesabınla giriş yap.",
+    loginCta: "Giriş / Kayıt",
+    creditsWord: "kredi",
+    title: "Yayın Planı",
+    promise: "Şarkını ileri bir tarihe planla — gönderim o anda otomatik yapılır.",
+    readinessTitle: "Yayına Hazırlık Kontrolü",
+    songPlaceholder: '"Sanatçı - Şarkı"',
+    checkCta: "Kontrol Et",
+    busy: "...",
+    readinessEmpty: "Kontrol edilemedi — şarkı bulunamadı olabilir.",
+    ready: "Hazır",
+    threshold: (n: number) => `Eşik ${n}`,
+    noIssues: "Sorun bulunamadı.",
+    severity: {
+      critical: "kritik",
+      warn: "uyarı",
+      info: "bilgi",
+    } as Record<string, string>,
+    newPlanTitle: "Yeni Plan",
+    songFormPlaceholder: 'Şarkın: "Sanatçı - Şarkı"',
+    chooseCurator: "Küratör seç",
+    curatorAria: "Küratör seç",
+    dateTimeAria: "Tarih ve saat",
+    planCta: "Planla",
+    scheduledTitle: "Planlanmış Gönderimler",
+    loading: "Yükleniyor...",
+    noSchedules: "Henüz planlanmış gönderim yok.",
+    colSong: "Şarkı",
+    colCurator: "Küratör",
+    colTime: "Zaman",
+    colStatus: "Durum",
+    status: {
+      executed: "Gönderildi",
+      failed: "Başarısız",
+      pending: "Bekliyor",
+    } as Record<ScheduledSubmission["status"], string>,
+    errSongFormat: 'Şarkıyı "Sanatçı - Şarkı" formatında yaz.',
+    errCurator: "Bir küratör seç.",
+    errDateTime: "Bir tarih-saat seç.",
+    errPlanFailed: "Planlama başarısız — bilgileri kontrol et.",
+  },
+  en: {
+    loginRequired: "Login required",
+    gateText: "Log in with your artist account to create a release plan.",
+    loginCta: "Log In / Sign Up",
+    creditsWord: "credits",
+    title: "Release Calendar",
+    promise: "Schedule your song for a future date — the submission happens automatically then.",
+    readinessTitle: "Release Readiness Check",
+    songPlaceholder: '"Artist - Song"',
+    checkCta: "Check",
+    busy: "...",
+    readinessEmpty: "Couldn't check — the song may not be found.",
+    ready: "Ready",
+    threshold: (n: number) => `Threshold ${n}`,
+    noIssues: "No issues found.",
+    severity: {
+      critical: "critical",
+      warn: "warning",
+      info: "info",
+    } as Record<string, string>,
+    newPlanTitle: "New Plan",
+    songFormPlaceholder: 'Your song: "Artist - Song"',
+    chooseCurator: "Choose curator",
+    curatorAria: "Choose curator",
+    dateTimeAria: "Date and time",
+    planCta: "Schedule",
+    scheduledTitle: "Scheduled Submissions",
+    loading: "Loading...",
+    noSchedules: "No scheduled submissions yet.",
+    colSong: "Song",
+    colCurator: "Curator",
+    colTime: "Time",
+    colStatus: "Status",
+    status: {
+      executed: "Sent",
+      failed: "Failed",
+      pending: "Pending",
+    } as Record<ScheduledSubmission["status"], string>,
+    errSongFormat: 'Write your song as "Artist - Song".',
+    errCurator: "Choose a curator.",
+    errDateTime: "Choose a date and time.",
+    errPlanFailed: "Scheduling failed — check the details.",
+  },
+} as const;
 
 function parseSong(raw: string): { artist: string; title: string } | null {
   const trimmed = raw.trim();
@@ -23,12 +113,6 @@ function parseSong(raw: string): { artist: string; title: string } | null {
   const title = rest.join(" - ").trim();
   if (!artist.trim() || !title) return null;
   return { artist: artist.trim(), title };
-}
-
-function statusLabel(status: ScheduledSubmission["status"]): string {
-  if (status === "executed") return "Gönderildi";
-  if (status === "failed") return "Başarısız";
-  return "Bekliyor";
 }
 
 function statusClass(status: ScheduledSubmission["status"], styles: Record<string, string>): string {
@@ -46,6 +130,9 @@ function severityClass(severity: string, styles: Record<string, string>): string
 /** Yayin Plani — sanatci ilerideki bir tarihe gonderim planlar (createSchedule
  *  cron worker'i tetikler); ustte opsiyonel yayina hazirlik on kontrolu. */
 export default function TakvimPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [user, setUser] = useState<User | null>(null);
   const [checked, setChecked] = useState(false);
   const [curators, setCurators] = useState<Curator[]>([]);
@@ -94,15 +181,15 @@ export default function TakvimPage() {
     setError("");
     const parsed = parseSong(song);
     if (!parsed) {
-      setError('Şarkıyı "Sanatçı - Şarkı" formatında yaz.');
+      setError(t.errSongFormat);
       return;
     }
     if (!curatorId) {
-      setError("Bir küratör seç.");
+      setError(t.errCurator);
       return;
     }
     if (!scheduledAt) {
-      setError("Bir tarih-saat seç.");
+      setError(t.errDateTime);
       return;
     }
     const iso = new Date(scheduledAt).toISOString();
@@ -110,7 +197,7 @@ export default function TakvimPage() {
     const created = await createSchedule(parsed.artist, parsed.title, curatorId, iso);
     setBusy(false);
     if (!created) {
-      setError("Planlama başarısız — bilgileri kontrol et.");
+      setError(t.errPlanFailed);
       return;
     }
     setSchedules((prev) => [created, ...prev]);
@@ -134,11 +221,12 @@ export default function TakvimPage() {
     return (
       <div className={styles.gate}>
         <div className="nb-card" style={{ padding: 28, maxWidth: 460 }}>
-          <h2 className="nb-h">Giriş gerekli</h2>
-          <p className={styles.gateText}>
-            Yayın planı oluşturmak için sanatçı hesabınla giriş yap.
-          </p>
-          <Link href="/giris" className="nb-btn">Giriş / Kayıt</Link>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <LangToggle />
+          </div>
+          <h2 className="nb-h">{t.loginRequired}</h2>
+          <p className={styles.gateText}>{t.gateText}</p>
+          <Link href="/giris" className="nb-btn">{t.loginCta}</Link>
         </div>
       </div>
     );
@@ -148,34 +236,33 @@ export default function TakvimPage() {
     <div className={styles.wrap}>
       <div className={styles.top}>
         <Link href="/" className={styles.logo}>MuzikSEO</Link>
-        {user && (
-          <div className={styles.wallet}>💳 {user.credits} kredi · {user.name}</div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {user && (
+            <div className={styles.wallet}>💳 {user.credits} {t.creditsWord} · {user.name}</div>
+          )}
+          <LangToggle />
+        </div>
       </div>
 
-      <h1 className="nb-h">Yayın Planı</h1>
-      <p className={styles.promise}>
-        Şarkını ileri bir tarihe planla — gönderim o anda otomatik yapılır.
-      </p>
+      <h1 className="nb-h">{t.title}</h1>
+      <p className={styles.promise}>{t.promise}</p>
 
       <div className={`nb-card ${styles.readinessCard}`}>
-        <div className={styles.readinessTitle}>Yayına Hazırlık Kontrolü</div>
+        <div className={styles.readinessTitle}>{t.readinessTitle}</div>
         <form className={styles.readinessRow} onSubmit={handleReadinessCheck}>
           <input
             className="nb-input"
-            placeholder='"Sanatçı - Şarkı"'
+            placeholder={t.songPlaceholder}
             value={readinessQuery}
             onChange={(e) => setReadinessQuery(e.target.value)}
           />
           <button type="submit" className="nb-btn" disabled={readinessBusy}>
-            {readinessBusy ? "..." : "Kontrol Et"}
+            {readinessBusy ? t.busy : t.checkCta}
           </button>
         </form>
 
         {readiness === null && (
-          <div className={styles.readinessEmpty}>
-            Kontrol edilemedi — şarkı bulunamadı olabilir.
-          </div>
+          <div className={styles.readinessEmpty}>{t.readinessEmpty}</div>
         )}
 
         {readiness && (
@@ -185,17 +272,17 @@ export default function TakvimPage() {
               <span
                 className={`nb-pill ${readiness.ready ? "nb-pill--green" : "nb-pill--red"}`}
               >
-                {readiness.ready ? "Hazır" : `Eşik ${readiness.threshold}`}
+                {readiness.ready ? t.ready : t.threshold(readiness.threshold)}
               </span>
             </div>
             {readiness.checklist.length === 0 ? (
-              <div className={styles.readinessEmpty}>Sorun bulunamadı.</div>
+              <div className={styles.readinessEmpty}>{t.noIssues}</div>
             ) : (
               <ul className={styles.checklist}>
                 {readiness.checklist.map((item, i) => (
                   <li key={i} className={styles.checklistItem}>
                     <span className={`${styles.sevPill} ${severityClass(item.severity, styles)}`}>
-                      {item.severity}
+                      {t.severity[item.severity] ?? item.severity}
                     </span>
                     <div>
                       <div className={styles.checklistMsg}>{item.message}</div>
@@ -211,11 +298,11 @@ export default function TakvimPage() {
         )}
       </div>
 
-      <h2 className="nb-h" style={{ fontSize: 18 }}>Yeni Plan</h2>
+      <h2 className="nb-h" style={{ fontSize: 18 }}>{t.newPlanTitle}</h2>
       <form className={`nb-card ${styles.planForm}`} onSubmit={handlePlan}>
         <input
           className="nb-input"
-          placeholder='Şarkın: "Sanatçı - Şarkı"'
+          placeholder={t.songFormPlaceholder}
           value={song}
           onChange={(e) => setSong(e.target.value)}
         />
@@ -223,9 +310,9 @@ export default function TakvimPage() {
           className="nb-input"
           value={curatorId}
           onChange={(e) => setCuratorId(e.target.value ? Number(e.target.value) : "")}
-          aria-label="Küratör seç"
+          aria-label={t.curatorAria}
         >
-          <option value="">Küratör seç</option>
+          <option value="">{t.chooseCurator}</option>
           {curators.map((c) => (
             <option key={c.id} value={c.id}>
               {c.playlist_title} — {c.name}
@@ -237,28 +324,28 @@ export default function TakvimPage() {
           type="datetime-local"
           value={scheduledAt}
           onChange={(e) => setScheduledAt(e.target.value)}
-          aria-label="Tarih ve saat"
+          aria-label={t.dateTimeAria}
         />
         {error && <div className={styles.error}>{error}</div>}
         <button type="submit" className="nb-btn nb-btn--purple" disabled={busy}>
-          {busy ? "..." : "Planla"}
+          {busy ? t.busy : t.planCta}
         </button>
       </form>
 
-      <h2 className="nb-h" style={{ fontSize: 18 }}>Planlanmış Gönderimler</h2>
-      {loading && <div className={styles.empty}>Yükleniyor...</div>}
+      <h2 className="nb-h" style={{ fontSize: 18 }}>{t.scheduledTitle}</h2>
+      {loading && <div className={styles.empty}>{t.loading}</div>}
       {!loading && schedules.length === 0 && (
-        <div className={styles.empty}>Henüz planlanmış gönderim yok.</div>
+        <div className={styles.empty}>{t.noSchedules}</div>
       )}
       {!loading && schedules.length > 0 && (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Şarkı</th>
-                <th>Küratör</th>
-                <th>Zaman</th>
-                <th>Durum</th>
+                <th>{t.colSong}</th>
+                <th>{t.colCurator}</th>
+                <th>{t.colTime}</th>
+                <th>{t.colStatus}</th>
               </tr>
             </thead>
             <tbody>
@@ -272,7 +359,7 @@ export default function TakvimPage() {
                       className={`${styles.pill} ${statusClass(s.status, styles)}`}
                       title={s.error ?? undefined}
                     >
-                      {statusLabel(s.status)}
+                      {t.status[s.status]}
                     </span>
                   </td>
                 </tr>

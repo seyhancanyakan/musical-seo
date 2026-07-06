@@ -2,19 +2,60 @@
 
 import { useState } from "react";
 import { adminGrantCredits, type User } from "@/lib/api";
+import { useLocale, pick } from "@/lib/locale";
 import styles from "./page.module.css";
 
-const CREDIT_REASONS: { key: string; label: string }[] = [
-  { key: "purchase", label: "Satın alma" },
-  { key: "grant", label: "Hediye" },
-  { key: "bonus", label: "Bonus" },
-];
+type ReasonKey = "purchase" | "grant" | "bonus";
+
+const REASON_KEYS: ReasonKey[] = ["purchase", "grant", "bonus"];
+
+const T = {
+  tr: {
+    reasons: {
+      purchase: "Satın alma",
+      grant: "Hediye",
+      bonus: "Bonus",
+    } as Record<ReasonKey, string>,
+    userIdLabel: "Kullanıcı ID",
+    userIdPlaceholder: "Örn. 42",
+    amountLabel: "Miktar (kredi)",
+    amountPlaceholder: "Örn. 10",
+    reasonLabel: "Sebep",
+    loadingBtn: "Yükleniyor...",
+    submitBtn: "Yükle",
+    errorMissing: "Kullanıcı ID ve miktar gerekli.",
+    errorFailed: "Yükleme başarısız — kullanıcı bulunamadı olabilir.",
+    resultText: (name: string, credits: number) =>
+      `${name} — yeni bakiye: ${credits} kredi`,
+  },
+  en: {
+    reasons: {
+      purchase: "Purchase",
+      grant: "Gift",
+      bonus: "Bonus",
+    } as Record<ReasonKey, string>,
+    userIdLabel: "User ID",
+    userIdPlaceholder: "e.g. 42",
+    amountLabel: "Amount (credits)",
+    amountPlaceholder: "e.g. 10",
+    reasonLabel: "Reason",
+    loadingBtn: "Granting...",
+    submitBtn: "Grant",
+    errorMissing: "User ID and amount are required.",
+    errorFailed: "Grant failed — the user may not exist.",
+    resultText: (name: string, credits: number) =>
+      `${name} — new balance: ${credits} credits`,
+  },
+} as const;
 
 /** Admin: manuel kredi yukleme formu (odeme pilotta elden alinir). */
 export default function CreditGrantTab() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [userId, setUserId] = useState("");
   const [amount, setAmount] = useState("");
-  const [reason, setReason] = useState(CREDIT_REASONS[0].key);
+  const [reason, setReason] = useState<ReasonKey>(REASON_KEYS[0]);
   const [isSaving, setIsSaving] = useState(false);
   const [result, setResult] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +64,7 @@ export default function CreditGrantTab() {
     const idNum = Number(userId);
     const amountNum = Number(amount);
     if (!idNum || !amountNum) {
-      setError("Kullanıcı ID ve miktar gerekli.");
+      setError(t.errorMissing);
       setResult(null);
       return;
     }
@@ -35,7 +76,7 @@ export default function CreditGrantTab() {
     if (updated) {
       setResult(updated);
     } else {
-      setError("Yükleme başarısız — kullanıcı bulunamadı olabilir.");
+      setError(t.errorFailed);
     }
   }
 
@@ -43,35 +84,35 @@ export default function CreditGrantTab() {
     <div className={styles.formCard}>
       <div className={styles.formGrid}>
         <label className={styles.formLabel}>
-          Kullanıcı ID
+          {t.userIdLabel}
           <input
             className="nb-input"
             type="number"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
-            placeholder="Örn. 42"
+            placeholder={t.userIdPlaceholder}
           />
         </label>
         <label className={styles.formLabel}>
-          Miktar (kredi)
+          {t.amountLabel}
           <input
             className="nb-input"
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="Örn. 10"
+            placeholder={t.amountPlaceholder}
           />
         </label>
         <label className={styles.formLabel}>
-          Sebep
+          {t.reasonLabel}
           <select
             className="nb-input"
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => setReason(e.target.value as ReasonKey)}
           >
-            {CREDIT_REASONS.map((r) => (
-              <option key={r.key} value={r.key}>
-                {r.label}
+            {REASON_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {t.reasons[key]}
               </option>
             ))}
           </select>
@@ -79,13 +120,13 @@ export default function CreditGrantTab() {
       </div>
       <div className={styles.formActions}>
         <button type="button" className="nb-btn" onClick={submit} disabled={isSaving}>
-          {isSaving ? "Yükleniyor..." : "Yükle"}
+          {isSaving ? t.loadingBtn : t.submitBtn}
         </button>
       </div>
       {error && <div className={styles.errorBanner}>{error}</div>}
       {result && (
         <div className={styles.resultBanner}>
-          {result.name} — yeni bakiye: {result.credits} kredi
+          {t.resultText(result.name, result.credits)}
         </div>
       )}
     </div>

@@ -9,6 +9,7 @@ import {
   type PitchItem,
   type PitchStreamEvent,
 } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
 
 type Status = "pitched" | "accepted" | "rejected";
@@ -30,7 +31,8 @@ type PitchCard = {
   curatorId?: number | null;
 };
 
-const DEMO_CARDS: PitchCard[] = [
+/** Demo kart meta bilgisi (locale-bagimsiz). Pitch mesaji T sozlugunden gelir. */
+const DEMO_CARDS_META: Omit<PitchCard, "message">[] = [
   {
     key: "demo-turk",
     title: '"Türk"',
@@ -40,8 +42,6 @@ const DEMO_CARDS: PitchCard[] = [
     extraCount: 3,
     score: 70,
     status: "pitched",
-    message:
-      'Merhaba, "Türk" listende Duman, Hayko Cepkin, Mor ve Ötesi gibi isimlere yer veriyorsun; gerçekten tutarlı bir seçki olmuş. Ben Duman. Yeni şarkım "Senden Daha Güzel" aynı damardan besleniyor ve listenle örtüşen bir dinleyici kitlesine hitap ediyor. İncelemene minnettar olurum.',
   },
   {
     key: "demo-brk-tr",
@@ -52,8 +52,6 @@ const DEMO_CARDS: PitchCard[] = [
     extraCount: 2,
     score: 70,
     status: "accepted",
-    message:
-      'Merhaba, "BRK - TR" listende Duman, Athena ve maNga gibi isimlerle güçlü bir Türkçe rock seçkisi kurmuşsun. Ben Duman. Yeni şarkım "Senden Daha Güzel" listenin enerjisiyle birebir örtüşüyor. Değerlendirmeni rica ederim.',
   },
   {
     key: "demo-turkce-rock",
@@ -64,13 +62,8 @@ const DEMO_CARDS: PitchCard[] = [
     extraCount: 1,
     score: 40,
     status: "rejected",
-    message:
-      'Merhaba, "Türkçe Rock" listende Kurban ve Pentagram gibi isimlere yer veriyorsun. Ben Duman. Yeni şarkım "Senden Daha Güzel" listenin tarzına yakın bir seste. İncelemene minnettar olurum.',
   },
 ];
-
-/** VFX aşama rayı: SSE stage -> görsel faz eşlemesi. */
-const PHASES = ["Çözümleme", "Tarama", "Ses Analizi", "Skorlama"] as const;
 
 const STAGE_PHASE: Record<string, number> = {
   resolve: 0,
@@ -98,12 +91,114 @@ function logLineClass(kind: string): string {
   return "";
 }
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "Tümü" },
-  { key: "pitched", label: "Pitched" },
-  { key: "accepted", label: "Accepted" },
-  { key: "rejected", label: "Rejected" },
-];
+const T = {
+  tr: {
+    nav: [
+      { href: "/karne", label: "Karne", icon: "📊" },
+      { href: "/playlistler", label: "Playlistler", icon: "🎧" },
+      { href: "/kanit", label: "Kanıt", icon: "✅" },
+      { href: "/curator/inbox", label: "Curator Kutusu", icon: "📥" },
+    ],
+    userChipSuffix: "— Sanatçı Paneli",
+    pageTitle: "Playlist Eşleştirme & Pitch",
+    searchPlaceholder: "Sanatçı veya şarkı adı ara...",
+    searchAria: "Sanatçı veya şarkı adı ara",
+    analyzing: "Analiz ediliyor...",
+    submit: "Playlist Bul",
+    phases: ["Çözümleme", "Tarama", "Ses Analizi", "Skorlama"],
+    bpmText: (v: number) => `♩ ${v} BPM`,
+    energyText: (v: number) => `⚡ Enerji %${v}`,
+    instrumentalText: (v: number) => `🎹 Enstrümantal %${v}`,
+    apiFailedPrefix: "Eşleşme bulunamadı ya da API'ye ulaşılamadı. Şarkıyı ",
+    apiFailedStrong: '"Sanatçı - Şarkı"',
+    apiFailedSuffix: " formatında dene (ör. Duman - Senden Daha Güzel).",
+    filters: [
+      { key: "all" as Filter, label: "Tümü" },
+      { key: "pitched" as Filter, label: "Pitched" },
+      { key: "accepted" as Filter, label: "Accepted" },
+      { key: "rejected" as Filter, label: "Rejected" },
+    ],
+    emptyIdle: "Şarkını yukarıdan ara → uygun playlist'ler burada çıksın.",
+    emptyFiltered: "Bu filtrede playlist bulunamadı.",
+    trackCountLabel: "parça",
+    fanLabel: "fan",
+    numberLocale: "tr-TR",
+    openLink: "Aç ↗",
+    platformSendBtn: "🎯 Platformda — Gönder (kredi ile)",
+    inviteBtn: "➕ Platforma davet et",
+    inviteSentBtn: "✓ Davet mesajı kopyalandı",
+    sentStatus: "Gönderildi",
+    pitchPreviewTitle: "Pitch Mesajı Önizleme",
+    pitchMetaText: (title: string) => `${title} için hazırlanan mesaj`,
+    copied: "Kopyalandı!",
+    copy: "Kopyala",
+    markSent: "Gönderildi İşaretle",
+    sentNote: "✓ Gönderildi olarak işaretlendi.",
+    noSelection: "Önizlemek için soldan bir playlist seç.",
+    inviteText: (title: string, origin: string) =>
+      `Merhaba! ${title} listeni MuzikSEO curator ağına davet etmek istiyoruz. ` +
+      `Sanatçılardan doğrudan, sana uygun şarkı gönderimi alırsın; kabul/ret tek tık. ` +
+      `Başvuru: ${origin}/curator/basvuru`,
+    demoMessages: [
+      'Merhaba, "Türk" listende Duman, Hayko Cepkin, Mor ve Ötesi gibi isimlere yer veriyorsun; gerçekten tutarlı bir seçki olmuş. Ben Duman. Yeni şarkım "Senden Daha Güzel" aynı damardan besleniyor ve listenle örtüşen bir dinleyici kitlesine hitap ediyor. İncelemene minnettar olurum.',
+      'Merhaba, "BRK - TR" listende Duman, Athena ve maNga gibi isimlerle güçlü bir Türkçe rock seçkisi kurmuşsun. Ben Duman. Yeni şarkım "Senden Daha Güzel" listenin enerjisiyle birebir örtüşüyor. Değerlendirmeni rica ederim.',
+      'Merhaba, "Türkçe Rock" listende Kurban ve Pentagram gibi isimlere yer veriyorsun. Ben Duman. Yeni şarkım "Senden Daha Güzel" listenin tarzına yakın bir seste. İncelemene minnettar olurum.',
+    ],
+  },
+  en: {
+    nav: [
+      { href: "/karne", label: "Scorecard", icon: "📊" },
+      { href: "/playlistler", label: "Playlists", icon: "🎧" },
+      { href: "/kanit", label: "Proof", icon: "✅" },
+      { href: "/curator/inbox", label: "Curator Inbox", icon: "📥" },
+    ],
+    userChipSuffix: "— Artist Panel",
+    pageTitle: "Playlist Matching & Pitch",
+    searchPlaceholder: "Search artist or song name...",
+    searchAria: "Search artist or song name",
+    analyzing: "Analyzing...",
+    submit: "Find Playlists",
+    phases: ["Resolving", "Scanning", "Audio Analysis", "Scoring"],
+    bpmText: (v: number) => `♩ ${v} BPM`,
+    energyText: (v: number) => `⚡ Energy ${v}%`,
+    instrumentalText: (v: number) => `🎹 Instrumental ${v}%`,
+    apiFailedPrefix: "No match found or the API is unreachable. Try the song in ",
+    apiFailedStrong: '"Artist - Song"',
+    apiFailedSuffix: " format (e.g. Duman - Senden Daha Güzel).",
+    filters: [
+      { key: "all" as Filter, label: "All" },
+      { key: "pitched" as Filter, label: "Pitched" },
+      { key: "accepted" as Filter, label: "Accepted" },
+      { key: "rejected" as Filter, label: "Rejected" },
+    ],
+    emptyIdle: "Search your song above → matching playlists show up here.",
+    emptyFiltered: "No playlists found in this filter.",
+    trackCountLabel: "tracks",
+    fanLabel: "fans",
+    numberLocale: "en-US",
+    openLink: "Open ↗",
+    platformSendBtn: "🎯 On Platform — Send (uses credit)",
+    inviteBtn: "➕ Invite to platform",
+    inviteSentBtn: "✓ Invite message copied",
+    sentStatus: "Sent",
+    pitchPreviewTitle: "Pitch Message Preview",
+    pitchMetaText: (title: string) => `Message prepared for ${title}`,
+    copied: "Copied!",
+    copy: "Copy",
+    markSent: "Mark as Sent",
+    sentNote: "✓ Marked as sent.",
+    noSelection: "Select a playlist on the left to preview.",
+    inviteText: (title: string, origin: string) =>
+      `Hi! We'd like to invite your ${title} playlist to the MuzikSEO curator network. ` +
+      `You'll get song submissions directly from artists tailored to your list; accept/reject with one tap. ` +
+      `Apply: ${origin}/curator/basvuru`,
+    demoMessages: [
+      'Hi, your "Türk" playlist features names like Duman, Hayko Cepkin, and Mor ve Ötesi — it\'s a genuinely coherent selection. I\'m Duman. My new song "Senden Daha Güzel" draws from the same vein and speaks to a listener base that overlaps with your playlist. I\'d be grateful if you gave it a listen.',
+      'Hi, your "BRK - TR" playlist builds a strong Turkish rock selection with names like Duman, Athena, and maNga. I\'m Duman. My new song "Senden Daha Güzel" matches your playlist\'s energy exactly. I\'d appreciate you considering it.',
+      'Hi, your "Türkçe Rock" playlist features names like Kurban and Pentagram. I\'m Duman. My new song "Senden Daha Güzel" has a sound close to your playlist\'s style. I\'d be grateful if you gave it a listen.',
+    ],
+  },
+};
 
 function toCards(pitches: PitchItem[]): PitchCard[] {
   return pitches.map((p, i) => {
@@ -138,6 +233,8 @@ function statusLabel(status: Status): string {
 }
 
 export default function PlaylistlerPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -253,10 +350,7 @@ export default function PlaylistlerPage() {
   async function handleInvite(card: PitchCard) {
     // Iletisimi olmayan curator'a platform daveti — mesaj panoya kopyalanir,
     // sanatci Spotify/Deezer uzerinden (takip/yorum) iletebilir.
-    const inviteText =
-      `Merhaba! ${card.title} listeni MuzikSEO curator ağına davet etmek istiyoruz. ` +
-      `Sanatçılardan doğrudan, sana uygun şarkı gönderimi alırsın; kabul/ret tek tık. ` +
-      `Başvuru: ${window.location.origin}/curator/basvuru`;
+    const inviteText = t.inviteText(card.title, window.location.origin);
     try {
       await navigator.clipboard.writeText(inviteText);
       setInvitedKeys((prev) => ({ ...prev, [card.key]: true }));
@@ -273,49 +367,51 @@ export default function PlaylistlerPage() {
     <div className={styles.shell}>
       <div className={styles.topbar}>
         <Link href="/" className={styles.logo}>MuzikSEO</Link>
-        <div className={styles.userChip}>👤 Duman — Sanatçı Paneli</div>
+        <div className={styles.userChip}>👤 Duman {t.userChipSuffix}</div>
+        <LangToggle />
       </div>
 
       <div className={styles.sidebar}>
-        <Link href="/karne" className={styles.sidebarLink}>
-          📊 Karne
-        </Link>
-        <Link href="/playlistler" className={`${styles.sidebarLink} ${styles.sidebarLinkActive}`}>
-          🎧 Playlistler
-        </Link>
-        <Link href="/kanit" className={styles.sidebarLink}>
-          ✅ Kanıt
-        </Link>
-        <Link href="/curator/inbox" className={styles.sidebarLink}>
-          📥 Curator Kutusu
-        </Link>
+        {t.nav.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={
+              link.href === "/playlistler"
+                ? `${styles.sidebarLink} ${styles.sidebarLinkActive}`
+                : styles.sidebarLink
+            }
+          >
+            {link.icon} {link.label}
+          </Link>
+        ))}
       </div>
 
       <main className={styles.main}>
-        <h1 className={`nb-h ${styles.pageTitle}`}>Playlist Eşleştirme &amp; Pitch</h1>
+        <h1 className={`nb-h ${styles.pageTitle}`}>{t.pageTitle}</h1>
 
         <form className={styles.searchRow} onSubmit={handleSearch}>
           <input
             className="nb-input"
             type="text"
-            placeholder="Sanatçı veya şarkı adı ara..."
+            placeholder={t.searchPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Sanatçı veya şarkı adı ara"
+            aria-label={t.searchAria}
           />
           <button
             type="submit"
             className={`nb-btn nb-btn--purple ${styles.searchBtn}`}
             disabled={loading}
           >
-            {loading ? "Analiz ediliyor..." : "Playlist Bul"}
+            {loading ? t.analyzing : t.submit}
           </button>
         </form>
 
         {loading && (
           <div className={styles.analysisPanel} aria-live="polite">
             <div className={styles.stageRail}>
-              {PHASES.map((phaseLabel, i) => (
+              {t.phases.map((phaseLabel, i) => (
                 <span
                   key={phaseLabel}
                   className={`${styles.stageChip} ${
@@ -344,12 +440,12 @@ export default function PlaylistlerPage() {
 
             {profile && (
               <div className={styles.profileChips}>
-                <span className={styles.profileChip}>♩ {profile.bpm} BPM</span>
+                <span className={styles.profileChip}>{t.bpmText(profile.bpm)}</span>
                 <span className={styles.profileChip}>
-                  ⚡ Enerji %{Math.round(profile.energy * 100)}
+                  {t.energyText(Math.round(profile.energy * 100))}
                 </span>
                 <span className={styles.profileChip}>
-                  🎹 Enstrümantal %{Math.round(profile.instrumental * 100)}
+                  {t.instrumentalText(Math.round(profile.instrumental * 100))}
                 </span>
               </div>
             )}
@@ -366,13 +462,14 @@ export default function PlaylistlerPage() {
 
         {apiFailed && (
           <div className={styles.banner} role="status">
-            Eşleşme bulunamadı ya da API&apos;ye ulaşılamadı. Şarkıyı{" "}
-            <strong>&quot;Sanatçı - Şarkı&quot;</strong> formatında dene (ör. Duman - Senden Daha Güzel).
+            {t.apiFailedPrefix}
+            <strong>{t.apiFailedStrong}</strong>
+            {t.apiFailedSuffix}
           </div>
         )}
 
         <div className={styles.tabs}>
-          {FILTERS.map((f) => (
+          {t.filters.map((f) => (
             <button
               key={f.key}
               type="button"
@@ -388,9 +485,7 @@ export default function PlaylistlerPage() {
           <div className={styles.plList}>
             {filteredCards.length === 0 && (
               <div className={styles.emptyState}>
-                {!hasSearched
-                  ? "Şarkını yukarıdan ara → uygun playlist'ler burada çıksın."
-                  : "Bu filtrede playlist bulunamadı."}
+                {!hasSearched ? t.emptyIdle : t.emptyFiltered}
               </div>
             )}
 
@@ -415,7 +510,8 @@ export default function PlaylistlerPage() {
                   <div>
                     <div className={styles.plName}>{card.title}</div>
                     <div className={styles.plMeta}>
-                      {card.trackCount} parça · {card.fans.toLocaleString("tr-TR")} fan
+                      {card.trackCount} {t.trackCountLabel} ·{" "}
+                      {card.fans.toLocaleString(t.numberLocale)} {t.fanLabel}
                     </div>
                   </div>
                   <div className={styles.plTopRight}>
@@ -428,7 +524,7 @@ export default function PlaylistlerPage() {
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        Aç ↗
+                        {t.openLink}
                       </a>
                     )}
                   </div>
@@ -457,7 +553,7 @@ export default function PlaylistlerPage() {
                         router.push(`/gonder?curator=${card.curatorId}`);
                       }}
                     >
-                      🎯 Platformda — Gönder (kredi ile)
+                      {t.platformSendBtn}
                     </button>
                   )}
                   {card.contact ? (
@@ -507,9 +603,7 @@ export default function PlaylistlerPage() {
                           handleInvite(card);
                         }}
                       >
-                        {invitedKeys[card.key]
-                          ? "✓ Davet mesajı kopyalandı"
-                          : "➕ Platforma davet et"}
+                        {invitedKeys[card.key] ? t.inviteSentBtn : t.inviteBtn}
                       </button>
                     )
                   )}
@@ -518,7 +612,7 @@ export default function PlaylistlerPage() {
                 <div className={styles.statusRow}>
                   <span className={`${styles.statusPill} ${statusPillClass(card.status)}`}>
                     {sentKeys[card.key] && card.status === "pitched"
-                      ? "Gönderildi"
+                      ? t.sentStatus
                       : statusLabel(card.status)}
                   </span>
                 </div>
@@ -527,29 +621,29 @@ export default function PlaylistlerPage() {
           </div>
 
           <div className={styles.pitchPanel}>
-            <h3 className="nb-h">Pitch Mesajı Önizleme</h3>
+            <h3 className="nb-h">{t.pitchPreviewTitle}</h3>
             {selected ? (
               <>
-                <div className={styles.pitchMeta}>{selected.title} için hazırlanan mesaj</div>
+                <div className={styles.pitchMeta}>{t.pitchMetaText(selected.title)}</div>
                 <div className={styles.pitchBox}>{selected.message}</div>
                 <div className={styles.pitchActions}>
                   <button type="button" className={styles.actionBtn} onClick={handleCopy}>
-                    {copied ? "Kopyalandı!" : "Kopyala"}
+                    {copied ? t.copied : t.copy}
                   </button>
                   <button
                     type="button"
                     className={`${styles.actionBtn} ${styles.actionPrimary}`}
                     onClick={handleMarkSent}
                   >
-                    Gönderildi İşaretle
+                    {t.markSent}
                   </button>
                 </div>
                 {sentKeys[selected.key] && (
-                  <div className={styles.sentNote}>✓ Gönderildi olarak işaretlendi.</div>
+                  <div className={styles.sentNote}>{t.sentNote}</div>
                 )}
               </>
             ) : (
-              <div className={styles.pitchMeta}>Önizlemek için soldan bir playlist seç.</div>
+              <div className={styles.pitchMeta}>{t.noSelection}</div>
             )}
           </div>
         </div>

@@ -6,12 +6,49 @@ import {
   listPurchaseRequests,
   type PurchaseRequest,
 } from "@/lib/api";
+import { useLocale, pick } from "@/lib/locale";
 import styles from "./page.module.css";
 import { formatDate } from "./utils";
+
+const T = {
+  tr: {
+    loading: "Yükleniyor...",
+    empty: "Bekleyen talep yok.",
+    columns: {
+      request: "Talep",
+      user: "Kullanıcı",
+      pkg: "Paket",
+      credits: "Kredi",
+      amount: "Tutar",
+      date: "Tarih",
+      action: "İşlem",
+    },
+    grantAction: "Ödeme Alındı → Krediyi Yükle",
+    grantedMessage: (credits: number) => `${credits} kredi yüklendi`,
+  },
+  en: {
+    loading: "Loading...",
+    empty: "No pending requests.",
+    columns: {
+      request: "Request",
+      user: "User",
+      pkg: "Package",
+      credits: "Credits",
+      amount: "Amount",
+      date: "Date",
+      action: "Action",
+    },
+    grantAction: "Payment Received → Grant Credits",
+    grantedMessage: (credits: number) => `${credits} credits granted`,
+  },
+} as const;
 
 /** Admin: bekleyen kredi paketi taleplerini listeler ve manuel odeme sonrasi
  *  krediyi kullaniciya yukler (pilotta odeme havale/Papara ile elden alinir). */
 export default function PurchaseRequestsTab() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -35,7 +72,7 @@ export default function PurchaseRequestsTab() {
     const updated = await grantPurchaseRequest(req.id);
     if (updated) {
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
-      setMessage(`${req.credits} kredi yüklendi`);
+      setMessage(t.grantedMessage(req.credits));
     }
     setBusyId(null);
   }
@@ -44,10 +81,10 @@ export default function PurchaseRequestsTab() {
     <div>
       {message && <div className={styles.resultBanner}>{message}</div>}
 
-      {isLoading && <div className={styles.loading}>Yükleniyor...</div>}
+      {isLoading && <div className={styles.loading}>{t.loading}</div>}
 
       {!isLoading && requests.length === 0 && (
-        <div className={styles.empty}>Bekleyen talep yok.</div>
+        <div className={styles.empty}>{t.empty}</div>
       )}
 
       {!isLoading && requests.length > 0 && (
@@ -55,13 +92,13 @@ export default function PurchaseRequestsTab() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Talep</th>
-                <th>Kullanıcı</th>
-                <th>Paket</th>
-                <th className={styles.num}>Kredi</th>
-                <th className={styles.num}>Tutar</th>
-                <th>Tarih</th>
-                <th>İşlem</th>
+                <th>{t.columns.request}</th>
+                <th>{t.columns.user}</th>
+                <th>{t.columns.pkg}</th>
+                <th className={styles.num}>{t.columns.credits}</th>
+                <th className={styles.num}>{t.columns.amount}</th>
+                <th>{t.columns.date}</th>
+                <th>{t.columns.action}</th>
               </tr>
             </thead>
             <tbody>
@@ -73,7 +110,9 @@ export default function PurchaseRequestsTab() {
                     <td>#{r.user_id}</td>
                     <td>{r.package_key}</td>
                     <td className={styles.num}>{r.credits}</td>
-                    <td className={styles.num}>{r.price_try.toLocaleString("tr-TR")} TL</td>
+                    <td className={styles.num}>
+                      {r.price_try.toLocaleString(locale === "tr" ? "tr-TR" : "en-US")} TL
+                    </td>
                     <td className={styles.sub}>{formatDate(r.created_at)}</td>
                     <td>
                       <button
@@ -82,7 +121,7 @@ export default function PurchaseRequestsTab() {
                         onClick={() => grant(r)}
                         disabled={isBusy}
                       >
-                        Ödeme Alındı → Krediyi Yükle
+                        {t.grantAction}
                       </button>
                     </td>
                   </tr>

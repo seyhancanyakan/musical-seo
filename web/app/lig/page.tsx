@@ -3,18 +3,55 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLeaderboard, type LeaderboardEntry } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
 
-const MONTHS_TR = [
-  "Oca", "Şub", "Mar", "Nis", "May", "Haz",
-  "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara",
-];
+const T = {
+  tr: {
+    shareCta: "Karneni Paylaş",
+    title: "Karne Ligi",
+    infoTitle: "Bu lig tamamen opt-in'dir",
+    infoTextBefore:
+      "Karneni burada göstermek senin seçimin — gizlilik varsayılan olarak ",
+    infoTextBold: "kapalı",
+    infoTextAfter:
+      ". Sadece paylaşmayı seçtiğin karneler listelenir. İstediğin an ligden çıkabilirsin.",
+    loading: "Lig yükleniyor…",
+    emptyTitle: "Lig boş",
+    emptyText: "Karneni paylaş, ligde yerini al.",
+    emptyCta: "Karneni Çıkar",
+    colRank: "Sıra",
+    colTrack: "Sanatçı — Şarkı",
+    colScore: "Skor",
+    colDate: "Tarih",
+    months: ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"],
+  },
+  en: {
+    shareCta: "Share Your Report Card",
+    title: "Report Card League",
+    infoTitle: "This league is fully opt-in",
+    infoTextBefore:
+      "Showing your report card here is your choice — privacy defaults to ",
+    infoTextBold: "off",
+    infoTextAfter:
+      ". Only report cards you choose to share are listed. You can leave the league anytime.",
+    loading: "Loading league…",
+    emptyTitle: "League is empty",
+    emptyText: "Share your report card to claim your spot.",
+    emptyCta: "Get Your Report Card",
+    colRank: "Rank",
+    colTrack: "Artist — Song",
+    colScore: "Score",
+    colDate: "Date",
+    months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  },
+} as const;
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, months: readonly string[]): string {
   const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return iso;
   const [, y, m, d] = match;
-  const month = MONTHS_TR[parseInt(m, 10) - 1] ?? m;
+  const month = months[parseInt(m, 10) - 1] ?? m;
   return `${parseInt(d, 10)} ${month} ${y}`;
 }
 
@@ -33,6 +70,9 @@ function scoreBarClass(score: number): string {
 }
 
 export default function LigPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [entries, setEntries] = useState<LeaderboardEntry[] | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -50,36 +90,37 @@ export default function LigPage() {
     <div className={styles.wrap}>
       <div className={styles.topbar}>
         <Link href="/" className={styles.logo}>MuzikSEO</Link>
-        <Link href="/karne" className={`nb-btn ${styles.shareBtn}`}>
-          Karneni Paylaş
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link href="/karne" className={`nb-btn ${styles.shareBtn}`}>
+            {t.shareCta}
+          </Link>
+          <LangToggle />
+        </div>
       </div>
 
       <main className={styles.main}>
-        <h1 className={`nb-h ${styles.pageTitle}`}>Karne Ligi</h1>
+        <h1 className={`nb-h ${styles.pageTitle}`}>{t.title}</h1>
 
         <div className={`nb-card ${styles.infoBanner}`}>
           <span className={styles.infoIcon}>ℹ️</span>
           <div>
-            <div className={styles.infoTitle}>Bu lig tamamen opt-in&apos;dir</div>
+            <div className={styles.infoTitle}>{t.infoTitle}</div>
             <div className={styles.infoText}>
-              Karneni burada göstermek senin seçimin — gizlilik varsayılan
-              olarak <b>kapalı</b>. Sadece paylaşmayı seçtiğin karneler
-              listelenir. İstediğin an ligden çıkabilirsin.
+              {t.infoTextBefore}
+              <b>{t.infoTextBold}</b>
+              {t.infoTextAfter}
             </div>
           </div>
         </div>
 
-        {loading && <div className={styles.loading}>Lig yükleniyor…</div>}
+        {loading && <div className={styles.loading}>{t.loading}</div>}
 
         {isEmpty && (
           <div className={`nb-card ${styles.emptyCard}`}>
-            <div className={styles.emptyTitle}>Lig boş</div>
-            <p className={styles.emptyText}>
-              Karneni paylaş, ligde yerini al.
-            </p>
+            <div className={styles.emptyTitle}>{t.emptyTitle}</div>
+            <p className={styles.emptyText}>{t.emptyText}</p>
             <Link href="/karne" className="nb-btn nb-btn--purple">
-              Karneni Çıkar
+              {t.emptyCta}
             </Link>
           </div>
         )}
@@ -87,10 +128,10 @@ export default function LigPage() {
         {!loading && entries && entries.length > 0 && (
           <div className={styles.tableWrap}>
             <div className={`${styles.tableHead}`}>
-              <span className={styles.colRank}>Sıra</span>
-              <span className={styles.colTrack}>Sanatçı — Şarkı</span>
-              <span className={styles.colScore}>Skor</span>
-              <span className={styles.colDate}>Tarih</span>
+              <span className={styles.colRank}>{t.colRank}</span>
+              <span className={styles.colTrack}>{t.colTrack}</span>
+              <span className={styles.colScore}>{t.colScore}</span>
+              <span className={styles.colDate}>{t.colDate}</span>
             </div>
             {entries.map((entry, index) => {
               const rank = index + 1;
@@ -117,7 +158,7 @@ export default function LigPage() {
                     </span>
                     <span className={styles.scoreNum}>{entry.score}</span>
                   </span>
-                  <span className={styles.dateCell}>{formatDate(entry.created_at)}</span>
+                  <span className={styles.dateCell}>{formatDate(entry.created_at, t.months)}</span>
                 </Link>
               );
             })}

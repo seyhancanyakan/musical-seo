@@ -4,37 +4,83 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getPublicKarne, type PublicReport } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
 
-const SUBSCORE_LABELS: Record<string, string> = {
-  metadata: "Metadata",
-  presence: "Varlık",
-  consistency: "Tutarlılık",
-  keywords: "Anahtar Kelime",
-};
+const T = {
+  tr: {
+    subscoreLabels: {
+      metadata: "Metadata",
+      presence: "Varlık",
+      consistency: "Tutarlılık",
+      keywords: "Anahtar Kelime",
+    } as Record<string, string>,
+    severityLabels: {
+      critical: "Kritik",
+      warn: "Uyarı",
+      info: "Bilgi",
+      ok: "OK",
+    } as Record<string, string>,
+    months: [
+      "Oca", "Şub", "Mar", "Nis", "May", "Haz",
+      "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara",
+    ],
+    loading: "Karne yükleniyor…",
+    notFoundTitle: "Karne bulunamadı",
+    notFoundText: "Bu link geçersiz olabilir ya da karne artık paylaşılmıyor.",
+    backHome: "Ana Sayfaya Dön",
+    sharedAt: "Paylaşım tarihi:",
+    pill: "Paylaşılan Karne",
+    trackName: "SEO KARNESİ",
+    sectionTag: "Bulgu Sayıları",
+    noFindings: "Bulgu kaydı yok.",
+    lockTitle: "Detaylı Bulgular Kilitli",
+    lockText:
+      "Bu şarkı için tam bulgu listesi ve aksiyon önerileri yalnızca hesap sahiplerine açık.",
+    lockCta: "Detaylı bulgular ve aksiyon önerileri için ücretsiz hesap aç",
+  },
+  en: {
+    subscoreLabels: {
+      metadata: "Metadata",
+      presence: "Presence",
+      consistency: "Consistency",
+      keywords: "Keywords",
+    } as Record<string, string>,
+    severityLabels: {
+      critical: "Critical",
+      warn: "Warning",
+      info: "Info",
+      ok: "OK",
+    } as Record<string, string>,
+    months: [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ],
+    loading: "Loading report…",
+    notFoundTitle: "Report not found",
+    notFoundText: "This link may be invalid, or the report is no longer shared.",
+    backHome: "Back to Home",
+    sharedAt: "Shared on:",
+    pill: "Shared Report",
+    trackName: "SEO REPORT",
+    sectionTag: "Finding Counts",
+    noFindings: "No findings recorded.",
+    lockTitle: "Detailed Findings Locked",
+    lockText:
+      "The full finding list and action recommendations for this track are only available to account holders.",
+    lockCta: "Create a free account for detailed findings and action tips",
+  },
+} as const;
 
 const SUBSCORE_ORDER = ["metadata", "presence", "consistency", "keywords"];
-
-const SEVERITY_LABELS: Record<string, string> = {
-  critical: "Kritik",
-  warn: "Uyarı",
-  info: "Bilgi",
-  ok: "OK",
-};
-
 const SEVERITY_ORDER = ["critical", "warn", "info", "ok"];
 
-const MONTHS_TR = [
-  "Oca", "Şub", "Mar", "Nis", "May", "Haz",
-  "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara",
-];
-
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string, months: readonly string[]): string {
   const dateMatch = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   const timeMatch = iso.match(/T(\d{2}):(\d{2})/);
   if (!dateMatch) return iso;
   const [, y, m, d] = dateMatch;
-  const month = MONTHS_TR[parseInt(m, 10) - 1] ?? m;
+  const month = months[parseInt(m, 10) - 1] ?? m;
   const datePart = `${parseInt(d, 10)} ${month} ${y}`;
   return timeMatch ? `${datePart}, ${timeMatch[1]}:${timeMatch[2]}` : datePart;
 }
@@ -67,6 +113,8 @@ function subscoreBarClass(index: number): string {
 export default function PublicKarnePage() {
   const params = useParams<{ token: string }>();
   const token = params?.token ?? "";
+  const { locale } = useLocale();
+  const t = pick(T, locale);
 
   const [report, setReport] = useState<PublicReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -96,18 +144,17 @@ export default function PublicKarnePage() {
     <div className={styles.wrap}>
       <div className={styles.topbar}>
         <Link href="/" className={styles.logo}>MuzikSEO</Link>
+        <LangToggle />
       </div>
 
       <main className={styles.main}>
-        {loading && <div className={styles.loading}>Karne yükleniyor…</div>}
+        {loading && <div className={styles.loading}>{t.loading}</div>}
 
         {!loading && !report && (
           <div className={`nb-card ${styles.notFound}`}>
-            <div className={styles.notFoundTitle}>Karne bulunamadı</div>
-            <p className={styles.notFoundText}>
-              Bu link geçersiz olabilir ya da karne artık paylaşılmıyor.
-            </p>
-            <Link href="/" className="nb-btn">Ana Sayfaya Dön</Link>
+            <div className={styles.notFoundTitle}>{t.notFoundTitle}</div>
+            <p className={styles.notFoundText}>{t.notFoundText}</p>
+            <Link href="/" className="nb-btn">{t.backHome}</Link>
           </div>
         )}
 
@@ -119,10 +166,10 @@ export default function PublicKarnePage() {
                   {report.artist} — {report.title}
                 </h1>
                 <div className={styles.trackSub}>
-                  Paylaşım tarihi: {formatDateTime(report.created_at)}
+                  {t.sharedAt} {formatDateTime(report.created_at, t.months)}
                 </div>
               </div>
-              <span className={styles.pill}>Paylaşılan Karne</span>
+              <span className={styles.pill}>{t.pill}</span>
             </div>
 
             <div className={styles.topGrid}>
@@ -136,14 +183,14 @@ export default function PublicKarnePage() {
                   <div className={styles.num}>{report.score}</div>
                   <div className={styles.lbl}>/ 100</div>
                 </div>
-                <div className={styles.trackName}>SEO KARNESİ</div>
+                <div className={styles.trackName}>{t.trackName}</div>
               </div>
 
               <div className={`nb-card ${styles.subscores}`}>
                 {orderedSubscores.map(([key, value], index) => (
                   <div key={key} className={styles.subscoreRow}>
                     <div className={styles.subscoreLbl}>
-                      {SUBSCORE_LABELS[key] ?? key}
+                      {t.subscoreLabels[key] ?? key}
                     </div>
                     <div className={styles.barTrack}>
                       <div
@@ -157,17 +204,17 @@ export default function PublicKarnePage() {
               </div>
             </div>
 
-            <span className={styles.sectionTag}>Bulgu Sayıları</span>
+            <span className={styles.sectionTag}>{t.sectionTag}</span>
             <div className={styles.findingBadges}>
               {orderedFindings.length === 0 && (
-                <span className={styles.noFindings}>Bulgu kaydı yok.</span>
+                <span className={styles.noFindings}>{t.noFindings}</span>
               )}
               {orderedFindings.map(([severity, count]) => (
                 <span
                   key={severity}
                   className={`${styles.badge} ${severityBadgeClass(severity)}`}
                 >
-                  {SEVERITY_LABELS[severity] ?? severity}: {count}
+                  {t.severityLabels[severity] ?? severity}: {count}
                 </span>
               ))}
             </div>
@@ -183,15 +230,10 @@ export default function PublicKarnePage() {
                 </div>
                 <div className={styles.lockedOverlay}>
                   <div className={styles.lockIcon}>🔒</div>
-                  <div className={styles.lockTitle}>
-                    Detaylı Bulgular Kilitli
-                  </div>
-                  <p className={styles.lockText}>
-                    Bu şarkı için tam bulgu listesi ve aksiyon önerileri
-                    yalnızca hesap sahiplerine açık.
-                  </p>
+                  <div className={styles.lockTitle}>{t.lockTitle}</div>
+                  <p className={styles.lockText}>{t.lockText}</p>
                   <Link href="/giris" className="nb-btn nb-btn--purple">
-                    Detaylı bulgular ve aksiyon önerileri için ücretsiz hesap aç
+                    {t.lockCta}
                   </Link>
                 </div>
               </div>

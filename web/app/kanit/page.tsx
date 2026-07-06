@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { getHistory } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
 
 type HistoryRow = {
@@ -11,22 +12,89 @@ type HistoryRow = {
   spotify_popularity: number | null;
 };
 
-const NAV_LINKS: { href: string; label: string }[] = [
-  { href: "/karne", label: "Karne" },
-  { href: "/playlistler", label: "Playlistler" },
-  { href: "/kanit", label: "Kanıt" },
-  { href: "/curator/inbox", label: "Küratör Kutusu" },
-];
+const T = {
+  tr: {
+    nav: [
+      { href: "/karne", label: "Karne" },
+      { href: "/playlistler", label: "Playlistler" },
+      { href: "/kanit", label: "Kanıt" },
+      { href: "/curator/inbox", label: "Küratör Kutusu" },
+    ],
+    dayFallback: (index: number) => `Gün ${index + 1}`,
+    dateLocale: "tr-TR",
+    pageTitle: "Kanıt Paneli",
+    subLiveData: "canlı veri",
+    subNoData: "veri yok",
+    subIdle: "Şarkını ara — popülerlik trendini canlı göster",
+    searchPlaceholder: "Sanatçı — Şarkı adı",
+    searchAria: "Şarkı ara",
+    loading: "Yükleniyor…",
+    submit: "Kanıtı Göster",
+    noDataBannerSuffix:
+      "için henüz zaman serisi yok. Kanıt grafiği, gecelik denetimler biriktikçe (birden çok gün) dolar. En az bir denetim kaydı gerekir.",
+    chartTitle: "Popülerlik Trendi",
+    chartEmptySubmitted: "Bu şarkı için veri noktası yok.",
+    chartEmptyIdle: "Şarkını ara → popülerlik trendi burada çıksın.",
+    before: "Öncesi",
+    after: "Sonrası",
+    dataPoints: "Veri Noktası",
+    verifiedTag: "Doğrulanmış Yerleşimler",
+    badgeMainHasData:
+      "Yerleşim doğrulaması küratör kutusu üzerinden işlenir; onaylananlar burada listelenir.",
+    badgeMainNoData: "Bu arama için doğrulanmış yerleşim kaydı yok.",
+    badgeSub: "Kaynak: Deezer Public API · Yöntem: bağımsız çapraz kontrol",
+    caption:
+      "Her yerleşim Deezer API'sinden bağımsız doğrulanır — söz değil, kanıt.",
+  },
+  en: {
+    nav: [
+      { href: "/karne", label: "Scorecard" },
+      { href: "/playlistler", label: "Playlists" },
+      { href: "/kanit", label: "Proof" },
+      { href: "/curator/inbox", label: "Curator Inbox" },
+    ],
+    dayFallback: (index: number) => `Day ${index + 1}`,
+    dateLocale: "en-US",
+    pageTitle: "Proof Panel",
+    subLiveData: "live data",
+    subNoData: "no data",
+    subIdle: "Search your song — see the popularity trend live",
+    searchPlaceholder: "Artist — Song title",
+    searchAria: "Search song",
+    loading: "Loading…",
+    submit: "Show Proof",
+    noDataBannerSuffix:
+      "has no time series yet. The proof chart fills in as nightly audits accumulate (multiple days). At least one audit record is required.",
+    chartTitle: "Popularity Trend",
+    chartEmptySubmitted: "No data points for this song.",
+    chartEmptyIdle: "Search your song → the popularity trend shows up here.",
+    before: "Before",
+    after: "After",
+    dataPoints: "Data Points",
+    verifiedTag: "Verified Placements",
+    badgeMainHasData:
+      "Placement verification runs through the curator inbox; approved placements are listed here.",
+    badgeMainNoData: "No verified placement record for this search yet.",
+    badgeSub: "Source: Deezer Public API · Method: independent cross-check",
+    caption:
+      "Every placement is independently verified via the Deezer API — proof, not promises.",
+  },
+};
 
 function metric(row: HistoryRow): number {
   return row.spotify_popularity ?? row.score;
 }
 
-function formatDay(dateStr: string, index: number): string {
-  if (!dateStr) return `Gün ${index + 1}`;
+function formatDay(
+  dateStr: string,
+  index: number,
+  dayFallback: (index: number) => string,
+  dateLocale: string
+): string {
+  if (!dateStr) return dayFallback(index);
   const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return `Gün ${index + 1}`;
-  return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" });
+  if (Number.isNaN(d.getTime())) return dayFallback(index);
+  return d.toLocaleDateString(dateLocale, { day: "2-digit", month: "short" });
 }
 
 /** Gercek gecmis satirlarindan SVG polyline noktalari uretir (viewBox 0 0 1200 340). */
@@ -60,6 +128,9 @@ function buildLivePoints(rows: HistoryRow[]): {
 }
 
 export default function KanitPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
+
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -92,7 +163,7 @@ export default function KanitPage() {
         <div className={styles.topbarInner}>
           <Link href="/" className={styles.logo}>MuzikSEO</Link>
           <div className={styles.navLinks}>
-            {NAV_LINKS.map((link) => (
+            {t.nav.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -106,45 +177,44 @@ export default function KanitPage() {
               </Link>
             ))}
           </div>
+          <LangToggle />
         </div>
       </nav>
 
       <div className={styles.wrap}>
-        <h1 className={`${styles.pageTitle} nb-h`}>Kanıt Paneli</h1>
+        <h1 className={`${styles.pageTitle} nb-h`}>{t.pageTitle}</h1>
         <div className={styles.trackSub}>
           {submitted && activeQuery
-            ? `${activeQuery} · ${hasData ? "canlı veri" : "veri yok"}`
-            : "Şarkını ara — popülerlik trendini canlı göster"}
+            ? `${activeQuery} · ${hasData ? t.subLiveData : t.subNoData}`
+            : t.subIdle}
         </div>
 
         <form className={styles.searchRow} onSubmit={handleSubmit}>
           <input
             className={`${styles.searchInput} nb-input`}
             type="text"
-            placeholder="Sanatçı — Şarkı adı"
+            placeholder={t.searchPlaceholder}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            aria-label="Şarkı ara"
+            aria-label={t.searchAria}
           />
           <button
             type="submit"
             className={`${styles.searchBtn} nb-btn`}
             disabled={loading}
           >
-            {loading ? "Yükleniyor…" : "Kanıtı Göster"}
+            {loading ? t.loading : t.submit}
           </button>
         </form>
 
         {submitted && !loading && !hasData && (
           <div className={styles.banner}>
-            <strong>{activeQuery}</strong> için henüz zaman serisi yok. Kanıt grafiği,
-            gecelik denetimler biriktikçe (birden çok gün) dolar. En az bir denetim
-            kaydı gerekir.
+            <strong>{activeQuery}</strong> {t.noDataBannerSuffix}
           </div>
         )}
 
         <div className={`${styles.chartCard} nb-card`}>
-          <div className={styles.chartTitle}>Popülerlik Trendi</div>
+          <div className={styles.chartTitle}>{t.chartTitle}</div>
           <div className={styles.chartWrap}>
             {live && history ? (
               <svg viewBox="0 0 1200 340" preserveAspectRatio="none">
@@ -189,17 +259,20 @@ export default function KanitPage() {
                   </g>
                 )}
                 <text x="30" y="320" fontSize="13" fontWeight="700" fill="#555">
-                  {formatDay(history[0]?.created_at, 0)}
+                  {formatDay(history[0]?.created_at, 0, t.dayFallback, t.dateLocale)}
                 </text>
                 <text x="1100" y="320" fontSize="13" fontWeight="700" fill="#555">
-                  {formatDay(history[history.length - 1]?.created_at, history.length - 1)}
+                  {formatDay(
+                    history[history.length - 1]?.created_at,
+                    history.length - 1,
+                    t.dayFallback,
+                    t.dateLocale
+                  )}
                 </text>
               </svg>
             ) : (
               <div className={styles.chartEmpty}>
-                {submitted
-                  ? "Bu şarkı için veri noktası yok."
-                  : "Şarkını ara → popülerlik trendi burada çıksın."}
+                {submitted ? t.chartEmptySubmitted : t.chartEmptyIdle}
               </div>
             )}
           </div>
@@ -208,37 +281,31 @@ export default function KanitPage() {
         <div className={styles.tiles}>
           <div className={`${styles.tile} nb-card`}>
             <div className={styles.tval}>{first !== null ? Math.round(first) : "—"}</div>
-            <div className={styles.tlbl}>Öncesi</div>
+            <div className={styles.tlbl}>{t.before}</div>
           </div>
           <div className={`${styles.tile} ${styles.tileAlt} nb-card`}>
             <div className={styles.tval}>{last !== null ? Math.round(last) : "—"}</div>
-            <div className={styles.tlbl}>Sonrası</div>
+            <div className={styles.tlbl}>{t.after}</div>
           </div>
           <div className={`${styles.tile} nb-card`}>
             <div className={styles.tval}>{hasData ? history!.length : "—"}</div>
-            <div className={styles.tlbl}>Veri Noktası</div>
+            <div className={styles.tlbl}>{t.dataPoints}</div>
           </div>
         </div>
 
-        <span className={styles.sectionTag}>Doğrulanmış Yerleşimler</span>
+        <span className={styles.sectionTag}>{t.verifiedTag}</span>
         <div className={styles.badges}>
           <div className={`${styles.badgeRow} nb-card`}>
             <div className={styles.badgeText}>
               <div className={styles.badgeMain}>
-                {hasData
-                  ? "Yerleşim doğrulaması küratör kutusu üzerinden işlenir; onaylananlar burada listelenir."
-                  : "Bu arama için doğrulanmış yerleşim kaydı yok."}
+                {hasData ? t.badgeMainHasData : t.badgeMainNoData}
               </div>
-              <div className={styles.badgeSub}>
-                Kaynak: Deezer Public API · Yöntem: bağımsız çapraz kontrol
-              </div>
+              <div className={styles.badgeSub}>{t.badgeSub}</div>
             </div>
           </div>
         </div>
 
-        <div className={styles.caption}>
-          Her yerleşim Deezer API&apos;sinden bağımsız doğrulanır — söz değil, kanıt.
-        </div>
+        <div className={styles.caption}>{t.caption}</div>
       </div>
     </>
   );

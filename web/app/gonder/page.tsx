@@ -16,38 +16,145 @@ import {
   type CreditPackage,
   type User,
 } from "@/lib/api";
+import { useLocale, pick, LangToggle } from "@/lib/locale";
 import styles from "./page.module.css";
-
-const TYPE_LABELS: Record<CuratorType, string> = {
-  playlist: "🎧 Playlist",
-  radyo: "📻 Radyo",
-  medya: "📰 Medya",
-  label: "💿 Label",
-  menajer: "🧑‍💼 Menajer",
-  booker: "🎪 Booker",
-  dj: "🎛️ DJ",
-  mentor: "🎓 Mentor",
-  sync: "🎬 Sync",
-};
-
-/** Kademe rozeti — reach bazli fiyatlandirmayi gorsellestirir. */
-const TIER_COLORS: Record<CuratorTier, string> = {
-  bronze: "#cd7f32",
-  silver: "#c0c0c0",
-  gold: "#d4a017",
-  platinum: "#7de2d1",
-};
-
-const TIER_LABELS: Record<CuratorTier, string> = {
-  bronze: "Bronz",
-  silver: "Gümüş",
-  gold: "Altın",
-  platinum: "Platin",
-};
 
 type SubmitOpts = { guaranteed: boolean; priority: boolean };
 
 const DEFAULT_OPTS: SubmitOpts = { guaranteed: false, priority: false };
+
+const T = {
+  tr: {
+    typeLabels: {
+      playlist: "🎧 Playlist",
+      radyo: "📻 Radyo",
+      medya: "📰 Medya",
+      label: "💿 Label",
+      menajer: "🧑‍💼 Menajer",
+      booker: "🎪 Booker",
+      dj: "🎛️ DJ",
+      mentor: "🎓 Mentor",
+      sync: "🎬 Sync",
+    } as Record<CuratorType, string>,
+    tierLabels: {
+      bronze: "Bronz",
+      silver: "Gümüş",
+      gold: "Altın",
+      platinum: "Platin",
+    } as Record<CuratorTier, string>,
+    sponsored: "Sponsorlu",
+    statsResponse: "yanıt",
+    statsSuccess: "kabul",
+    statsOpportunity: "fırsat",
+    fanSuffix: "fan",
+    trackSuffix: "parça",
+    qualityLabel: "kalite",
+    optGuaranteed: "Garanti (+%50 kredi): 72 saatte yanıt gelmezse 2x kredi iadesi",
+    optPriority: "Öne çıkan (+1 kredi): 48 saat SLA + kurator kutusunda üst sıra",
+    sentBtn: "✓ Gönderildi",
+    insufficientBtn: "Kredin yetersiz — paket al",
+    sendBtn: (cost: number) => `Gönder (${cost} kredi)`,
+    busy: "...",
+    songFormatError:
+      'Şarkıyı "Sanatçı - Şarkı" formatında yaz (ör. Seyhan Canyakan - Serenity).',
+    insufficientError: "Kredin yetersiz — paket al.",
+    submitFailedError:
+      "Gönderim başarısız — şarkı Deezer'da bulunamadı ya da kredi yetersiz.",
+    autopilotBudgetError: "Bütçe en az 2 kredi olmalı.",
+    autopilotFailedError: "Otopilot başarısız — tekrar dene.",
+    gateTitle: "Giriş gerekli",
+    gateText: "Şarkı göndermek için sanatçı hesabınla giriş yap.",
+    gateLink: "Giriş / Kayıt",
+    walletLine: (credits: number, name: string) => `💳 ${credits} kredi · ${name}`,
+    heading: "Şarkını Küratörlere Gönder",
+    promise:
+      "72 saatte gerçek dinleme ve yazılı geri bildirim. Cevap yoksa kredin geri. Playlist garantisi satmıyoruz — Spotify kuralları gereği zaten kimse satamaz.",
+    songInputPlaceholder: 'Şarkın: "Sanatçı - Şarkı" (ör. Seyhan Canyakan - Serenity)',
+    emptyCurators: "Henüz onaylı küratör yok — başvurular değerlendiriliyor.",
+    autopilotHeading: "Otopilot",
+    autopilotPromise:
+      "Bir şarkı ve bütçe belirle — sistem uygun küratörlere otomatik gönderim yapsın.",
+    songFieldLabel: "Şarkı",
+    autopilotSongPlaceholder: '"Sanatçı - Şarkı" (ör. Seyhan Canyakan - Serenity)',
+    budgetFieldLabel: "Bütçe (kredi)",
+    startBtn: "Başlat",
+    autopilotResult: (created: number, spent: number) =>
+      `✓ ${created} gönderim oluştu · ${spent} kredi harcandı.`,
+    modalClose: "Kapat",
+    modalHeading: "Kredi Paketleri",
+    loading: "Yükleniyor...",
+    packageCreditsSuffix: "kredi",
+    packageBtn: "Talep Gönder",
+    requestFailedMsg: "Talep gönderilemedi — tekrar dene.",
+    requestSuccessMsg:
+      "Talebin alındı — ödeme bilgisi e-postana gelecek, admin onayıyla kredin yüklenecek (pilot dönem).",
+  },
+  en: {
+    typeLabels: {
+      playlist: "🎧 Playlist",
+      radyo: "📻 Radio",
+      medya: "📰 Media",
+      label: "💿 Label",
+      menajer: "🧑‍💼 Manager",
+      booker: "🎪 Booker",
+      dj: "🎛️ DJ",
+      mentor: "🎓 Mentor",
+      sync: "🎬 Sync",
+    } as Record<CuratorType, string>,
+    tierLabels: {
+      bronze: "Bronze",
+      silver: "Silver",
+      gold: "Gold",
+      platinum: "Platinum",
+    } as Record<CuratorTier, string>,
+    sponsored: "Sponsored",
+    statsResponse: "response",
+    statsSuccess: "acceptance",
+    statsOpportunity: "opportunity",
+    fanSuffix: "fans",
+    trackSuffix: "tracks",
+    qualityLabel: "quality",
+    optGuaranteed: "Guaranteed (+50% credits): 2x credit refund if no response within 72 hours",
+    optPriority: "Featured (+1 credit): 48-hour SLA + top position in curator's inbox",
+    sentBtn: "✓ Sent",
+    insufficientBtn: "Not enough credits — buy a package",
+    sendBtn: (cost: number) => `Send (${cost} credits)`,
+    busy: "...",
+    songFormatError:
+      'Write your song as "Artist - Title" (e.g. Seyhan Canyakan - Serenity).',
+    insufficientError: "Not enough credits — buy a package.",
+    submitFailedError:
+      "Submission failed — the song wasn't found on Deezer, or you don't have enough credits.",
+    autopilotBudgetError: "Budget must be at least 2 credits.",
+    autopilotFailedError: "Autopilot failed — try again.",
+    gateTitle: "Login required",
+    gateText: "Log in with your artist account to send a song.",
+    gateLink: "Login / Sign Up",
+    walletLine: (credits: number, name: string) => `💳 ${credits} credits · ${name}`,
+    heading: "Send Your Song to Curators",
+    promise:
+      "Real listening and written feedback within 72 hours. No response, your credit is refunded. We don't sell playlist guarantees — nobody can, per Spotify's rules.",
+    songInputPlaceholder: 'Your song: "Artist - Title" (e.g. Seyhan Canyakan - Serenity)',
+    emptyCurators: "No approved curators yet — applications are under review.",
+    autopilotHeading: "Autopilot",
+    autopilotPromise:
+      "Pick a song and a budget — the system automatically submits it to matching curators.",
+    songFieldLabel: "Song",
+    autopilotSongPlaceholder: '"Artist - Title" (e.g. Seyhan Canyakan - Serenity)',
+    budgetFieldLabel: "Budget (credits)",
+    startBtn: "Start",
+    autopilotResult: (created: number, spent: number) =>
+      `✓ ${created} submissions created · ${spent} credits spent.`,
+    modalClose: "Close",
+    modalHeading: "Credit Packages",
+    loading: "Loading...",
+    packageCreditsSuffix: "credits",
+    packageBtn: "Send Request",
+    requestFailedMsg: "Request failed — try again.",
+    requestSuccessMsg:
+      "Your request has been received — payment info will be sent to your email, credits will be added after admin approval (pilot period).",
+  },
+} as const;
 
 /** guaranteed → +%50 (min 1 kredi), priority → +1 kredi — backend'le ayni formul. */
 function computeCost(baseCost: number, opts: SubmitOpts): number {
@@ -55,17 +162,6 @@ function computeCost(baseCost: number, opts: SubmitOpts): number {
   if (opts.guaranteed) total += Math.max(1, Math.ceil(baseCost * 0.5));
   if (opts.priority) total += 1;
   return total;
-}
-
-/** "yanıt %92 · kabul %38 · fırsat %41" — veri yoksa parça atlanır. */
-function statsLine(c: Curator): string {
-  const s = c.stats;
-  if (!s) return "";
-  const parts: string[] = [];
-  if (s.response_rate !== null) parts.push(`yanıt %${s.response_rate}`);
-  if (s.success_rate !== null) parts.push(`kabul %${s.success_rate}`);
-  if (s.opportunity_rate !== null) parts.push(`fırsat %${s.opportunity_rate}`);
-  return parts.join(" · ");
 }
 
 /** "Sanatçı - Şarkı" ayrıştırıcısı — hem tekli gönderim hem otopilot kullanır. */
@@ -81,6 +177,8 @@ function parseSongText(raw: string): { artist: string; title: string } | null {
 /** Sanatci gonderim ekrani — cekirdek dongunun panel ayagi:
  *  kredi bakiyesi + onayli kurator katalogu + gercek gonderim (garanti/oncelik eklentili). */
 export default function GonderPage() {
+  const { locale } = useLocale();
+  const t = pick(T, locale);
   const [user, setUser] = useState<User | null>(null);
   const [checked, setChecked] = useState(false);
   const [curators, setCurators] = useState<Curator[]>([]);
@@ -143,6 +241,18 @@ export default function GonderPage() {
     });
   }
 
+  /** "yanıt %92 · kabul %38 · fırsat %41" — veri yoksa parça atlanır. */
+  function statsLine(c: Curator): string {
+    const s = c.stats;
+    if (!s) return "";
+    const parts: string[] = [];
+    if (s.response_rate !== null) parts.push(`${t.statsResponse} %${s.response_rate}`);
+    if (s.success_rate !== null) parts.push(`${t.statsSuccess} %${s.success_rate}`);
+    if (s.opportunity_rate !== null)
+      parts.push(`${t.statsOpportunity} %${s.opportunity_rate}`);
+    return parts.join(" · ");
+  }
+
   async function openPackageModal() {
     setPackageMsg("");
     setShowPackageModal(true);
@@ -158,25 +268,23 @@ export default function GonderPage() {
     const res = await requestPackage(key);
     setRequestingKey(null);
     if (!res) {
-      setPackageMsg("Talep gönderilemedi — tekrar dene.");
+      setPackageMsg(t.requestFailedMsg);
       return;
     }
-    setPackageMsg(
-      "Talebin alındı — ödeme bilgisi e-postana gelecek, admin onayıyla kredin yüklenecek (pilot dönem)."
-    );
+    setPackageMsg(t.requestSuccessMsg);
   }
 
   async function handleSubmit(curator: Curator) {
     setError("");
     const parsed = parseSong();
     if (!parsed) {
-      setError('Şarkıyı "Sanatçı - Şarkı" formatında yaz (ör. Seyhan Canyakan - Serenity).');
+      setError(t.songFormatError);
       return;
     }
     const opts = optsMap[curator.id] ?? DEFAULT_OPTS;
     const cost = computeCost(curator.base_cost ?? 1, opts);
     if (!user || user.credits < cost) {
-      setError("Kredin yetersiz — paket al.");
+      setError(t.insufficientError);
       openPackageModal();
       return;
     }
@@ -184,7 +292,7 @@ export default function GonderPage() {
     const sub = await submitToCurator(parsed.artist, parsed.title, curator.id, opts);
     setBusyId(null);
     if (!sub) {
-      setError("Gönderim başarısız — şarkı Deezer'da bulunamadı ya da kredi yetersiz.");
+      setError(t.submitFailedError);
       return;
     }
     setSentIds((prev) => ({ ...prev, [curator.id]: true }));
@@ -197,15 +305,15 @@ export default function GonderPage() {
     setAutopilotResult(null);
     const parsed = parseSongText(autopilotSong);
     if (!parsed) {
-      setAutopilotError('Şarkıyı "Sanatçı - Şarkı" formatında yaz (ör. Seyhan Canyakan - Serenity).');
+      setAutopilotError(t.songFormatError);
       return;
     }
     if (autopilotBudget < 2) {
-      setAutopilotError("Bütçe en az 2 kredi olmalı.");
+      setAutopilotError(t.autopilotBudgetError);
       return;
     }
     if (!user || user.credits < autopilotBudget) {
-      setAutopilotError("Kredin yetersiz — paket al.");
+      setAutopilotError(t.insufficientError);
       openPackageModal();
       return;
     }
@@ -213,7 +321,7 @@ export default function GonderPage() {
     const res = await startAutopilot(parsed.artist, parsed.title, autopilotBudget);
     setAutopilotBusy(false);
     if (!res) {
-      setAutopilotError("Otopilot başarısız — tekrar dene.");
+      setAutopilotError(t.autopilotFailedError);
       return;
     }
     setAutopilotResult({ created: res.created.length, spent: res.spent });
@@ -224,11 +332,12 @@ export default function GonderPage() {
     return (
       <div className={styles.gate}>
         <div className="nb-card" style={{ padding: 28, maxWidth: 460 }}>
-          <h2 className="nb-h">Giriş gerekli</h2>
-          <p className={styles.gateText}>
-            Şarkı göndermek için sanatçı hesabınla giriş yap.
-          </p>
-          <Link href="/giris" className="nb-btn">Giriş / Kayıt</Link>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+            <LangToggle />
+          </div>
+          <h2 className="nb-h">{t.gateTitle}</h2>
+          <p className={styles.gateText}>{t.gateText}</p>
+          <Link href="/giris" className="nb-btn">{t.gateLink}</Link>
         </div>
       </div>
     );
@@ -237,24 +346,21 @@ export default function GonderPage() {
   return (
     <div className={styles.wrap}>
       <div className={styles.top}>
-        <Link href="/" className={styles.logo}>MuzikSEO</Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Link href="/" className={styles.logo}>MuzikSEO</Link>
+          <LangToggle />
+        </div>
         {user && (
-          <div className={styles.wallet}>
-            💳 {user.credits} kredi · {user.name}
-          </div>
+          <div className={styles.wallet}>{t.walletLine(user.credits, user.name)}</div>
         )}
       </div>
 
-      <h1 className="nb-h">Şarkını Küratörlere Gönder</h1>
-      <p className={styles.promise}>
-        72 saatte gerçek dinleme ve yazılı geri bildirim. Cevap yoksa kredin
-        geri. Playlist garantisi satmıyoruz — Spotify kuralları gereği zaten
-        kimse satamaz.
-      </p>
+      <h1 className="nb-h">{t.heading}</h1>
+      <p className={styles.promise}>{t.promise}</p>
 
       <input
         className={`nb-input ${styles.songInput}`}
-        placeholder='Şarkın: "Sanatçı - Şarkı" (ör. Seyhan Canyakan - Serenity)'
+        placeholder={t.songInputPlaceholder}
         value={song}
         onChange={(e) => setSong(e.target.value)}
       />
@@ -263,9 +369,7 @@ export default function GonderPage() {
 
       <div className={styles.list}>
         {curators.length === 0 && (
-          <div className={styles.empty}>
-            Henüz onaylı küratör yok — başvurular değerlendiriliyor.
-          </div>
+          <div className={styles.empty}>{t.emptyCurators}</div>
         )}
         {curators.map((c) => {
           const opts = optsMap[c.id] ?? DEFAULT_OPTS;
@@ -293,7 +397,7 @@ export default function GonderPage() {
                       verticalAlign: "middle", whiteSpace: "nowrap",
                     }}
                   >
-                    {TYPE_LABELS[c.curator_type ?? "playlist"]}
+                    {t.typeLabels[c.curator_type ?? "playlist"]}
                   </span>{" "}
                   {c.tier && (
                     <span
@@ -304,7 +408,7 @@ export default function GonderPage() {
                         whiteSpace: "nowrap", textTransform: "uppercase",
                       }}
                     >
-                      {TIER_LABELS[c.tier]}
+                      {t.tierLabels[c.tier]}
                     </span>
                   )}{" "}
                   {c.sponsored && (
@@ -316,13 +420,14 @@ export default function GonderPage() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      Sponsorlu
+                      {t.sponsored}
                     </span>
                   )}
                 </div>
                 <div className={styles.curatorMeta}>
-                  {c.name} · {c.fans.toLocaleString("tr-TR")} fan ·{" "}
-                  {c.track_count} parça · kalite {c.quality_score}
+                  {c.name} · {c.fans.toLocaleString(locale === "tr" ? "tr-TR" : "en-US")}{" "}
+                  {t.fanSuffix} · {c.track_count} {t.trackSuffix} · {t.qualityLabel}{" "}
+                  {c.quality_score}
                   {statsLine(c) && <> · {statsLine(c)}</>}
                 </div>
 
@@ -334,7 +439,7 @@ export default function GonderPage() {
                         checked={opts.guaranteed}
                         onChange={() => toggleOpt(c.id, "guaranteed")}
                       />
-                      Garanti (+%50 kredi): 72 saatte yanıt gelmezse 2x kredi iadesi
+                      {t.optGuaranteed}
                     </label>
                     <label className={styles.optLabel}>
                       <input
@@ -342,7 +447,7 @@ export default function GonderPage() {
                         checked={opts.priority}
                         onChange={() => toggleOpt(c.id, "priority")}
                       />
-                      Öne çıkan (+1 kredi): 48 saat SLA + kurator kutusunda üst sıra
+                      {t.optPriority}
                     </label>
                   </div>
                 )}
@@ -350,7 +455,7 @@ export default function GonderPage() {
 
               {sent ? (
                 <button type="button" className={`nb-btn ${styles.sendBtn}`} disabled>
-                  ✓ Gönderildi
+                  {t.sentBtn}
                 </button>
               ) : insufficient ? (
                 <button
@@ -358,7 +463,7 @@ export default function GonderPage() {
                   className={`nb-btn ${styles.sendBtn}`}
                   onClick={openPackageModal}
                 >
-                  Kredin yetersiz — paket al
+                  {t.insufficientBtn}
                 </button>
               ) : (
                 <button
@@ -367,7 +472,7 @@ export default function GonderPage() {
                   disabled={busyId === c.id}
                   onClick={() => handleSubmit(c)}
                 >
-                  {busyId === c.id ? "..." : `Gönder (${cost} kredi)`}
+                  {busyId === c.id ? t.busy : t.sendBtn(cost)}
                 </button>
               )}
             </div>
@@ -376,27 +481,24 @@ export default function GonderPage() {
       </div>
 
       <div className={`nb-card ${styles.autopilotSection}`}>
-        <h2 className="nb-h">Otopilot</h2>
-        <p className={styles.promise}>
-          Bir şarkı ve bütçe belirle — sistem uygun küratörlere otomatik
-          gönderim yapsın.
-        </p>
+        <h2 className="nb-h">{t.autopilotHeading}</h2>
+        <p className={styles.promise}>{t.autopilotPromise}</p>
         <div className={styles.autopilotRow}>
           <div className={styles.autopilotField}>
             <label className={styles.fieldLabel} htmlFor="autopilot-song">
-              Şarkı
+              {t.songFieldLabel}
             </label>
             <input
               id="autopilot-song"
               className="nb-input"
-              placeholder='"Sanatçı - Şarkı" (ör. Seyhan Canyakan - Serenity)'
+              placeholder={t.autopilotSongPlaceholder}
               value={autopilotSong}
               onChange={(e) => setAutopilotSong(e.target.value)}
             />
           </div>
           <div className={`${styles.autopilotField} ${styles.autopilotBudgetField}`}>
             <label className={styles.fieldLabel} htmlFor="autopilot-budget">
-              Bütçe (kredi)
+              {t.budgetFieldLabel}
             </label>
             <input
               id="autopilot-budget"
@@ -416,14 +518,13 @@ export default function GonderPage() {
             disabled={autopilotBusy}
             onClick={handleAutopilotStart}
           >
-            {autopilotBusy ? "..." : "Başlat"}
+            {autopilotBusy ? t.busy : t.startBtn}
           </button>
         </div>
         {autopilotError && <div className={styles.error}>{autopilotError}</div>}
         {autopilotResult && (
           <div className={styles.autopilotResult}>
-            ✓ {autopilotResult.created} gönderim oluştu · {autopilotResult.spent} kredi
-            harcandı.
+            {t.autopilotResult(autopilotResult.created, autopilotResult.spent)}
           </div>
         )}
       </div>
@@ -437,19 +538,21 @@ export default function GonderPage() {
             <button
               type="button"
               className={styles.modalClose}
-              aria-label="Kapat"
+              aria-label={t.modalClose}
               onClick={() => setShowPackageModal(false)}
             >
               ✕
             </button>
-            <h2 className="nb-h">Kredi Paketleri</h2>
-            {!packages && <div className={styles.empty}>Yükleniyor...</div>}
+            <h2 className="nb-h">{t.modalHeading}</h2>
+            {!packages && <div className={styles.empty}>{t.loading}</div>}
             {packages && (
               <div className={styles.packageGrid}>
                 {packages.map((p) => (
                   <div key={p.key} className={styles.packageCard}>
                     <div className={styles.packageLabel}>{p.label}</div>
-                    <div className={styles.packageCredits}>{p.credits} kredi</div>
+                    <div className={styles.packageCredits}>
+                      {p.credits} {t.packageCreditsSuffix}
+                    </div>
                     <div className={styles.packagePrice}>{p.price_try} TL</div>
                     <button
                       type="button"
@@ -457,7 +560,7 @@ export default function GonderPage() {
                       disabled={requestingKey === p.key}
                       onClick={() => handleRequestPackage(p.key)}
                     >
-                      {requestingKey === p.key ? "..." : "Talep Gönder"}
+                      {requestingKey === p.key ? t.busy : t.packageBtn}
                     </button>
                   </div>
                 ))}
@@ -470,3 +573,11 @@ export default function GonderPage() {
     </div>
   );
 }
+
+/** Kademe rozeti — reach bazli fiyatlandirmayi gorsellestirir. */
+const TIER_COLORS: Record<CuratorTier, string> = {
+  bronze: "#cd7f32",
+  silver: "#c0c0c0",
+  gold: "#d4a017",
+  platinum: "#7de2d1",
+};
