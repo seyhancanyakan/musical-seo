@@ -707,6 +707,77 @@ export const markPayoutPaid = (payoutId: number) =>
     headers: adminHeaders(),
   });
 
+/* --- Sarkilarim (sanatci sarki kutuphanesi) -------------------------------- */
+
+/** Backend'in Turkce hata detail'ini YUTMAYAN yardimci: {data} veya {error}.
+ *  j<T> null dondugu icin sayfalar gercek sebebi gosteremiyordu
+ *  (or. "Sarki Deezer/Spotify'da bulunamadi..."). Yeni akislar bunu kullanir. */
+export async function jd<T>(
+  path: string,
+  init?: RequestInit
+): Promise<{ data: T | null; error: string | null }> {
+  try {
+    const res = await fetch(`${API}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...init?.headers },
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      const detail =
+        body && typeof body.detail === "string" ? body.detail : `HTTP ${res.status}`;
+      return { data: null, error: detail };
+    }
+    return { data: body as T, error: null };
+  } catch {
+    return { data: null, error: "Sunucuya ulaşılamadı" };
+  }
+}
+
+export type ArtistTrack = {
+  id: number;
+  created_at: string;
+  artist: string;
+  title: string;
+  track_url: string | null;
+  source: "deezer" | "spotify";
+};
+
+export const myTracks = () =>
+  j<ArtistTrack[]>(`/me/tracks`, { headers: authHeaders() });
+
+/** Sarki ekle — bulunamazsa error alaninda Turkce sebep doner. */
+export const addTrack = (artist: string, title: string) =>
+  jd<ArtistTrack>(`/me/tracks`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ artist, title }),
+  });
+
+export const deleteTrack = (trackId: number) =>
+  j<{ ok: boolean }>(`/me/tracks/${trackId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+
+/** Gonderim — hata detayli surum (kredi/cozumleme hatalari gorunur). */
+export const submitToCuratorD = (
+  artist: string,
+  title: string,
+  curatorId: number,
+  opts?: { guaranteed?: boolean; priority?: boolean }
+) =>
+  jd<Submission>(`/me/submissions`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      artist,
+      title,
+      curator_id: curatorId,
+      guaranteed: opts?.guaranteed ?? false,
+      priority: opts?.priority ?? false,
+    }),
+  });
+
 export type AdminPayout = Payout & {
   curator_user_id: number;
   curator_name: string;

@@ -48,6 +48,104 @@
   max-width: 620px;
 }
 
+/* --- Sarkilarim (sarki kutuphanesi) --------------------------------------- */
+
+.trackSection {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.trackList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.trackChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.trackChip:hover {
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: translate(-1px, -1px);
+}
+
+.trackChipSelected {
+  background: var(--blue);
+  color: #fff;
+}
+
+.trackChipDelete {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-weight: 900;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.trackChipDelete:hover {
+  color: var(--red);
+}
+
+.trackEmptyHint {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--blue);
+  background: #fff;
+  padding: 14px 16px;
+  font-weight: 800;
+  font-size: 13px;
+  max-width: 620px;
+}
+
+.trackAddRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.trackAddRow input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.hint {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.sendBtnWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.autopilotSelectedSong {
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 10px 12px;
+  font-weight: 800;
+  font-size: 13px;
+  min-height: 20px;
+}
+
 .error {
   border: 3px solid var(--ink);
   border-left: 8px solid var(--red);

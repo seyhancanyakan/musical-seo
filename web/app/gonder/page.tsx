@@ -3,13 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  addTrack,
+  deleteTrack,
   getMe,
   getPackages,
   getToken,
   listCurators,
+  myTracks,
   requestPackage,
   startAutopilot,
-  submitToCurator,
+  submitToCuratorD,
+  type ArtistTrack,
   type Curator,
   type CuratorTier,
   type CuratorType,
@@ -71,11 +75,17 @@ const T = {
       "72 saatte gerçek dinleme ve yazılı geri bildirim. Cevap yoksa kredin geri. Playlist garantisi satmıyoruz — Spotify kuralları gereği zaten kimse satamaz.",
     songInputPlaceholder: 'Şarkın: "Sanatçı - Şarkı" (ör. Seyhan Canyakan - Serenity)',
     emptyCurators: "Henüz onaylı küratör yok — başvurular değerlendiriliyor.",
+    tracksHeading: "Şarkılarım",
+    trackEmptyHint:
+      "Önce şarkını kaydet — gönderimler kayıtlı şarkınla yapılır.",
+    saveTrackBtn: "Kaydet",
+    deleteTrackAria: "Şarkıyı sil",
+    selectSongFirstHint: "Önce şarkı seç.",
+    noSongSelected: "Şarkı seçilmedi",
     autopilotHeading: "Otopilot",
     autopilotPromise:
       "Bir şarkı ve bütçe belirle — sistem uygun küratörlere otomatik gönderim yapsın.",
     songFieldLabel: "Şarkı",
-    autopilotSongPlaceholder: '"Sanatçı - Şarkı" (ör. Seyhan Canyakan - Serenity)',
     budgetFieldLabel: "Bütçe (kredi)",
     startBtn: "Başlat",
     autopilotResult: (created: number, spent: number) =>
@@ -136,11 +146,17 @@ const T = {
       "Real listening and written feedback within 72 hours. No response, your credit is refunded. We don't sell playlist guarantees — nobody can, per Spotify's rules.",
     songInputPlaceholder: 'Your song: "Artist - Title" (e.g. Seyhan Canyakan - Serenity)',
     emptyCurators: "No approved curators yet — applications are under review.",
+    tracksHeading: "My Tracks",
+    trackEmptyHint:
+      "Save your song first — submissions are made with your saved song.",
+    saveTrackBtn: "Save",
+    deleteTrackAria: "Delete song",
+    selectSongFirstHint: "Select a song first.",
+    noSongSelected: "No song selected",
     autopilotHeading: "Autopilot",
     autopilotPromise:
       "Pick a song and a budget — the system automatically submits it to matching curators.",
     songFieldLabel: "Song",
-    autopilotSongPlaceholder: '"Artist - Title" (e.g. Seyhan Canyakan - Serenity)',
     budgetFieldLabel: "Budget (credits)",
     startBtn: "Start",
     autopilotResult: (created: number, spent: number) =>
@@ -182,12 +198,19 @@ export default function GonderPage() {
   const [user, setUser] = useState<User | null>(null);
   const [checked, setChecked] = useState(false);
   const [curators, setCurators] = useState<Curator[]>([]);
-  const [song, setSong] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [sentIds, setSentIds] = useState<Record<number, boolean>>({});
   const [error, setError] = useState("");
   const [optsMap, setOptsMap] = useState<Record<number, SubmitOpts>>({});
   const [highlightId, setHighlightId] = useState<number | null>(null);
+
+  // Sarkilarim: sanatcinin kayitli sarki kutuphanesi — gonderimler bu secimle yapilir
+  const [tracks, setTracks] = useState<ArtistTrack[]>([]);
+  const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null);
+  const [newTrackText, setNewTrackText] = useState("");
+  const [addTrackBusy, setAddTrackBusy] = useState(false);
+  const [addTrackError, setAddTrackError] = useState("");
+  const [deletingTrackId, setDeletingTrackId] = useState<number | null>(null);
 
   // Kredi paketi modali (dusuk kredi uyarisindan veya elle acilir)
   const [showPackageModal, setShowPackageModal] = useState(false);
@@ -196,7 +219,6 @@ export default function GonderPage() {
   const [requestingKey, setRequestingKey] = useState<string | null>(null);
 
   // Otopilot: sarki + butce -> uygun kuratorlere otomatik gonderim
-  const [autopilotSong, setAutopilotSong] = useState("");
   const [autopilotBudget, setAutopilotBudget] = useState(2);
   const [autopilotBusy, setAutopilotBusy] = useState(false);
   const [autopilotError, setAutopilotError] = useState("");
@@ -209,6 +231,8 @@ export default function GonderPage() {
       if (getToken()) {
         const me = await getMe();
         if (me) setUser(me.user);
+        const trackList = await myTracks();
+        if (trackList) setTracks(trackList);
       }
       setChecked(true);
       const list = await listCurators();
@@ -230,8 +254,44 @@ export default function GonderPage() {
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlightId, curators]);
 
-  function parseSong(): { artist: string; title: string } | null {
-    return parseSongText(song);
+  const selectedTrack = tracks.find((track) => track.id === selectedTrackId) ?? null;
+
+  /** Backend TR aciklamasi aynen gosterilir; EN locale'de "Error: " onekiyle. */
+  function displayBackendError(msg: string): string {
+    return locale === "en" ? `Error: ${msg}` : msg;
+  }
+
+  function selectTrack(id: number) {
+    setError("");
+    setSelectedTrackId(id);
+  }
+
+  async function handleAddTrack() {
+    setAddTrackError("");
+    const parsed = parseSongText(newTrackText);
+    if (!parsed) {
+      setAddTrackError(t.songFormatError);
+      return;
+    }
+    setAddTrackBusy(true);
+    const { data, error: err } = await addTrack(parsed.artist, parsed.title);
+    setAddTrackBusy(false);
+    if (!data) {
+      setAddTrackError(err ? displayBackendError(err) : t.submitFailedError);
+      return;
+    }
+    setTracks((prev) => [data, ...prev]);
+    setSelectedTrackId(data.id);
+    setNewTrackText("");
+  }
+
+  async function handleDeleteTrack(id: number) {
+    setDeletingTrackId(id);
+    const res = await deleteTrack(id);
+    setDeletingTrackId(null);
+    if (!res?.ok) return;
+    setTracks((prev) => prev.filter((track) => track.id !== id));
+    setSelectedTrackId((prev) => (prev === id ? null : prev));
   }
 
   function toggleOpt(curatorId: number, key: keyof SubmitOpts) {
@@ -276,9 +336,8 @@ export default function GonderPage() {
 
   async function handleSubmit(curator: Curator) {
     setError("");
-    const parsed = parseSong();
-    if (!parsed) {
-      setError(t.songFormatError);
+    if (!selectedTrack) {
+      setError(t.selectSongFirstHint);
       return;
     }
     const opts = optsMap[curator.id] ?? DEFAULT_OPTS;
@@ -289,10 +348,15 @@ export default function GonderPage() {
       return;
     }
     setBusyId(curator.id);
-    const sub = await submitToCurator(parsed.artist, parsed.title, curator.id, opts);
+    const { data: sub, error: subErr } = await submitToCuratorD(
+      selectedTrack.artist,
+      selectedTrack.title,
+      curator.id,
+      opts
+    );
     setBusyId(null);
     if (!sub) {
-      setError(t.submitFailedError);
+      setError(subErr ? displayBackendError(subErr) : t.submitFailedError);
       return;
     }
     setSentIds((prev) => ({ ...prev, [curator.id]: true }));
@@ -303,9 +367,8 @@ export default function GonderPage() {
   async function handleAutopilotStart() {
     setAutopilotError("");
     setAutopilotResult(null);
-    const parsed = parseSongText(autopilotSong);
-    if (!parsed) {
-      setAutopilotError(t.songFormatError);
+    if (!selectedTrack) {
+      setAutopilotError(t.selectSongFirstHint);
       return;
     }
     if (autopilotBudget < 2) {
@@ -318,7 +381,7 @@ export default function GonderPage() {
       return;
     }
     setAutopilotBusy(true);
-    const res = await startAutopilot(parsed.artist, parsed.title, autopilotBudget);
+    const res = await startAutopilot(selectedTrack.artist, selectedTrack.title, autopilotBudget);
     setAutopilotBusy(false);
     if (!res) {
       setAutopilotError(t.autopilotFailedError);
@@ -358,12 +421,59 @@ export default function GonderPage() {
       <h1 className="nb-h">{t.heading}</h1>
       <p className={styles.promise}>{t.promise}</p>
 
-      <input
-        className={`nb-input ${styles.songInput}`}
-        placeholder={t.songInputPlaceholder}
-        value={song}
-        onChange={(e) => setSong(e.target.value)}
-      />
+      <div className={`nb-card ${styles.trackSection}`}>
+        <h2 className="nb-h" style={{ fontSize: 20 }}>{t.tracksHeading}</h2>
+
+        {tracks.length === 0 && (
+          <div className={styles.trackEmptyHint}>{t.trackEmptyHint}</div>
+        )}
+
+        {tracks.length > 0 && (
+          <div className={styles.trackList}>
+            {tracks.map((track) => (
+              <div
+                key={track.id}
+                className={`${styles.trackChip} ${
+                  selectedTrackId === track.id ? styles.trackChipSelected : ""
+                }`}
+                onClick={() => selectTrack(track.id)}
+              >
+                <span>{track.artist} - {track.title}</span>
+                <button
+                  type="button"
+                  className={styles.trackChipDelete}
+                  aria-label={t.deleteTrackAria}
+                  disabled={deletingTrackId === track.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTrack(track.id);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className={styles.trackAddRow}>
+          <input
+            className="nb-input"
+            placeholder={t.songInputPlaceholder}
+            value={newTrackText}
+            onChange={(e) => setNewTrackText(e.target.value)}
+          />
+          <button
+            type="button"
+            className="nb-btn"
+            disabled={addTrackBusy}
+            onClick={handleAddTrack}
+          >
+            {addTrackBusy ? t.busy : t.saveTrackBtn}
+          </button>
+        </div>
+        {addTrackError && <div className={styles.error}>{addTrackError}</div>}
+      </div>
 
       {error && <div className={styles.error}>{error}</div>}
 
@@ -457,6 +567,13 @@ export default function GonderPage() {
                 <button type="button" className={`nb-btn ${styles.sendBtn}`} disabled>
                   {t.sentBtn}
                 </button>
+              ) : !selectedTrack ? (
+                <div className={styles.sendBtnWrap}>
+                  <button type="button" className={`nb-btn ${styles.sendBtn}`} disabled>
+                    {t.sendBtn(cost)}
+                  </button>
+                  <span className={styles.hint}>{t.selectSongFirstHint}</span>
+                </div>
               ) : insufficient ? (
                 <button
                   type="button"
@@ -488,13 +605,11 @@ export default function GonderPage() {
             <label className={styles.fieldLabel} htmlFor="autopilot-song">
               {t.songFieldLabel}
             </label>
-            <input
-              id="autopilot-song"
-              className="nb-input"
-              placeholder={t.autopilotSongPlaceholder}
-              value={autopilotSong}
-              onChange={(e) => setAutopilotSong(e.target.value)}
-            />
+            <div id="autopilot-song" className={styles.autopilotSelectedSong}>
+              {selectedTrack
+                ? `${selectedTrack.artist} - ${selectedTrack.title}`
+                : t.noSongSelected}
+            </div>
           </div>
           <div className={`${styles.autopilotField} ${styles.autopilotBudgetField}`}>
             <label className={styles.fieldLabel} htmlFor="autopilot-budget">
@@ -515,12 +630,13 @@ export default function GonderPage() {
           <button
             type="button"
             className="nb-btn"
-            disabled={autopilotBusy}
+            disabled={autopilotBusy || !selectedTrack}
             onClick={handleAutopilotStart}
           >
             {autopilotBusy ? t.busy : t.startBtn}
           </button>
         </div>
+        {!selectedTrack && <div className={styles.hint}>{t.selectSongFirstHint}</div>}
         {autopilotError && <div className={styles.error}>{autopilotError}</div>}
         {autopilotResult && (
           <div className={styles.autopilotResult}>
