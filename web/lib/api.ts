@@ -706,3 +706,26 @@ export const markPayoutPaid = (payoutId: number) =>
     method: "POST",
     headers: adminHeaders(),
   });
+
+export type AdminPayout = Payout & {
+  curator_user_id: number;
+  curator_name: string;
+  curator_email: string;
+};
+
+export const listAdminPayouts = (status = "requested") =>
+  j<AdminPayout[]>(`/admin/payouts?status=${status}`, {
+    headers: adminHeaders(),
+  });
+
+/** Admin: manuel kredi yukleme (odeme pilotta elden alinir). */
+export const adminGrantCredits = (
+  userId: number,
+  amount: number,
+  reason = "purchase"
+) =>
+  j<User>(`/admin/credits/grant`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ user_id: userId, amount, reason }),
+  });

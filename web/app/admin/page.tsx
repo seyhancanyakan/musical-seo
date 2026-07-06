@@ -6,10 +6,16 @@ import {
   listAllCurators,
   setAdminKey,
   setCuratorStatus,
+  sponsorCurator,
   type Curator,
   type CuratorStatus,
 } from "@/lib/api";
 import styles from "./page.module.css";
+import { formatDate } from "./utils";
+import PurchaseRequestsTab from "./PurchaseRequestsTab";
+import CreditGrantTab from "./CreditGrantTab";
+import ProActivationTab from "./ProActivationTab";
+import PayoutsTab from "./PayoutsTab";
 
 const DEMO_CURATORS: Curator[] = [
   {
@@ -107,15 +113,15 @@ function sourceLabel(source?: string | null): string {
   return SOURCE_LABELS[source] ?? source;
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+type TabKey = "curators" | "purchases" | "credits" | "pro" | "payouts";
+
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "curators", label: "Küratörler" },
+  { key: "purchases", label: "Kredi Talepleri" },
+  { key: "credits", label: "Kredi Yükle" },
+  { key: "pro", label: "Pro Aktivasyon" },
+  { key: "payouts", label: "Ödemeler" },
+];
 
 export default function AdminPage() {
   const [curators, setCurators] = useState<Curator[]>([]);
@@ -128,6 +134,8 @@ export default function AdminPage() {
   const [keyDraft, setKeyDraft] = useState("");
   const [needsKey, setNeedsKey] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [tab, setTab] = useState<TabKey>("curators");
+  const [sponsorBusyId, setSponsorBusyId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -193,6 +201,17 @@ export default function AdminPage() {
     setBusyId(null);
   }
 
+  /** Kuratoru 7 gunlugune vitrinde one cikar (sponsored=true). */
+  async function sponsorForWeek(id: number) {
+    setSponsorBusyId(id);
+    const untilIso = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const updated = await sponsorCurator(id, untilIso);
+    if (updated) {
+      setCurators((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    }
+    setSponsorBusyId(null);
+  }
+
   return (
     <div>
       <nav className={styles.topbar}>
@@ -203,7 +222,7 @@ export default function AdminPage() {
       </nav>
 
       <div className={styles.wrap}>
-        <h1 className={styles.pageTitle}>Küratör Paneli</h1>
+        <h1 className={styles.pageTitle}>Admin Paneli</h1>
 
         {needsKey && (
           <div className={styles.apiBanner} role="status">
@@ -225,6 +244,23 @@ export default function AdminPage() {
           </div>
         )}
 
+        <div className={styles.tabBar}>
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className={
+                tab === t.key ? `${styles.tabBtn} ${styles.tabActive}` : styles.tabBtn
+              }
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "curators" && (
+        <>
         <div className={styles.filters}>
           {FILTERS.map((f) => (
             <button
@@ -368,6 +404,19 @@ export default function AdminPage() {
                               Beklet
                             </button>
                           )}
+                          {c.sponsored && (
+                            <span className={`${styles.badge} ${styles.badgeSponsored}`}>
+                              Sponsorlu
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className={`${styles.act} ${styles.actSponsor}`}
+                            onClick={() => sponsorForWeek(c.id)}
+                            disabled={sponsorBusyId === c.id}
+                          >
+                            Sponsor 7g
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -377,6 +426,13 @@ export default function AdminPage() {
             </table>
           </div>
         )}
+        </>
+        )}
+
+        {tab === "purchases" && <PurchaseRequestsTab />}
+        {tab === "credits" && <CreditGrantTab />}
+        {tab === "pro" && <ProActivationTab />}
+        {tab === "payouts" && <PayoutsTab />}
       </div>
     </div>
   );

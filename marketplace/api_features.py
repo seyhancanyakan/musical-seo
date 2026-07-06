@@ -472,6 +472,24 @@ def payout_list(user: dict = Depends(_current_user)) -> list[dict]:
     return premium.list_payouts(user["id"])
 
 
+@router.get("/admin/payouts")
+def admin_payouts(
+    status: str = "requested", _: None = Depends(_require_admin_key)
+) -> list[dict]:
+    """Admin: bekleyen/odenmis payout talepleri (havale kuyrugu)."""
+    conn = accounts._connect()
+    try:
+        rows = conn.execute(
+            "SELECT p.*, u.name AS curator_name, u.email AS curator_email "
+            "FROM payouts p JOIN users u ON u.id = p.curator_user_id "
+            "WHERE p.status = ? ORDER BY p.id",
+            (status,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
 @router.post("/admin/payouts/{payout_id}/paid")
 def admin_payout_paid(
     payout_id: int, _: None = Depends(_require_admin_key)
