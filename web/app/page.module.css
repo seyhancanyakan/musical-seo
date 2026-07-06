@@ -251,6 +251,16 @@
   transform: rotate(-2deg);
   margin-bottom: 32px;
 }
+/* Menu kalabaliginda logo ile linkler ust uste binmesin: sig ve sar. */
+.navWrap {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.menu {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
 .heroTitle {
   font-size: 68px;
   /* 1.02 cok sikiydi: vurgulu span'in 3px cercevesi + Turkce buyuk harf
