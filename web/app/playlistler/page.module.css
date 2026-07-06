@@ -424,6 +424,23 @@
   background: #ffefb3;
 }
 
+.platformBtn {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border: 2px solid var(--ink);
+  background: var(--purple);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.platformBtn:hover {
+  box-shadow: 5px 5px 0 var(--ink);
+  transform: translate(-1px, -1px);
+}
+
 /* ---- Canli analiz VFX paneli ---- */
 
 .analysisPanel {

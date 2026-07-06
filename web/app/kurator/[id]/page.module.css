@@ -1,0 +1,253 @@
+/* Küratör vitrini — public profil, mavi neo-brutal */
+
+.wrap {
+  min-height: 100vh;
+}
+
+.topbar {
+  border-bottom: 3px solid var(--ink);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 40px;
+  height: 80px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.main {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+.loading {
+  font-weight: 800;
+  font-size: 14px;
+  color: #555;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.notFound {
+  padding: 48px;
+  text-align: center;
+  max-width: 460px;
+  margin: 60px auto 0;
+}
+
+.notFoundTitle {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 24px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.notFoundText {
+  font-size: 14px;
+  font-weight: 700;
+  color: #555;
+  margin-bottom: 20px;
+}
+
+/* HEAD */
+
+.head {
+  margin-bottom: 28px;
+}
+
+.badgeRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.typePill {
+  border: 3px solid var(--ink);
+  background: var(--lightblue);
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sponsoredPill {
+  border: 3px solid var(--ink);
+  background: #ffd23d;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.verifiedPill {
+  border: 3px solid var(--ink);
+  background: var(--green);
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.name {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 34px;
+  text-transform: uppercase;
+  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+}
+
+.playlistLink {
+  display: inline-block;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--blue);
+  text-decoration: none;
+  border-bottom: 3px solid var(--blue);
+}
+
+.playlistLink:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* META TILES */
+
+.metaRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.metaTile {
+  padding: 22px;
+  text-align: center;
+}
+
+.metaVal {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 32px;
+}
+
+.metaLbl {
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #555;
+  margin-top: 4px;
+}
+
+/* VERIFIED PLACEMENTS — buyuk vurgu */
+
+.verifiedCard {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 32px;
+  margin-bottom: 32px;
+  background: var(--ink);
+  color: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--blue);
+}
+
+.verifiedNum {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 56px;
+  color: var(--green);
+  flex-shrink: 0;
+}
+
+.verifiedTitle {
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.verifiedCaption {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ddd;
+  line-height: 1.5;
+}
+
+/* STATS */
+
+.sectionTag {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--blue);
+  padding: 6px 14px;
+  font-size: 13px;
+  text-transform: uppercase;
+  font-weight: 900;
+  margin-bottom: 16px;
+  transform: rotate(-1deg);
+}
+
+.statsCard {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 36px;
+}
+
+.statRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.statLbl {
+  width: 130px;
+  font-size: 14px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.barTrack {
+  flex: 1;
+  height: 24px;
+  border: 3px solid var(--ink);
+  background: #eee;
+}
+
+.barFill {
+  height: 100%;
+}
+
+.barFillBlue { background: var(--blue); }
+.barFillGreen { background: var(--green); }
+
+.statVal {
+  width: 48px;
+  text-align: right;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 15px;
+}
+
+/* CTA */
+
+.ctaRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   streamPitches,
   type CuratorContact,
@@ -25,6 +26,8 @@ type PitchCard = {
   message: string;
   url?: string;
   contact?: CuratorContact | null;
+  /** Aday playlist onayli kuratorse dogrudan gonderim koprusu (kredi harcar). */
+  curatorId?: number | null;
 };
 
 const DEMO_CARDS: PitchCard[] = [
@@ -117,6 +120,7 @@ function toCards(pitches: PitchItem[]): PitchCard[] {
       message: p.message,
       url: p.playlist.url,
       contact: p.contact ?? null,
+      curatorId: p.curator_id ?? null,
     };
   });
 }
@@ -134,6 +138,7 @@ function statusLabel(status: Status): string {
 }
 
 export default function PlaylistlerPage() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [cards, setCards] = useState<PitchCard[]>([]);
@@ -443,6 +448,18 @@ export default function PlaylistlerPage() {
                 </div>
 
                 <div className={styles.contactRow}>
+                  {card.curatorId != null && (
+                    <button
+                      type="button"
+                      className={styles.platformBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/gonder?curator=${card.curatorId}`);
+                      }}
+                    >
+                      🎯 Platformda — Gönder (kredi ile)
+                    </button>
+                  )}
                   {card.contact ? (
                     <>
                       {card.contact.emails.slice(0, 1).map((email) => (
@@ -481,18 +498,20 @@ export default function PlaylistlerPage() {
                       ))}
                     </>
                   ) : (
-                    <button
-                      type="button"
-                      className={styles.inviteBtn}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleInvite(card);
-                      }}
-                    >
-                      {invitedKeys[card.key]
-                        ? "✓ Davet mesajı kopyalandı"
-                        : "➕ Platforma davet et"}
-                    </button>
+                    card.curatorId == null && (
+                      <button
+                        type="button"
+                        className={styles.inviteBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleInvite(card);
+                        }}
+                      >
+                        {invitedKeys[card.key]
+                          ? "✓ Davet mesajı kopyalandı"
+                          : "➕ Platforma davet et"}
+                      </button>
+                    )
                   )}
                 </div>
 

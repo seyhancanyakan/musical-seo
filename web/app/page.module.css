@@ -50,6 +50,187 @@
   border-bottom: 3px solid var(--purple);
 }
 
+/* Groover-tarzi grup dropdown'lari: Sanatçılar için / Küratörler için */
+.menuGroup {
+  position: relative;
+}
+.menuGroupBtn {
+  composes: menuLink;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: -12px;
+  min-width: 250px;
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 8px 0;
+  z-index: 20;
+}
+.menuGroup:hover .dropdown,
+.menuGroup:focus-within .dropdown {
+  display: block;
+}
+.dropdownLink {
+  display: block;
+  padding: 10px 16px;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 14px;
+}
+.dropdownLink:hover {
+  background: var(--purple);
+  color: #fff;
+}
+
+/* Stats seridi (Groover Home yapisi: hero'nun hemen alti) */
+.statsStrip {
+  border-top: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+  background: var(--ink);
+}
+.statsWrap {
+  composes: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+}
+.statItem {
+  padding: 28px 16px;
+  text-align: center;
+  color: #fff;
+}
+.statItem + .statItem {
+  border-left: 3px solid #fff;
+}
+.statItem strong {
+  display: block;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: clamp(24px, 3vw, 36px);
+  color: var(--blue);
+}
+.statItem span {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* FAQ akordiyon (native details/summary — JS'siz) */
+.faq {
+  padding: 80px 0;
+}
+.faqList {
+  max-width: 840px;
+  display: grid;
+  gap: 14px;
+}
+.faqItem {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+}
+.faqItem summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 18px 20px;
+  font-weight: 900;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.faqItem summary::-webkit-details-marker {
+  display: none;
+}
+.faqItem summary::after {
+  content: "▾";
+  font-size: 18px;
+}
+.faqItem[open] summary::after {
+  content: "▴";
+}
+.faqAnswer {
+  padding: 0 20px 18px;
+  font-weight: 600;
+  line-height: 1.55;
+  border-top: 3px solid var(--ink);
+  padding-top: 14px;
+}
+
+/* Footer link kolonlari (Groover yapisi: Urun / Sirket / Profesyoneller) */
+.footerCols {
+  composes: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 220px));
+  gap: 32px;
+  padding-bottom: 32px;
+}
+.footerCol h4 {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-bottom: 12px;
+}
+.footerCol a {
+  display: block;
+  color: #ccc;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 4px 0;
+}
+.footerCol a:hover {
+  color: #fff;
+}
+
+/* Kurator turleri bolumu (#kuratorler) */
+.roles {
+  padding: 80px 0;
+  border-top: 3px solid var(--ink);
+  background: #f4ecff;
+}
+.rolesTitle {
+  font-size: 38px;
+  margin: 8px 0 12px;
+}
+.rolesSub {
+  font-size: 16px;
+  font-weight: 700;
+  max-width: 720px;
+  line-height: 1.5;
+  margin-bottom: 32px;
+}
+.roleGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+.roleCard {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 14px 16px;
+  font-weight: 900;
+  font-size: 15px;
+}
+.roleCard span {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
 /* HERO */
 .hero {
   padding: 96px 0 80px;
@@ -228,6 +409,16 @@
 
 @media (max-width: 960px) {
   .featureGrid {
+    grid-template-columns: 1fr;
+  }
+  .statsWrap {
+    grid-template-columns: 1fr;
+  }
+  .statItem + .statItem {
+    border-left: none;
+    border-top: 3px solid #fff;
+  }
+  .footerCols {
     grid-template-columns: 1fr;
   }
   .heroTitle {

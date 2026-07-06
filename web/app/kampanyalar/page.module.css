@@ -117,3 +117,103 @@
   align-items: center;
   justify-content: center;
 }
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.verifyBlock {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.verifyOk {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--green-ink, #1a7a45);
+}
+
+.verifyInfo {
+  font-weight: 700;
+  font-size: 13px;
+  color: #555;
+}
+
+.provenActions {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.hint {
+  font-size: 12px;
+  font-weight: 700;
+  color: #777;
+}
+
+.impactPanel {
+  margin-top: 14px;
+  border: 2px solid var(--ink);
+  background: #fdfdf8;
+  padding: 16px 18px;
+}
+
+.impactGrid {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.impactBox {
+  text-align: center;
+}
+
+.impactLabel {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #777;
+  margin-bottom: 4px;
+}
+
+.impactScore {
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.impactArrow {
+  font-size: 20px;
+  font-weight: 900;
+  color: #777;
+}
+
+.impactDelta {
+  font-size: 18px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border: 2px solid var(--ink);
+}
+
+.deltaUp {
+  background: var(--green);
+}
+
+.deltaDown {
+  background: #ffd166;
+}
+
+.impactMsg {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
+}

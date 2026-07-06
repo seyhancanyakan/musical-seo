@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from marketplace import accounts, db, service
+from marketplace import accounts, api_features, db, growth, premium, service
 from musical_seo import audit as seo_audit
 from musical_seo import contacts as seo_contacts
 from musical_seo import db as seo_db
@@ -37,22 +37,45 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Gelir ozellikleri: paketler, pro, referans, public karne/lig/vitrin,
+# sertifika/kart/etki/EPK, panel, otopilot, takvim, payout (api_features.py).
+app.include_router(api_features.router)
+
 
 class CuratorApply(BaseModel):
     name: str = Field(min_length=2)
     email: str = Field(min_length=5)
-    playlist_url: str = Field(min_length=1, description="Deezer playlist URL veya ID")
+    playlist_url: str = Field(
+        default="",
+        description="Deezer/Spotify playlist URL veya ID (playlist turu icin zorunlu)",
+    )
+    curator_type: str = Field(
+        default="playlist",
+        description="playlist|radyo|medya|label|menajer|booker|dj|mentor|sync",
+    )
 
 
 class SubmissionCreate(BaseModel):
     artist: str = Field(min_length=1)
     title: str = Field(min_length=1)
     curator_id: int
+    guaranteed: bool = Field(
+        default=False, description="Garanti: SLA kacarsa 2x kredi iadesi (ek ucretli)"
+    )
+    priority: bool = Field(
+        default=False, description="One cikan: 48s SLA + inbox'ta ust sira (+1 kredi)"
+    )
 
 
 class SubmissionRespond(BaseModel):
     action: str = Field(description="accepted | rejected")
     feedback: str = ""
+    opportunity_level: str | None = Field(
+        default=None, description="primary | secondary (bos = kabulde otomatik primary)"
+    )
+    opportunity_kind: str | None = Field(
+        default=None, description="orn. playlist_ekleme, radyo_calma, sosyal_paylasim"
+    )
 
 
 @app.get("/health")
@@ -112,6 +135,14 @@ def _enrich_contacts(pitches: list[dict], emit=None) -> list[dict]:
         if emit is not None:
             emit({"stage": "contact",
                   "msg": f"İletişim aranıyor: “{pl['title']}”", "data": None})
+        # Pitch->gonder koprusu: aday playlist zaten onayli kuratorse
+        # panel dogrudan kredi harcatan "Gonder" butonunu gosterir.
+        bridge_pid = (f"sp_{pl['playlist_id']}" if pl["source"] == "spotify"
+                      else str(pl["playlist_id"]))
+        known = db.get_curator_by_playlist(bridge_pid)
+        p["curator_id"] = (
+            known["id"] if known and known["status"] == "approved" else None
+        )
         p["contact"] = seo_contacts.for_playlist(
             pl["source"], pl["playlist_id"], pl.get("owner_id")
         )
@@ -225,7 +256,12 @@ class AuthRegister(BaseModel):
     password: str = Field(min_length=8)
     name: str = Field(min_length=1)
     role: str = Field(pattern="^(artist|curator)$")
-    playlist_url: str | None = None  # kurator: Deezer listesi (Spotify sonraki faz)
+    playlist_url: str | None = None  # kurator: Deezer/Spotify listesi
+    curator_type: str = Field(
+        default="playlist",
+        description="playlist|radyo|medya|label|menajer|booker|dj|mentor|sync",
+    )
+    referral_code: str | None = None  # davet kodu: ilk gonderimde iki tarafa bonus
 
 
 class AuthLogin(BaseModel):
@@ -256,14 +292,18 @@ def _require_role(user: dict, role: str) -> None:
 def auth_register(payload: AuthRegister) -> dict:
     try:
         curator_id = None
-        if payload.role == "curator" and payload.playlist_url:
+        if payload.role == "curator" and (
+            payload.playlist_url or payload.curator_type != "playlist"
+        ):
+            # Playlist turu link ister; diger profesyoneller linksiz basvurur.
             curator = service.apply_curator(
-                payload.name, payload.email, payload.playlist_url
+                payload.name, payload.email, payload.playlist_url or "",
+                curator_type=payload.curator_type,
             )
             curator_id = curator["id"]
         user = accounts.register(
             payload.email, payload.password, payload.name, payload.role,
-            curator_id=curator_id,
+            curator_id=curator_id, referral_code=payload.referral_code,
         )
         token = accounts.login(payload.email, payload.password)
     except ValueError as exc:
@@ -313,6 +353,7 @@ def my_submission_create(
         return service.create_submission(
             payload.artist, payload.title, payload.curator_id,
             artist_user_id=user["id"],
+            guaranteed=payload.guaranteed, priority=payload.priority,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -337,7 +378,11 @@ def my_submission_respond(
     if submission is None or submission["curator_id"] != user.get("curator_id"):
         raise HTTPException(status_code=404, detail="Gonderim bulunamadi")
     try:
-        return service.respond(submission_id, payload.action, payload.feedback)
+        return service.respond(
+            submission_id, payload.action, payload.feedback,
+            opportunity_level=payload.opportunity_level,
+            opportunity_kind=payload.opportunity_kind,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -364,7 +409,10 @@ def maintenance_expire(_: None = Depends(_require_admin_key)) -> dict:
 @app.post("/curators/apply")
 def curators_apply(payload: CuratorApply) -> dict:
     try:
-        return service.apply_curator(payload.name, payload.email, payload.playlist_url)
+        return service.apply_curator(
+            payload.name, payload.email, payload.playlist_url,
+            curator_type=payload.curator_type,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -373,16 +421,34 @@ def curators_apply(payload: CuratorApply) -> dict:
 _PUBLIC_CURATOR_FIELDS = (
     "id", "name", "playlist_title", "playlist_url", "fans",
     "track_count", "quality_score", "status", "ownership_verified",
+    "curator_type",
 )
 
+_EMPTY_STATS = {
+    "total_submissions": 0, "responded": 0, "accepted": 0,
+    "response_rate": None, "success_rate": None, "opportunity_rate": None,
+}
 
-def _public_curator(curator: dict) -> dict:
-    return {k: curator.get(k) for k in _PUBLIC_CURATOR_FIELDS}
+
+def _public_curator(curator: dict, stats: dict | None = None) -> dict:
+    result = {k: curator.get(k) for k in _PUBLIC_CURATOR_FIELDS}
+    result["stats"] = stats or _EMPTY_STATS
+    # Reach-bazli fiyat: kademe + taban kredi maliyeti katalogda gorunur.
+    result.update(service.curator_pricing(curator, stats))
+    result["sponsored"] = growth.is_sponsored(curator)
+    return result
 
 
 @app.get("/curators")
 def curators_list(status: str | None = "approved") -> list[dict]:
-    return [_public_curator(c) for c in db.list_curators(status=status or None)]
+    all_stats = db.curator_stats()
+    items = [
+        _public_curator(c, all_stats.get(c["id"]))
+        for c in db.list_curators(status=status or None)
+    ]
+    # Sponsorlu kuratorler katalogda ust sirada (arz tarafi gelir bacagi).
+    items.sort(key=lambda c: (not c["sponsored"],))
+    return items
 
 
 @app.get("/curators/{curator_id}")
@@ -390,7 +456,7 @@ def curators_get(curator_id: int) -> dict:
     curator = db.get_curator(curator_id)
     if curator is None:
         raise HTTPException(status_code=404, detail="Curator bulunamadi")
-    return _public_curator(curator)
+    return _public_curator(curator, db.curator_stats(curator_id).get(curator_id))
 
 
 @app.get("/admin/curators")
@@ -517,7 +583,9 @@ def _sla_cron() -> None:
     while True:
         _time.sleep(15 * 60)
         try:
-            service.expire_and_refund()
+            # Tam bakim: SLA iade + yerlesim garantisi + planli gonderimler
+            # + Artist Pro aylik kredi tahsisi.
+            premium.maintenance_cycle(service)
         except Exception:
             pass  # cron dongusu tek hatayla olmesin
 

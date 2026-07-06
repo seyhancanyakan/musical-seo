@@ -81,6 +81,11 @@ _SCHEMA = [
     CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_refund_once
         ON transactions (submission_id) WHERE reason = 'refund';
     """,
+    # Yerlesim garantisi iadesi de ayni gonderime bir kez yazilir.
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_placement_refund_once
+        ON transactions (submission_id) WHERE reason = 'placement_refund';
+    """,
 ]
 
 
@@ -91,6 +96,22 @@ def _connect() -> sqlite3.Connection:
     cols = {r[1] for r in conn.execute("PRAGMA table_info(sessions)")}
     if "expires_at" not in cols:
         conn.execute("ALTER TABLE sessions ADD COLUMN expires_at TEXT")
+    ucols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
+    # Artist Pro aboneligi: pro_until gecerlilik sonu, last_pro_grant aylik
+    # kredi tahsisinin son tarihi (cron cift tahsisi bununla engeller).
+    if "pro_until" not in ucols:
+        conn.execute("ALTER TABLE users ADD COLUMN pro_until TEXT")
+    if "last_pro_grant" not in ucols:
+        conn.execute("ALTER TABLE users ADD COLUMN last_pro_grant TEXT")
+    # Referans sistemi: her kullaniciya kod, davet edilene referred_by.
+    if "referral_code" not in ucols:
+        conn.execute("ALTER TABLE users ADD COLUMN referral_code TEXT")
+    if "referred_by" not in ucols:
+        conn.execute("ALTER TABLE users ADD COLUMN referred_by INTEGER")
+    if "leaderboard_opt_in" not in ucols:
+        conn.execute(
+            "ALTER TABLE users ADD COLUMN leaderboard_opt_in INTEGER NOT NULL DEFAULT 0"
+        )
     return conn
 
 
@@ -129,7 +150,8 @@ def _verify_password(password: str, stored: str) -> bool:
 
 
 def register(email: str, password: str, name: str, role: str,
-             curator_id: int | None = None) -> dict:
+             curator_id: int | None = None,
+             referral_code: str | None = None) -> dict:
     email = email.strip().lower()
     if role not in ROLES:
         raise ValueError(f"Gecersiz rol: {role}")
@@ -144,14 +166,25 @@ def register(email: str, password: str, name: str, role: str,
 
     conn = _connect()
     try:
+        referred_by = None
+        if referral_code:
+            row = conn.execute(
+                "SELECT id FROM users WHERE referral_code = ?",
+                (referral_code.strip().upper(),),
+            ).fetchone()
+            if row is None:
+                raise ValueError("Gecersiz referans kodu")
+            referred_by = int(row["id"])
         with conn:
             cur = conn.execute(
                 "INSERT OR IGNORE INTO users "
-                "(created_at, email, password_hash, role, name, curator_id) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
+                "(created_at, email, password_hash, role, name, curator_id, "
+                " referral_code, referred_by) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (db.now_iso(), email,
                  _hash_password(password, secrets.token_hex(16)),
-                 role, name.strip(), curator_id),
+                 role, name.strip(), curator_id,
+                 f"REF-{secrets.token_hex(3).upper()}", referred_by),
             )
             if not cur.rowcount:
                 raise ValueError("Bu e-posta ile hesap zaten var")
@@ -250,6 +283,45 @@ def _public(user: dict) -> dict:
     return user
 
 
+def is_pro(user: dict | None) -> bool:
+    """Artist Pro aktif mi? (pro_until gelecekte)."""
+    if not user:
+        return False
+    pro_until = user.get("pro_until")
+    if not pro_until:
+        return False
+    return datetime.fromisoformat(pro_until) > datetime.now(timezone.utc)
+
+
+def set_pro_until(user_id: int, until_iso: str | None) -> dict:
+    """Artist Pro aktivasyonu (odeme entegrasyonuna kadar admin tetikler)."""
+    if get_user(user_id) is None:
+        raise ValueError(f"Kullanici bulunamadi: {user_id}")
+    conn = _connect()
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE users SET pro_until = ? WHERE id = ?", (until_iso, user_id)
+            )
+    finally:
+        conn.close()
+    user = get_user(user_id)
+    assert user is not None
+    return user
+
+
+def set_leaderboard_opt_in(user_id: int, opt_in: bool) -> None:
+    conn = _connect()
+    try:
+        with conn:
+            conn.execute(
+                "UPDATE users SET leaderboard_opt_in = ? WHERE id = ?",
+                (int(opt_in), user_id),
+            )
+    finally:
+        conn.close()
+
+
 def user_for_curator(curator_id: int) -> dict | None:
     """curators tablosundaki kayda bagli kullanici hesabi (kazanc tahakkuku)."""
     conn = _connect()
@@ -316,10 +388,42 @@ def spend_credit(user_id: int, submission_id: int) -> None:
         conn.close()
 
 
-def refund_credit(user_id: int, submission_id: int) -> bool:
-    """SLA dolan gonderimin kredisini iade et. Cift iade DB seviyesinde
-    engelli: once refund transaction'i yazilir (idx_tx_refund_once unique),
+def charge_credits(user_id: int, amount: int, reason: str,
+                   submission_id: int | None = None) -> None:
+    """Premium urun ucreti (sertifika/EPK/otopilot...): atomik kosullu dusum.
+    Bakiye yetersizse ValueError; dusum + defter kaydi tek transaction."""
+    if amount <= 0:
+        raise ValueError("Ucret pozitif olmali")
+    conn = _connect()
+    try:
+        with conn:
+            cur = conn.execute(
+                "UPDATE users SET credits = credits - ? "
+                "WHERE id = ? AND credits >= ?",
+                (amount, user_id, amount),
+            )
+            if not cur.rowcount:
+                raise ValueError(
+                    f"Yetersiz kredi ({amount} gerekli) — paket satin almalisin"
+                )
+            conn.execute(
+                "INSERT INTO transactions "
+                "(created_at, user_id, delta, reason, submission_id) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (db.now_iso(), user_id, -amount, reason, submission_id),
+            )
+    finally:
+        conn.close()
+
+
+def refund_credit(user_id: int, submission_id: int, amount: int = 1,
+                  reason: str = "refund") -> bool:
+    """SLA dolan gonderimin kredisini iade et. Garantili gonderimde amount
+    2x gelir (pricing.refund_amount). Cift iade DB seviyesinde engelli:
+    once refund transaction'i yazilir (reason bazli unique partial index),
     yazilamadiysa kredi hic dokunulmaz — es zamanli cron'larda da guvenli."""
+    if amount <= 0:
+        raise ValueError("Iade miktari pozitif olmali")
     conn = _connect()
     try:
         with conn:
@@ -327,13 +431,14 @@ def refund_credit(user_id: int, submission_id: int) -> bool:
                 conn.execute(
                     "INSERT INTO transactions "
                     "(created_at, user_id, delta, reason, submission_id) "
-                    "VALUES (?, ?, 1, 'refund', ?)",
-                    (db.now_iso(), user_id, submission_id),
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (db.now_iso(), user_id, amount, reason, submission_id),
                 )
             except sqlite3.IntegrityError:
                 return False  # zaten iade edilmis
             conn.execute(
-                "UPDATE users SET credits = credits + 1 WHERE id = ?", (user_id,)
+                "UPDATE users SET credits = credits + ? WHERE id = ?",
+                (amount, user_id),
             )
             return True
     finally:
@@ -360,10 +465,12 @@ def is_qualified_feedback(feedback: str) -> bool:
     return len(feedback.strip()) >= QUALIFIED_FEEDBACK_MIN_CHARS
 
 
-def accrue_earning(curator_user_id: int, submission_id: int) -> bool:
-    """Nitelikli degerlendirme icin $1 tahakkuk. Ayni gonderime ikinci tahakkuk
-    yazilmaz (UNIQUE) — False doner. Playlist'e ekleme SARTI YOK (editoryal
-    bagimsizlik: kabul de red de ayni ucreti kazanir)."""
+def accrue_earning(curator_user_id: int, submission_id: int,
+                   amount_usd: float | None = None) -> bool:
+    """Nitelikli degerlendirme icin tahakkuk ($1; one cikan gonderimde bonus
+    eklenmis tutar gelir). Ayni gonderime ikinci tahakkuk yazilmaz (UNIQUE) —
+    False doner. Playlist'e ekleme SARTI YOK (editoryal bagimsizlik: kabul de
+    red de ayni ucreti kazanir)."""
     conn = _connect()
     try:
         with conn:
@@ -371,7 +478,8 @@ def accrue_earning(curator_user_id: int, submission_id: int) -> bool:
                 "INSERT OR IGNORE INTO earnings "
                 "(created_at, curator_user_id, submission_id, amount_usd) "
                 "VALUES (?, ?, ?, ?)",
-                (db.now_iso(), curator_user_id, submission_id, FEEDBACK_EARNING_USD),
+                (db.now_iso(), curator_user_id, submission_id,
+                 amount_usd if amount_usd is not None else FEEDBACK_EARNING_USD),
             )
             return bool(cur.rowcount)
     finally:

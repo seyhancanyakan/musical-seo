@@ -1,0 +1,151 @@
+/* Pro — Artist Pro tanitim + kredi paketleri (mavi neo-brutal) */
+
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.wallet {
+  border: 3px solid var(--ink);
+  background: var(--green);
+  padding: 8px 16px;
+  font-weight: 900;
+  font-size: 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.hero {
+  text-align: center;
+  padding: 20px 0 6px;
+}
+
+.price {
+  font-size: 44px;
+  font-weight: 900;
+  color: var(--purple);
+  margin-top: 6px;
+}
+
+.priceUnit {
+  font-size: 18px;
+  font-weight: 800;
+  color: #555;
+  margin-left: 4px;
+}
+
+.tagline {
+  font-weight: 600;
+  font-size: 14px;
+  color: #555;
+  margin-top: 8px;
+}
+
+.empty {
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 24px;
+  font-weight: 800;
+  color: #555;
+}
+
+.error {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--red);
+  background: #fff;
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.benefitsCard {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.benefitsTitle {
+  font-weight: 900;
+  font-size: 15px;
+  text-transform: uppercase;
+}
+
+.benefitsList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.benefitItem {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.note {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+}
+
+.packageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.packageCard {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.packageLabel {
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.packageCredits {
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--blue);
+}
+
+.packagePrice {
+  font-weight: 700;
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+.requestedNote {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1a7a45;
+}

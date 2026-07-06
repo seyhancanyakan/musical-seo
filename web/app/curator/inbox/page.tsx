@@ -6,22 +6,49 @@ import {
   getMe,
   getToken,
   linkCuratorPlaylist,
+  listPayouts,
   myCurator,
   myInbox,
   myRespond,
+  openSubmission,
+  requestPayout,
   verifyOwnershipCheck,
   verifyOwnershipStart,
   type Curator,
   type Earnings,
+  type OpportunityLevel,
+  type Payout,
   type Submission,
   type User,
 } from "@/lib/api";
 import styles from "./page.module.css";
 
+/** Firsat secenekleri — backend PRIMARY_KINDS/SECONDARY_KINDS ile ayni. */
+const OPPORTUNITY_OPTIONS: {
+  value: string;
+  level: OpportunityLevel;
+  label: string;
+}[] = [
+  { value: "playlist_ekleme", level: "primary", label: "Playlist'e ekleyeceğim" },
+  { value: "radyo_calma", level: "primary", label: "Radyoda çalacağım" },
+  { value: "haber_yazi", level: "primary", label: "Haber / yazı yapacağım" },
+  { value: "label_degerlendirme", level: "primary", label: "Label olarak değerlendireceğim" },
+  { value: "menajerlik_gorusme", level: "primary", label: "Menajerlik görüşmesi" },
+  { value: "booking_teklif", level: "primary", label: "Booking teklifi" },
+  { value: "dj_set", level: "primary", label: "DJ setimde çalacağım" },
+  { value: "mentorluk_seansi", level: "primary", label: "Mentorluk seansı" },
+  { value: "sync_degerlendirme", level: "primary", label: "Sync için değerlendireceğim" },
+  { value: "sosyal_paylasim", level: "secondary", label: "Sosyal medyada paylaşacağım" },
+  { value: "tavsiye", level: "secondary", label: "Tavsiyede bulunacağım" },
+  { value: "iletisimde_kal", level: "secondary", label: "İletişimde kalalım" },
+];
+
 const SLA_URGENT_HOURS = 6;
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
 const QUALIFIED_MIN_CHARS = 120; // backend esigiyle ayni: nitelikli = odenir
+const PAYOUT_MIN_USD = 20; // backend pricing.PAYOUT_MIN_USD ile ayni
+const INSTANT_PAYOUT_FEE_PCT = 12; // backend pricing.INSTANT_PAYOUT_FEE_RATE ile ayni
 
 type RowStatus = Submission["status"];
 
@@ -33,6 +60,7 @@ type Row = {
   feedback: string | null;
   createdAt: string | null;
   deadline: string | null;
+  priority: number | undefined;
 };
 
 function submissionToRow(sub: Submission): Row {
@@ -44,7 +72,18 @@ function submissionToRow(sub: Submission): Row {
     feedback: sub.feedback,
     createdAt: sub.created_at,
     deadline: sub.deadline,
+    priority: sub.priority,
   };
+}
+
+/** Kurator gonderimi actiginda alinan dinleme kapisi bilgisi. */
+type GateInfo = { openedAtMs: number; gateSeconds: number };
+
+/** Kalan kapi suresi (saniye) — 0 ise yanit acik. */
+function gateRemainingSeconds(gate: GateInfo | undefined, nowMs: number): number {
+  if (!gate) return 0;
+  const remainingMs = gate.openedAtMs + gate.gateSeconds * 1000 - nowMs;
+  return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0;
 }
 
 type SlaDisplay = { text: string; percent: number; urgent: boolean };
@@ -98,8 +137,19 @@ export default function CuratorInboxPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [expandedAction, setExpandedAction] = useState<"accepted" | "rejected">("rejected");
   const [feedbackDrafts, setFeedbackDrafts] = useState<Record<number, string>>({});
+  // Gonderim basina secilen firsat ("" = otomatik: kabulde primary varsayilani)
+  const [opportunityDrafts, setOpportunityDrafts] = useState<Record<number, string>>({});
   const [busyId, setBusyId] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [tick, setTick] = useState(() => Date.now());
+
+  // Dinleme kapisi: gonderim id -> acilis ani + kapi suresi
+  const [gateInfo, setGateInfo] = useState<Record<number, GateInfo>>({});
+
+  // Kurator odeme paneli
+  const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [payoutBusy, setPayoutBusy] = useState(false);
+  const [payoutMsg, setPayoutMsg] = useState("");
 
   // Spotify/Deezer playlist sahiplik dogrulamasi
   const [curatorRec, setCuratorRec] = useState<Curator | null>(null);
@@ -165,6 +215,8 @@ export default function CuratorInboxPage() {
       } else {
         setRows(inbox.map(submissionToRow));
       }
+      const payoutList = await listPayouts();
+      if (!cancelled && payoutList) setPayouts(payoutList);
       setIsLoading(false);
     })();
     return () => {
@@ -175,6 +227,12 @@ export default function CuratorInboxPage() {
   // SLA geri sayimlarini canli tut
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Dinleme kapisi geri sayimini saniye hassasiyetinde canli tut
+  useEffect(() => {
+    const id = setInterval(() => setTick(Date.now()), 1_000);
     return () => clearInterval(id);
   }, []);
 
@@ -194,17 +252,58 @@ export default function CuratorInboxPage() {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
-  function handleActionClick(id: number, action: "accepted" | "rejected") {
+  async function handleActionClick(id: number, action: "accepted" | "rejected") {
+    const willOpen = !(expandedId === id && expandedAction === action);
     setExpandedAction(action);
-    setExpandedId((current) => (current === id && expandedAction === action ? null : id));
+    setExpandedId(willOpen ? id : null);
+    if (willOpen && !gateInfo[id]) {
+      // Dinleme kapisi: yanit formu ilk kez acilinca sayac baslar.
+      const result = await openSubmission(id);
+      if (result?.opened_at) {
+        setGateInfo((prev) => ({
+          ...prev,
+          [id]: {
+            openedAtMs: new Date(result.opened_at).getTime(),
+            gateSeconds: result.listen_gate_seconds,
+          },
+        }));
+      }
+    }
+  }
+
+  async function handlePayoutRequest(instant: boolean) {
+    setPayoutMsg("");
+    setPayoutBusy(true);
+    const result = await requestPayout(instant);
+    setPayoutBusy(false);
+    if (!result) {
+      setPayoutMsg("Ödeme talebi oluşturulamadı — tekrar dene.");
+      return;
+    }
+    setPayouts((prev) => [result, ...prev]);
+    // Talep tum tahakkuk etmis bakiyeyi kapsar; bekleyen kazanci sifirla.
+    setEarnings((prev) => (prev ? { ...prev, pending_usd: 0 } : prev));
+    setPayoutMsg(
+      result.fee_usd > 0
+        ? `Talep oluşturuldu: $${result.amount_usd.toFixed(2)} (kesinti $${result.fee_usd.toFixed(2)})`
+        : `Talep oluşturuldu: $${result.amount_usd.toFixed(2)}`
+    );
   }
 
   async function handleSend(id: number) {
     const draft = (feedbackDrafts[id] ?? "").trim();
     if (expandedAction === "rejected" && !draft) return;
 
+    const oppValue = opportunityDrafts[id] ?? "";
+    const oppOption = OPPORTUNITY_OPTIONS.find((o) => o.value === oppValue);
+
     setBusyId(id);
-    const updated = await myRespond(id, expandedAction, draft);
+    const updated = await myRespond(
+      id,
+      expandedAction,
+      draft,
+      oppOption ? { level: oppOption.level, kind: oppOption.value } : undefined
+    );
     setBusyId(null);
     if (!updated) return;
     updateRow(id, { status: expandedAction, feedback: updated.feedback ?? draft });
@@ -325,6 +424,64 @@ export default function CuratorInboxPage() {
           )}
         </div>
 
+        {user && (
+          <div className={styles.payoutPanel}>
+            <h2 className={styles.payoutTitle}>Ödeme</h2>
+            <div className={styles.payoutPending}>
+              Bekleyen kazanç <b>${(earnings?.pending_usd ?? 0).toFixed(2)}</b>
+            </div>
+            <div className={styles.payoutButtons}>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnAccept}`}
+                onClick={() => handlePayoutRequest(false)}
+                disabled={payoutBusy || (earnings?.pending_usd ?? 0) < PAYOUT_MIN_USD}
+              >
+                Standart Ödeme İste
+              </button>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnSend}`}
+                onClick={() => handlePayoutRequest(true)}
+                disabled={payoutBusy || (earnings?.pending_usd ?? 0) <= 0}
+              >
+                Anında Ödeme (%{INSTANT_PAYOUT_FEE_PCT} kesinti)
+              </button>
+            </div>
+            {(earnings?.pending_usd ?? 0) < PAYOUT_MIN_USD && (
+              <div className={styles.payoutHint}>
+                Standart ödeme eşiği ${PAYOUT_MIN_USD} — bakiyen $
+                {(earnings?.pending_usd ?? 0).toFixed(2)}. Eşiğe ulaşana kadar
+                anında ödemeyi kullanabilirsin.
+              </div>
+            )}
+            {payoutMsg && <div className={styles.payoutMsg}>{payoutMsg}</div>}
+
+            {payouts.length > 0 && (
+              <table className={styles.payoutTable}>
+                <thead>
+                  <tr>
+                    <th>Tarih</th>
+                    <th>Tutar</th>
+                    <th>Kesinti</th>
+                    <th>Durum</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payouts.map((p) => (
+                    <tr key={p.id}>
+                      <td>{new Date(p.created_at).toLocaleDateString("tr-TR")}</td>
+                      <td>${p.amount_usd.toFixed(2)}</td>
+                      <td>{p.fee_usd > 0 ? `$${p.fee_usd.toFixed(2)}` : "—"}</td>
+                      <td>{p.status === "paid" ? "Ödendi" : "Talep edildi"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
         {isLoading && <div className={styles.loading}>Yükleniyor...</div>}
 
         {!isLoading && rows.length === 0 && !apiFailed && (
@@ -341,6 +498,8 @@ export default function CuratorInboxPage() {
             const draft = feedbackDrafts[row.id] ?? "";
             const isPending = row.status === "pending";
             const qualified = draft.trim().length >= QUALIFIED_MIN_CHARS;
+            const gateRemaining = gateRemainingSeconds(gateInfo[row.id], tick);
+            const gateActive = isExpanded && gateRemaining > 0;
 
             return (
               <div key={row.id}>
@@ -354,7 +513,14 @@ export default function CuratorInboxPage() {
                   </button>
 
                   <div className={styles.trackInfo}>
-                    <div className={styles.name}>{row.title}</div>
+                    <div className={styles.name}>
+                      {row.title}
+                      {row.priority === 1 && (
+                        <span className={styles.priorityBadge}>
+                          Öne çıkan (+$0.50 bonus)
+                        </span>
+                      )}
+                    </div>
                     <div className={styles.artist}>{row.artist}</div>
                   </div>
 
@@ -415,6 +581,54 @@ export default function CuratorInboxPage() {
                         setFeedbackDrafts((prev) => ({ ...prev, [row.id]: e.target.value }))
                       }
                     />
+                    <div style={{ marginTop: 10 }}>
+                      <label
+                        htmlFor={`opp-${row.id}`}
+                        style={{ fontSize: 12, fontWeight: 800, display: "block" }}
+                      >
+                        Fırsat sun (opsiyonel — sanatçıya ekstra değer)
+                      </label>
+                      <select
+                        id={`opp-${row.id}`}
+                        className="nb-input"
+                        value={opportunityDrafts[row.id] ?? ""}
+                        onChange={(e) =>
+                          setOpportunityDrafts((prev) => ({
+                            ...prev,
+                            [row.id]: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">
+                          {expandedAction === "accepted"
+                            ? "Otomatik (kabul = birincil fırsat)"
+                            : "Fırsat yok"}
+                        </option>
+                        <optgroup label="Birincil fırsat (somut sonuç)">
+                          {OPPORTUNITY_OPTIONS.filter((o) => o.level === "primary").map(
+                            (o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            )
+                          )}
+                        </optgroup>
+                        <optgroup label="İkincil fırsat (dolaylı değer)">
+                          {OPPORTUNITY_OPTIONS.filter((o) => o.level === "secondary").map(
+                            (o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            )
+                          )}
+                        </optgroup>
+                      </select>
+                    </div>
+                    {gateActive && (
+                      <div className={styles.gateNotice}>
+                        Şarkıyı dinle — yanıt {gateRemaining} saniye sonra açılır
+                      </div>
+                    )}
                     <div className={styles.sendRow}>
                       <span style={{ fontSize: 12, fontWeight: 700 }}>
                         {draft.trim().length} karakter {qualified ? "— nitelikli ✓ ($1)" : ""}
@@ -423,7 +637,11 @@ export default function CuratorInboxPage() {
                         type="button"
                         className={`${styles.btn} ${styles.btnSend}`}
                         onClick={() => handleSend(row.id)}
-                        disabled={(expandedAction === "rejected" && !draft.trim()) || isBusy}
+                        disabled={
+                          (expandedAction === "rejected" && !draft.trim()) ||
+                          isBusy ||
+                          gateActive
+                        }
                       >
                         {expandedAction === "accepted" ? "Kabul + Gönder" : "Reddet + Gönder"}
                       </button>

@@ -76,9 +76,14 @@
 .curatorCard {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
   padding: 18px 22px;
+}
+
+.curatorCardHighlighted {
+  border-color: var(--purple);
+  box-shadow: 6px 6px 0 var(--purple);
 }
 
 .curatorName {
@@ -97,6 +102,168 @@
   flex-shrink: 0;
   font-size: 12px;
   padding: 10px 16px;
+  white-space: nowrap;
+}
+
+.optsRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.optLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #333;
+  max-width: 460px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.optLabel input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* --- Otopilot ------------------------------------------------------------ */
+
+.autopilotSection {
+  padding: 24px 26px;
+  margin-top: 12px;
+}
+
+.autopilotRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.autopilotField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.autopilotBudgetField {
+  flex: 0 0 140px;
+  min-width: 120px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.autopilotResult {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--green);
+  background: #fff;
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 13px;
+  max-width: 620px;
+  margin-top: 14px;
+}
+
+/* --- Kredi paketi modali --------------------------------------------------- */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.modalBox {
+  position: relative;
+  max-width: 560px;
+  width: 100%;
+  padding: 28px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  width: 32px;
+  height: 32px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.packageGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.packageCard {
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  text-align: center;
+}
+
+.packageLabel {
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.packageCredits {
+  font-weight: 700;
+  font-size: 13px;
+  color: #555;
+}
+
+.packagePrice {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 20px;
+  color: var(--blue);
+}
+
+.packageBtn {
+  font-size: 12px;
+  padding: 8px 14px;
+  width: 100%;
+}
+
+.modalMsg {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--green);
+  background: #fff;
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 13px;
+  margin-top: 18px;
+}
+
+@media (max-width: 640px) {
+  .packageGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .gate {

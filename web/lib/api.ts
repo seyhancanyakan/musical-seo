@@ -66,6 +66,24 @@ export type PlaylistMatch = {
 
 export type CuratorStatus = "lead" | "pending" | "approved" | "rejected";
 
+/** Kurator/profesyonel turu — playlist disi turler linksiz basvurur. */
+export type CuratorType =
+  | "playlist" | "radyo" | "medya" | "label" | "menajer"
+  | "booker" | "dj" | "mentor" | "sync";
+
+/** Kurator performans metrikleri (oranlar 0-100; hic veri yoksa null). */
+export type CuratorStats = {
+  total_submissions: number;
+  responded: number;
+  accepted: number;
+  response_rate: number | null;
+  success_rate: number | null;
+  opportunity_rate: number | null;
+};
+
+/** Reach-bazli fiyat kademesi: gonderim maliyeti kademeye gore artar. */
+export type CuratorTier = "bronze" | "silver" | "gold" | "platinum";
+
 export type Curator = {
   id: number;
   created_at: string;
@@ -79,6 +97,10 @@ export type Curator = {
   diversity: number;
   quality_score: number;
   status: CuratorStatus;
+  // Fiyatlandirma + sponsorluk (public katalog DTO'su)
+  tier?: CuratorTier;
+  base_cost?: number;
+  sponsored?: boolean;
   // İletişim kaynağı — nereden bulundu (manuel doğrulama için).
   contact_source?: string | null;
   source_url?: string | null;
@@ -86,7 +108,13 @@ export type Curator = {
   // Playlist sahiplik dogrulamasi (SubmitHub yontemi: kod aciklamaya eklenir)
   ownership_verified?: number;
   verify_code?: string | null;
+  // Kurator turu + performans metrikleri (public DTO her zaman doner)
+  curator_type?: CuratorType;
+  stats?: CuratorStats;
 };
+
+/** Firsat sistemi: primary = somut sonuc, secondary = dolayli deger. */
+export type OpportunityLevel = "primary" | "secondary";
 
 export type Submission = {
   id: number;
@@ -100,6 +128,15 @@ export type Submission = {
   feedback: string | null;
   deadline: string;
   placement_verified: number;
+  opportunity_level?: OpportunityLevel | null;
+  opportunity_kind?: string | null;
+  // Fiyat + eklentiler
+  cost_credits?: number;
+  guaranteed?: number;      // 1: SLA kacarsa 2x iade sozu
+  priority?: number;        // 1: one cikan (48s SLA, inbox ustu)
+  opened_at?: string | null;
+  certificate_token?: string | null;
+  readiness_score?: number | null;
 };
 
 export const getAudit = (query: string) =>
@@ -127,6 +164,8 @@ export type PitchItem = {
   playlist: PlaylistMatch;
   message: string;
   contact?: CuratorContact | null;
+  /** Aday playlist onayli kuratorse dogrudan gonderim koprusu (kredi harcar). */
+  curator_id?: number | null;
 };
 
 export const generatePitches = (query: string, limit = 5) =>
@@ -186,6 +225,7 @@ export const applyCurator = (payload: {
   name: string;
   email: string;
   playlist_url: string;
+  curator_type?: CuratorType;
 }) => j<Curator>(`/curators/apply`, { method: "POST", body: JSON.stringify(payload) });
 
 export const listCurators = () => j<Curator[]>(`/curators`);
@@ -225,6 +265,9 @@ export type User = {
   name: string;
   curator_id: number | null;
   credits: number;
+  pro_until?: string | null;       // Artist Pro bitis tarihi
+  referral_code?: string | null;
+  leaderboard_opt_in?: number;
 };
 
 export type WalletTransaction = {
@@ -269,6 +312,8 @@ export const authRegister = (payload: {
   name: string;
   role: "artist" | "curator";
   playlist_url?: string;
+  curator_type?: CuratorType;
+  referral_code?: string;
 }) =>
   j<{ user: User; token: string }>(`/auth/register`, {
     method: "POST",
@@ -290,12 +335,19 @@ export const getMe = () =>
 export const submitToCurator = (
   artist: string,
   title: string,
-  curatorId: number
+  curatorId: number,
+  opts?: { guaranteed?: boolean; priority?: boolean }
 ) =>
   j<Submission>(`/me/submissions`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ artist, title, curator_id: curatorId }),
+    body: JSON.stringify({
+      artist,
+      title,
+      curator_id: curatorId,
+      guaranteed: opts?.guaranteed ?? false,
+      priority: opts?.priority ?? false,
+    }),
   });
 
 export const myInbox = () =>
@@ -304,12 +356,18 @@ export const myInbox = () =>
 export const myRespond = (
   id: number,
   action: "accepted" | "rejected",
-  feedback = ""
+  feedback = "",
+  opportunity?: { level: OpportunityLevel; kind: string }
 ) =>
   j<Submission>(`/me/submissions/${id}/respond`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ action, feedback }),
+    body: JSON.stringify({
+      action,
+      feedback,
+      opportunity_level: opportunity?.level ?? null,
+      opportunity_kind: opportunity?.kind ?? null,
+    }),
   });
 
 export const myEarnings = () =>
@@ -343,4 +401,308 @@ export const verifyOwnershipCheck = () =>
   j<Curator>(`/me/curator/verify/check`, {
     method: "POST",
     headers: authHeaders(),
+  });
+
+/* --- Gelir ozellikleri: paketler, pro, referans, premium urunler ---------- */
+
+export type CreditPackage = {
+  key: string;
+  credits: number;
+  price_try: number;
+  label: string;
+};
+
+export const getPackages = () =>
+  j<{
+    packages: CreditPackage[];
+    pro: { price_try: number; monthly_credits: number; sla_hours: number };
+  }>(`/packages`);
+
+/** Paket talebi: odeme pilotta manuel (havale/Papara) -> admin krediyi yukler. */
+export const requestPackage = (packageKey: string) =>
+  j<{ id: number; status: string; credits: number; price_try: number }>(
+    `/me/packages/request`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ package_key: packageKey }),
+    }
+  );
+
+export const getReferral = () =>
+  j<{ code: string; bonus_credits: number; note: string }>(`/me/referral`, {
+    headers: authHeaders(),
+  });
+
+export type Notification = {
+  id: number;
+  created_at: string;
+  kind: string;
+  message: string;
+  read: number;
+};
+
+export const getNotifications = (unreadOnly = false) =>
+  j<Notification[]>(`/me/notifications?unread_only=${unreadOnly}`, {
+    headers: authHeaders(),
+  });
+
+export const markNotificationsRead = () =>
+  j<{ marked: number }>(`/me/notifications/read`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+/* --- Paylasilabilir karne + lig + kurator vitrini -------------------------- */
+
+export type PublicReport = {
+  token: string;
+  artist: string;
+  title: string;
+  score: number;
+  created_at: string;
+  finding_counts: Record<string, number>;
+  subscores: Record<string, number>;
+  locked: boolean;
+};
+
+export const shareKarne = (query: string, leaderboardOptIn?: boolean) =>
+  j<{ token: string; url: string }>(`/me/karne/share`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ query, leaderboard_opt_in: leaderboardOptIn ?? null }),
+  });
+
+export const getPublicKarne = (token: string) =>
+  j<PublicReport>(`/public/karne/${encodeURIComponent(token)}`);
+
+export type LeaderboardEntry = {
+  artist: string;
+  title: string;
+  score: number;
+  created_at: string;
+  token: string;
+};
+
+export const getLeaderboard = (limit = 20) =>
+  j<LeaderboardEntry[]>(`/public/leaderboard?limit=${limit}`);
+
+export const setLeaderboardOptIn = (optIn: boolean) =>
+  j<{ opt_in: boolean }>(`/me/leaderboard-opt-in`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ opt_in: optIn }),
+  });
+
+export type CuratorProfile = {
+  id: number;
+  name: string;
+  curator_type: CuratorType;
+  playlist_title: string;
+  playlist_url: string;
+  fans: number;
+  track_count: number;
+  quality_score: number;
+  ownership_verified: number;
+  verified_placements: number;
+  sponsored: boolean;
+  stats: Partial<CuratorStats>;
+};
+
+export const getCuratorProfile = (id: number) =>
+  j<CuratorProfile>(`/public/curators/${id}`);
+
+/* --- Dinleme kapisi + yerlesim kaniti urunleri ------------------------------ */
+
+/** Kurator gonderimi acti: dinleme sayaci baslar (yanit kapisi). */
+export const openSubmission = (id: number) =>
+  j<{ opened_at: string; listen_gate_seconds: number }>(
+    `/me/submissions/${id}/open`,
+    { method: "POST", headers: authHeaders() }
+  );
+
+/** Sanatci self-servis yerlesim dogrulama (admin beklemeden). */
+export const verifyPlacementSelf = (id: number) =>
+  j<Submission & { placement_checked?: boolean }>(
+    `/me/submissions/${id}/verify-placement`,
+    { method: "POST", headers: authHeaders() }
+  );
+
+/** Auth gerektiren HTML/SVG iceriklerini yeni sekmede acmak icin blob URL. */
+async function fetchBlobUrl(path: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API}${path}`, { headers: authHeaders() });
+    if (!res.ok) return null;
+    return URL.createObjectURL(await res.blob());
+  } catch {
+    return null;
+  }
+}
+
+export const openCertificate = (id: number) =>
+  fetchBlobUrl(`/me/submissions/${id}/certificate`);
+
+export const openShareCard = (id: number) =>
+  fetchBlobUrl(`/me/submissions/${id}/share-card`);
+
+export const openEpk = () => fetchBlobUrl(`/me/epk`);
+
+export type ImpactReport = {
+  submission_id: number;
+  artist: string;
+  title: string;
+  placement_verified: boolean;
+  pivot: string;
+  data_points: number;
+  before: { score: number | null; spotify_popularity: number | null };
+  after: { score: number | null; spotify_popularity: number | null };
+  score_delta: number | null;
+  premium: boolean;
+};
+
+export const getImpact = (id: number, premiumReport = false) =>
+  j<ImpactReport>(
+    `/me/submissions/${id}/impact?premium_report=${premiumReport}`,
+    { headers: authHeaders() }
+  );
+
+/* --- Kariyer panosu + hazirlik + otopilot + takvim --------------------------- */
+
+export type Dashboard = {
+  funnel: Record<string, number>;
+  credits_spent: number;
+  tracks: {
+    artist: string;
+    title: string;
+    latest_score: number | null;
+    trend: { created_at: string; score: number | null }[];
+  }[];
+  pro: boolean;
+  cohort: { avg_score: number | null; artists: number } | null;
+  notifications: Notification[];
+};
+
+export const getDashboard = () =>
+  j<Dashboard>(`/me/dashboard`, { headers: authHeaders() });
+
+export type Readiness = {
+  score: number;
+  ready: boolean;
+  threshold: number;
+  checklist: { severity: string; message: string; action: string | null }[];
+};
+
+export const getReadiness = (query: string) =>
+  j<Readiness>(`/me/readiness?query=${encodeURIComponent(query)}`, {
+    headers: authHeaders(),
+  });
+
+export const startAutopilot = (
+  artist: string,
+  title: string,
+  budgetCredits: number
+) =>
+  j<{ created: Submission[]; spent: number; errors: unknown[] }>(
+    `/me/autopilot`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ artist, title, budget_credits: budgetCredits }),
+    }
+  );
+
+export type ScheduledSubmission = {
+  id: number;
+  created_at: string;
+  artist: string;
+  title: string;
+  curator_id: number;
+  scheduled_at: string;
+  status: "pending" | "executed" | "failed";
+  submission_id: number | null;
+  error: string | null;
+};
+
+export const createSchedule = (
+  artist: string,
+  title: string,
+  curatorId: number,
+  scheduledAt: string
+) =>
+  j<ScheduledSubmission>(`/me/schedule`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      artist,
+      title,
+      curator_id: curatorId,
+      scheduled_at: scheduledAt,
+    }),
+  });
+
+export const listSchedules = () =>
+  j<ScheduledSubmission[]>(`/me/schedule`, { headers: authHeaders() });
+
+/* --- Kurator payout'lari ------------------------------------------------------ */
+
+export type Payout = {
+  id: number;
+  created_at: string;
+  amount_usd: number;
+  fee_usd: number;
+  instant: number;
+  status: "requested" | "paid";
+};
+
+export const requestPayout = (instant = false) =>
+  j<Payout>(`/me/payouts`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ instant }),
+  });
+
+export const listPayouts = () =>
+  j<Payout[]>(`/me/payouts`, { headers: authHeaders() });
+
+/* --- Admin: satin alma talepleri + pro + sponsor + payout --------------------- */
+
+export type PurchaseRequest = {
+  id: number;
+  created_at: string;
+  user_id: number;
+  package_key: string;
+  credits: number;
+  price_try: number;
+  status: "pending" | "granted" | "rejected";
+};
+
+export const listPurchaseRequests = (status = "pending") =>
+  j<PurchaseRequest[]>(`/admin/purchase-requests?status=${status}`, {
+    headers: adminHeaders(),
+  });
+
+export const grantPurchaseRequest = (id: number) =>
+  j<User>(`/admin/purchase-requests/${id}/grant`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+
+export const activatePro = (userId: number, untilIso: string) =>
+  j<User>(`/admin/pro/activate`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ user_id: userId, until_iso: untilIso }),
+  });
+
+export const sponsorCurator = (curatorId: number, untilIso: string) =>
+  j<Curator>(`/admin/curators/sponsor`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify({ curator_id: curatorId, until_iso: untilIso }),
+  });
+
+export const markPayoutPaid = (payoutId: number) =>
+  j<Payout>(`/admin/payouts/${payoutId}/paid`, {
+    method: "POST",
+    headers: adminHeaders(),
   });

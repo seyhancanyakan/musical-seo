@@ -10,13 +10,19 @@ import sqlite3
 
 import pytest
 
-from marketplace import accounts, db, service
+from marketplace import accounts, db, pricing, service
 from musical_seo.models import TrackInfo
+
+# Fixture kuratoru: quality 80 + 5000 fan (gecmis istatistik yok) -> GOLD
+# kademe -> gonderim 3 kredi (reach-bazli fiyat).
+GOLD_COST = pricing.TIER_COST["gold"]
 
 
 @pytest.fixture()
 def loop_db(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "_DB_PATH", tmp_path / "marketplace.db")
+    # Dinleme kapisi testlerde kapali (kendi testi ayrica var)
+    monkeypatch.setattr(pricing, "LISTEN_GATE_SECONDS", 0)
     # Deezer lookup'ini sahtele (network yok)
     monkeypatch.setattr(
         service.deezer, "lookup",
@@ -29,7 +35,7 @@ def loop_db(tmp_path, monkeypatch):
         name="Test Kurator", email="k@test.com", playlist_id="123",
         playlist_title="Test Liste", playlist_url="https://deezer.com/playlist/123",
         fans=5000, track_count=50, diversity=0.6, quality_score=80.0,
-        status="approved",
+        status="approved", quality_passed=True,
     )
     return curator_id
 
@@ -49,11 +55,12 @@ def test_full_loop_qualified_feedback_earns(loop_db):
     # Kredi yukle (pilot: manuel odeme sonrasi admin grant)
     accounts.grant_credits(artist["id"], 10, reason="purchase")
 
-    # Gonderim: 1 kredi duser
+    # Gonderim: gold kurator -> GOLD_COST kredi duser
     sub = service.create_submission(
         "Sanatci", "Sarki", curator_id, artist_user_id=artist["id"]
     )
-    assert accounts.get_user(artist["id"])["credits"] == 9
+    assert accounts.get_user(artist["id"])["credits"] == 10 - GOLD_COST
+    assert sub["cost_credits"] == GOLD_COST
     assert sub["artist_user_id"] == artist["id"]
 
     # Nitelikli geri bildirim (>=120 karakter) -> kazanc tahakkuku
@@ -72,7 +79,7 @@ def test_short_feedback_is_rejected(loop_db):
     kabul de red de nitelikli yazili degerlendirme ister."""
     curator_id = loop_db
     artist, curator = _make_users(curator_id)
-    accounts.grant_credits(artist["id"], 1)
+    accounts.grant_credits(artist["id"], GOLD_COST)
     sub = service.create_submission(
         "Sanatci", "Sarki", curator_id, artist_user_id=artist["id"]
     )
@@ -113,7 +120,7 @@ def test_ownership_verification_flow(loop_db, monkeypatch):
 def test_expired_submission_refunds_credit(loop_db, monkeypatch):
     curator_id = loop_db
     artist, _ = _make_users(curator_id)
-    accounts.grant_credits(artist["id"], 1)
+    accounts.grant_credits(artist["id"], GOLD_COST)
     sub = service.create_submission(
         "Sanatci", "Sarki", curator_id, artist_user_id=artist["id"]
     )
@@ -131,12 +138,12 @@ def test_expired_submission_refunds_credit(loop_db, monkeypatch):
     result = service.expire_and_refund()
     assert result["expired"] == 1
     assert result["refunded"] == 1
-    assert accounts.get_user(artist["id"])["credits"] == 1  # iade geldi
+    assert accounts.get_user(artist["id"])["credits"] == GOLD_COST  # iade geldi
 
     # Idempotent: ikinci kosuda cift iade yok
     result2 = service.expire_and_refund()
     assert result2["refunded"] == 0
-    assert accounts.get_user(artist["id"])["credits"] == 1
+    assert accounts.get_user(artist["id"])["credits"] == GOLD_COST
 
 
 def test_no_credit_blocks_submission(loop_db):
