@@ -472,6 +472,52 @@ def payout_list(user: dict = Depends(_current_user)) -> list[dict]:
     return premium.list_payouts(user["id"])
 
 
+@router.get("/admin/users")
+def admin_users(
+    role: str | None = None, _: None = Depends(_require_admin_key)
+) -> list[dict]:
+    """Admin: kullanici listesi (sanatci/kurator hesaplari + kredi/pro durumu)."""
+    sql = ("SELECT id, created_at, email, name, role, credits, pro_until, "
+           "curator_id, referral_code FROM users")
+    params: list = []
+    if role:
+        sql += " WHERE role = ?"
+        params.append(role)
+    sql += " ORDER BY id DESC LIMIT 500"
+    conn = accounts._connect()
+    try:
+        return [dict(r) for r in conn.execute(sql, params).fetchall()]
+    finally:
+        conn.close()
+
+
+@router.get("/admin/submissions")
+def admin_submissions(
+    status: str | None = None, _: None = Depends(_require_admin_key)
+) -> list[dict]:
+    """Admin: tum gonderimler — sanatci + kurator bilgisiyle (denetim gorunumu)."""
+    sql = """
+        SELECT s.id, s.created_at, s.artist, s.title, s.status, s.deadline,
+               s.cost_credits, s.guaranteed, s.priority, s.placement_verified,
+               s.responded_at, s.opportunity_kind,
+               c.name AS curator_name, c.playlist_title,
+               u.name AS artist_account, u.email AS artist_email
+        FROM submissions s
+        JOIN curators c ON c.id = s.curator_id
+        LEFT JOIN users u ON u.id = s.artist_user_id
+    """
+    params: list = []
+    if status:
+        sql += " WHERE s.status = ?"
+        params.append(status)
+    sql += " ORDER BY s.id DESC LIMIT 300"
+    conn = accounts._connect()
+    try:
+        return [dict(r) for r in conn.execute(sql, params).fetchall()]
+    finally:
+        conn.close()
+
+
 @router.get("/admin/payouts")
 def admin_payouts(
     status: str = "requested", _: None = Depends(_require_admin_key)

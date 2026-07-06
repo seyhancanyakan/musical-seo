@@ -19,6 +19,8 @@ import ProActivationTab from "./ProActivationTab";
 import PayoutsTab from "./PayoutsTab";
 import AirplayTab from "./AirplayTab";
 import LabelsTab from "./LabelsTab";
+import UsersTab from "./UsersTab";
+import SubmissionsTab from "./SubmissionsTab";
 
 const DEMO_CURATORS: Curator[] = [
   {
@@ -68,8 +70,8 @@ const DEMO_CURATORS: Curator[] = [
 type Filter = "all" | CuratorStatus;
 type SourceKey = "all" | "spotify" | "deezer";
 type TabKey =
-  | "curators" | "purchases" | "credits" | "pro" | "payouts"
-  | "airplay" | "labels";
+  | "curators" | "users" | "submissions" | "purchases" | "credits" | "pro"
+  | "payouts" | "airplay" | "labels";
 
 const T = {
   tr: {
@@ -87,6 +89,8 @@ const T = {
       payouts: "Ödemeler",
       airplay: "Radyo İstasyonları",
       labels: "Label Başvuruları",
+      users: "Kullanıcılar",
+      submissions: "Gönderimler",
     } as Record<TabKey, string>,
     filters: {
       all: "Tümü",
@@ -151,6 +155,8 @@ const T = {
       payouts: "Payouts",
       airplay: "Radio Stations",
       labels: "Label Applications",
+      users: "Users",
+      submissions: "Submissions",
     } as Record<TabKey, string>,
     filters: {
       all: "All",
@@ -205,7 +211,8 @@ const T = {
 const FILTER_KEYS: Filter[] = ["all", "lead", "pending", "approved", "rejected"];
 const SOURCE_KEYS: SourceKey[] = ["all", "spotify", "deezer"];
 const TAB_KEYS: TabKey[] = [
-  "curators", "purchases", "credits", "pro", "payouts", "airplay", "labels",
+  "curators", "users", "submissions", "purchases", "credits", "pro",
+  "payouts", "airplay", "labels",
 ];
 
 function curatorSource(c: Curator): Exclude<SourceKey, "all"> {
@@ -543,6 +550,8 @@ export default function AdminPage() {
         {tab === "payouts" && <PayoutsTab />}
         {tab === "airplay" && <AirplayTab />}
         {tab === "labels" && <LabelsTab />}
+        {tab === "users" && <UsersTab />}
+        {tab === "submissions" && <SubmissionsTab />}
       </div>
     </div>
   );

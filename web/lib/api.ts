@@ -778,6 +778,49 @@ export const submitToCuratorD = (
     }),
   });
 
+/** Admin: kullanici listesi satiri. */
+export type AdminUser = {
+  id: number;
+  created_at: string;
+  email: string;
+  name: string;
+  role: "artist" | "curator" | "admin";
+  credits: number;
+  pro_until: string | null;
+  curator_id: number | null;
+  referral_code: string | null;
+};
+
+export const listAdminUsers = (role?: "artist" | "curator") =>
+  j<AdminUser[]>(`/admin/users${role ? `?role=${role}` : ""}`, {
+    headers: adminHeaders(),
+  });
+
+/** Admin: gonderim denetim satiri (sanatci + kurator bilgisiyle). */
+export type AdminSubmission = {
+  id: number;
+  created_at: string;
+  artist: string;
+  title: string;
+  status: "pending" | "accepted" | "rejected" | "expired";
+  deadline: string;
+  cost_credits: number | null;
+  guaranteed: number | null;
+  priority: number | null;
+  placement_verified: number;
+  responded_at: string | null;
+  opportunity_kind: string | null;
+  curator_name: string;
+  playlist_title: string;
+  artist_account: string | null;
+  artist_email: string | null;
+};
+
+export const listAdminSubmissions = (status?: string) =>
+  j<AdminSubmission[]>(`/admin/submissions${status ? `?status=${status}` : ""}`, {
+    headers: adminHeaders(),
+  });
+
 export type AdminPayout = Payout & {
   curator_user_id: number;
   curator_name: string;
