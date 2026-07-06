@@ -41,6 +41,19 @@ app.add_middleware(
 # sertifika/kart/etki/EPK, panel, otopilot, takvim, payout (api_features.py).
 app.include_router(api_features.router)
 
+# Gelir dalga-2: akilli link + affiliate, sync/lisans pazari, label B2B,
+# radyo airplay takibi, animasyonlu tanitim karti, geri bildirim sentezi.
+from marketplace import (  # noqa: E402  (router kayitlari app tanimindan sonra)
+    api_airplay, api_feedback, api_labels, api_promo, api_smartlink, api_sync,
+)
+
+app.include_router(api_smartlink.router)
+app.include_router(api_sync.router)
+app.include_router(api_labels.router)
+app.include_router(api_airplay.router)
+app.include_router(api_promo.router)
+app.include_router(api_feedback.router)
+
 
 class CuratorApply(BaseModel):
     name: str = Field(min_length=2)
