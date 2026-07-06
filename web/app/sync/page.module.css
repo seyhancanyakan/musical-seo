@@ -1,0 +1,197 @@
+/* Sync/Lisans kataloğu — public marketplace (mor-mavi neo-brutal) */
+
+.wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--purple);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.manageLink {
+  border: 3px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  font-weight: 900;
+  font-size: 13px;
+  padding: 8px 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+  text-decoration: none;
+}
+
+.intro {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  max-width: 680px;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 680px;
+}
+
+.filters select,
+.filters input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.empty {
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 24px;
+  font-weight: 800;
+  color: #555;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cardName {
+  font-weight: 900;
+  font-size: 17px;
+}
+
+.tagRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.description {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.5;
+}
+
+.priceRow {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.priceChip {
+  border: 2px solid var(--ink);
+  background: var(--lightblue);
+  font-weight: 900;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
+.requestBtn {
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 10px 18px;
+}
+
+/* --- Talep modali ----------------------------------------------------- */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+
+.modalBox {
+  position: relative;
+  max-width: 480px;
+  width: 100%;
+  padding: 28px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  width: 32px;
+  height: 32px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.error {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--red);
+  background: #fff;
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.successBox {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--green);
+  background: #fff;
+  padding: 16px 18px;
+  font-weight: 800;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .filters {
+    flex-direction: column;
+  }
+  .filters select,
+  .filters input {
+    min-width: 0;
+  }
+}

@@ -1,0 +1,221 @@
+/* Public akilli link sayfasi — mobil oncelikli, neo-brutal aksanli */
+
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 32px;
+  background:
+    radial-gradient(circle at 15% 0%, var(--lightblue) 0%, transparent 45%),
+    var(--bg);
+}
+
+.topbar {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.brandTag {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 13px;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 4px 10px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.card {
+  width: 100%;
+  max-width: 420px;
+  padding: 26px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.headline {
+  text-align: center;
+}
+
+.artist {
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #555;
+}
+
+.title {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 26px;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin-top: 4px;
+}
+
+/* Presave geri sayimi */
+.presaveBox {
+  border: 3px solid var(--ink);
+  background: var(--purple);
+  color: #fff;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.presaveLabel {
+  font-weight: 900;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.countdown {
+  display: flex;
+  gap: 10px;
+}
+
+.countUnit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  border: 2px solid #fff;
+  padding: 6px 4px;
+}
+
+.countNum {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.countUnitLabel {
+  font-size: 9px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Platform butonlari */
+.platformList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.platformBtn {
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  width: 100%;
+  transition: box-shadow 0.1s, transform 0.1s;
+}
+.platformBtn:hover {
+  box-shadow: 6px 6px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+.platformBtn:active {
+  box-shadow: 2px 2px 0 var(--ink);
+  transform: translate(1px, 1px);
+}
+
+/* Hayran kaydi formu */
+.fanForm {
+  border-top: 3px solid var(--ink);
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fanFormLabel {
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.fanFormRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fanFormRow input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.fanMsgSuccess {
+  font-weight: 800;
+  font-size: 13px;
+  color: #1a7a3e;
+}
+
+.fanMsgRepeat {
+  font-weight: 800;
+  font-size: 13px;
+  color: #555;
+}
+
+.fanMsgError {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--red);
+}
+
+.badge {
+  margin-top: 22px;
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #777;
+  border: 2px solid #ccc;
+  padding: 4px 12px;
+  background: #fff;
+}
+
+/* Yukleniyor / bulunamadi */
+.center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.loadingText {
+  font-weight: 800;
+  color: #555;
+}
+
+.notFoundCard {
+  padding: 28px;
+  max-width: 380px;
+  text-align: center;
+}
+
+.notFoundTitle {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 20px;
+  text-transform: uppercase;
+}
+
+.notFoundText {
+  font-weight: 600;
+  margin: 12px 0 20px;
+}

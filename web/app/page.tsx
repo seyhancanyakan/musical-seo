@@ -16,6 +16,11 @@ type Dict = {
     releasePlan: string;
     league: string;
     artistPro: string;
+    smartLinks: string;
+    radio: string;
+    report: string;
+    promoCard: string;
+    syncManage: string;
     curatorsFor: string;
     becomeCurator: string;
     curatorTypes: string;
@@ -110,6 +115,11 @@ const T: { tr: Dict; en: Dict } = {
       releasePlan: "🗓️ Yayın Planı",
       league: "🏆 Karne Ligi",
       artistPro: "⭐ Artist Pro",
+      smartLinks: "🔗 Akıllı Link & Pre-Save",
+      radio: "📻 Radyo Takibi",
+      report: "🧠 Geri Bildirim Raporu",
+      promoCard: "🎬 Tanıtım Kartı",
+      syncManage: "🎬 Sync İlanlarım",
       curatorsFor: "Küratörler İçin ▾",
       becomeCurator: "Küratör Ol",
       curatorTypes: "Küratör & Profesyonel Türleri",
@@ -215,6 +225,11 @@ const T: { tr: Dict; en: Dict } = {
       releasePlan: "🗓️ Release Plan",
       league: "🏆 Report Card League",
       artistPro: "⭐ Artist Pro",
+      smartLinks: "🔗 Smart Link & Pre-Save",
+      radio: "📻 Radio Airplay Tracking",
+      report: "🧠 Feedback Report",
+      promoCard: "🎬 Promo Card",
+      syncManage: "🎬 My Sync Listings",
       curatorsFor: "For Curators ▾",
       becomeCurator: "Become a Curator",
       curatorTypes: "Curator & Professional Types",
@@ -351,6 +366,21 @@ export default function HomePage() {
                 </Link>
                 <Link href="/pro" className={styles.dropdownLink}>
                   {t.nav.artistPro}
+                </Link>
+                <Link href="/linkler" className={styles.dropdownLink}>
+                  {t.nav.smartLinks}
+                </Link>
+                <Link href="/radyo" className={styles.dropdownLink}>
+                  {t.nav.radio}
+                </Link>
+                <Link href="/rapor" className={styles.dropdownLink}>
+                  {t.nav.report}
+                </Link>
+                <Link href="/tanitim" className={styles.dropdownLink}>
+                  {t.nav.promoCard}
+                </Link>
+                <Link href="/sync/yonet" className={styles.dropdownLink}>
+                  {t.nav.syncManage}
                 </Link>
               </div>
             </div>
@@ -505,6 +535,8 @@ export default function HomePage() {
             <Link href="/kanit">{t.footer.proofBoard}</Link>
             <Link href="/lig">{t.footer.league}</Link>
             <Link href="/pro">{t.footer.artistPro}</Link>
+            <Link href="/sync">Sync Market</Link>
+            <Link href="/label">Label / A&amp;R</Link>
           </div>
           <div className={styles.footerCol}>
             <h4>{t.footer.artistsHeading}</h4>

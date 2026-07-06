@@ -729,3 +729,380 @@ export const adminGrantCredits = (
     headers: adminHeaders(),
     body: JSON.stringify({ user_id: userId, amount, reason }),
   });
+
+/* --- Akilli link + pre-save + hayran toplama + affiliate ---------------------- */
+
+export type SmartLink = {
+  id: number;
+  created_at: string;
+  user_id: number;
+  slug: string;
+  artist: string;
+  title: string;
+  release_date: string | null;
+  links: Record<string, string>;
+  presave: number;
+  views: number;
+  clicks: Record<string, number>;
+};
+
+export const createSmartLink = (payload: {
+  artist: string;
+  title: string;
+  links: Record<string, string>;
+  release_date?: string;
+}) =>
+  j<SmartLink>(`/me/links`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+export const mySmartLinks = () =>
+  j<SmartLink[]>(`/me/links`, { headers: authHeaders() });
+
+/** Public link sayfasi — her cagri goruntuleme sayacini artirir. */
+export const getPublicLink = (slug: string) =>
+  j<SmartLink>(`/public/link/${encodeURIComponent(slug)}`);
+
+export const recordLinkClick = (slug: string, platform: string) =>
+  j<SmartLink>(`/public/link/${encodeURIComponent(slug)}/click`, {
+    method: "POST",
+    body: JSON.stringify({ platform }),
+  });
+
+export const addLinkFan = (slug: string, email: string) =>
+  j<{ added: boolean }>(`/public/link/${encodeURIComponent(slug)}/fan`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+export type LinkFan = {
+  id: number;
+  created_at: string;
+  link_id: number;
+  email: string;
+  consent: number;
+};
+
+/** Sahiplik kontrollu hayran listesi (sanatci kendi linkinin fanlarini gorur). */
+export const linkFans = (linkId: number) =>
+  j<LinkFan[]>(`/me/links/${linkId}/fans`, { headers: authHeaders() });
+
+/** Fan listesi disa aktarimi — pro ucretsiz, digerine kredi duser. */
+export const exportLinkFans = (linkId: number) =>
+  j<LinkFan[]>(`/me/links/${linkId}/fans/export`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+export type AffiliatePartner = {
+  key: string;
+  name: string;
+  category: string;
+  description: string;
+  url: string;
+};
+
+export const listAffiliates = () => j<AffiliatePartner[]>(`/affiliates`);
+
+/** Tiklamayi sayar, ortagin yonlendirme URL'ini doner. */
+export const affiliateClick = (key: string) =>
+  j<{ url: string }>(`/affiliates/${encodeURIComponent(key)}/click`, {
+    method: "POST",
+  });
+
+/* --- Sync/lisans mini-marketplace ---------------------------------------------- */
+
+export type SyncListing = {
+  id: number;
+  created_at: string;
+  user_id: number;
+  artist: string;
+  title: string;
+  track_url: string | null;
+  genres: string | null;
+  mood: string | null;
+  description: string | null;
+  price_youtube: number | null;
+  price_reklam: number | null;
+  price_film: number | null;
+  status: "active" | "paused";
+};
+
+export type SyncRequest = {
+  id: number;
+  created_at: string;
+  listing_id: number;
+  buyer_name: string;
+  buyer_email: string;
+  use_kind: string;
+  message: string | null;
+  status: "pending" | "accepted" | "rejected" | "paid";
+  price_try: number;
+  commission_try: number;
+  license_text: string | null;
+};
+
+export const createSyncListing = (payload: {
+  artist: string;
+  title: string;
+  track_url?: string;
+  genres?: string;
+  mood?: string;
+  description?: string;
+  price_youtube?: number;
+  price_reklam?: number;
+  price_film?: number;
+}) =>
+  j<SyncListing>(`/me/sync/listings`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+export const mySyncListings = () =>
+  j<SyncListing[]>(`/me/sync/listings`, { headers: authHeaders() });
+
+export const pauseSyncListing = (listingId: number) =>
+  j<SyncListing>(`/me/sync/listings/${listingId}/pause`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+export const activateSyncListing = (listingId: number) =>
+  j<SyncListing>(`/me/sync/listings/${listingId}/activate`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+/** Public katalog — sadece active ilanlar. use_kind: youtube|reklam|film|podcast|diger. */
+export const publicSyncCatalog = (filters?: {
+  use_kind?: string;
+  genre?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (filters?.use_kind) params.set("use_kind", filters.use_kind);
+  if (filters?.genre) params.set("genre", filters.genre);
+  const qs = params.toString();
+  return j<SyncListing[]>(`/public/sync${qs ? `?${qs}` : ""}`);
+};
+
+export const requestSyncLicense = (
+  listingId: number,
+  payload: {
+    buyer_name: string;
+    buyer_email: string;
+    use_kind: string;
+    message?: string;
+  }
+) =>
+  j<SyncRequest>(`/public/sync/${listingId}/request`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const mySyncRequests = () =>
+  j<SyncRequest[]>(`/me/sync/requests`, { headers: authHeaders() });
+
+export const respondSyncRequest = (
+  id: number,
+  action: "accepted" | "rejected"
+) =>
+  j<SyncRequest>(`/me/sync/requests/${id}/respond`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ action }),
+  });
+
+export const adminSyncRequests = (status?: string) =>
+  j<SyncRequest[]>(
+    `/admin/sync/requests${status ? `?status=${status}` : ""}`,
+    { headers: adminHeaders() }
+  );
+
+export const adminSyncMarkPaid = (id: number) =>
+  j<SyncRequest>(`/admin/sync/requests/${id}/paid`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+
+/* --- Label / A&R B2B erisimi ---------------------------------------------------- */
+
+export type LabelLead = {
+  id: number;
+  created_at: string;
+  company: string;
+  contact_name: string;
+  email: string;
+  note: string;
+  status: "pending" | "approved" | "rejected";
+  access_token: string | null;
+  expires_at: string | null;
+};
+
+export const applyLabel = (payload: {
+  company: string;
+  contact_name: string;
+  email: string;
+  note?: string;
+}) =>
+  j<LabelLead>(`/public/labels/apply`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const adminLabels = (status?: string) =>
+  j<LabelLead[]>(`/admin/labels${status ? `?status=${status}` : ""}`, {
+    headers: adminHeaders(),
+  });
+
+export const approveLabel = (id: number) =>
+  j<LabelLead>(`/admin/labels/${id}/approve`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+
+export const rejectLabel = (id: number) =>
+  j<LabelLead>(`/admin/labels/${id}/reject`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+
+export type RisingArtistEntry = {
+  artist_name: string;
+  latest_score: number;
+  score_delta: number | null;
+  accepted: number;
+  verified_placements: number;
+  accept_rate: number | null;
+};
+
+/** Auth gerektirmez — sureli access_token yeter (30 gun). */
+export const labelReport = (token: string) =>
+  j<RisingArtistEntry[]>(`/labels/report?token=${encodeURIComponent(token)}`);
+
+/* --- Radyo airplay takibi -------------------------------------------------------- */
+
+export type AirplayStation = {
+  id: number;
+  created_at: string;
+  name: string;
+  meta_url: string;
+  kind: "icecast" | "shoutcast";
+  active: number;
+};
+
+export type AirplaySubscription = {
+  id: number;
+  created_at: string;
+  user_id: number;
+  artist: string;
+  title: string;
+  expires_at: string;
+  active: number;
+};
+
+export type AirplayHit = {
+  id: number;
+  created_at: string;
+  station_id: number;
+  subscription_id: number;
+  raw_title: string | null;
+  artist: string;
+  title: string;
+  station_name: string;
+  station_kind: string;
+};
+
+export const adminAddStation = (payload: {
+  name: string;
+  meta_url: string;
+  kind?: "icecast" | "shoutcast";
+}) =>
+  j<AirplayStation>(`/admin/airplay/stations`, {
+    method: "POST",
+    headers: adminHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+export const adminStations = () =>
+  j<AirplayStation[]>(`/admin/airplay/stations`, { headers: adminHeaders() });
+
+/** Manuel tetik: arka plandaki 10 dakikalik dongu beklenmeden yoklama yapar. */
+export const adminAirplayPoll = () =>
+  j<{ checked_stations: number; hits: AirplayHit[] }>(`/admin/airplay/poll`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+
+export const subscribeAirplay = (artist: string, title: string) =>
+  j<AirplaySubscription>(`/me/airplay/subscribe`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ artist, title }),
+  });
+
+export const myAirplaySubscriptions = () =>
+  j<AirplaySubscription[]>(`/me/airplay/subscriptions`, {
+    headers: authHeaders(),
+  });
+
+export const myAirplayHits = () =>
+  j<AirplayHit[]>(`/me/airplay/hits`, { headers: authHeaders() });
+
+/* --- Otomatik tanitim videosu / animasyonlu kanit karti (promo) ---------------- */
+
+export type PromoAsset = {
+  id: number;
+  created_at: string;
+  user_id: number;
+  token: string;
+  artist: string;
+  title: string;
+  style: "dark" | "light";
+};
+
+export const createPromo = (
+  artist: string,
+  title: string,
+  style: "dark" | "light" = "dark"
+) =>
+  j<PromoAsset>(`/me/promo`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ artist, title, style }),
+  });
+
+export const myPromos = () =>
+  j<{ items: PromoAsset[] }>(`/me/promo`, { headers: authHeaders() });
+
+/** Animasyonlu SVG'yi (guncel skor/kapak ile) blob URL olarak acar. */
+export const openPromoSvg = (token: string) =>
+  fetchBlobUrl(`/me/promo/${encodeURIComponent(token)}.svg`);
+
+/* --- Geri bildirim sentez raporu ------------------------------------------------ */
+
+export type FeedbackDigest = {
+  stats: {
+    total_feedback: number;
+    accepted: number;
+    acceptance_rate: number;
+    tier_breakdown: Record<string, { total: number; accepted: number }>;
+  };
+  top_keywords: { keyword: string; count: number }[];
+  themes: { keyword: string; mentions: number; action: string }[];
+  opportunity_breakdown: Record<string, number>;
+  created_at: string;
+};
+
+/** Dolu geri bildirimlerden yeni sentez raporu uretir (en az 2 gerekli). */
+export const createFeedbackDigest = () =>
+  j<FeedbackDigest>(`/me/feedback-digest`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+
+/** En son uretilmis sentez raporu; hic yoksa null. */
+export const latestFeedbackDigest = () =>
+  j<FeedbackDigest>(`/me/feedback-digest`, { headers: authHeaders() });

@@ -1,0 +1,282 @@
+/* Linkler — akilli link yonetimi (mavi neo-brutal) */
+
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.wallet {
+  border: 3px solid var(--ink);
+  background: var(--green);
+  padding: 8px 16px;
+  font-weight: 900;
+  font-size: 14px;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.promise {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+  max-width: 620px;
+}
+
+.empty {
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 24px;
+  font-weight: 800;
+  color: #555;
+}
+
+.error {
+  border: 3px solid var(--ink);
+  border-left: 8px solid var(--red);
+  background: #fff;
+  padding: 10px 14px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gateText {
+  font-weight: 600;
+  margin: 12px 0 20px;
+}
+
+/* Olusturma formu */
+.createForm {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.createForm > input {
+  width: 100%;
+}
+
+.urlGrid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.dateRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dateLabel {
+  font-weight: 800;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.dateRow input {
+  width: auto;
+  min-width: 160px;
+}
+
+.presaveHint {
+  font-weight: 800;
+  font-size: 12px;
+  background: var(--lightblue);
+  border: 2px solid var(--ink);
+  padding: 4px 10px;
+}
+
+/* Link listesi */
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.linkCard {
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.linkHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.slugRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.songName {
+  font-weight: 900;
+  font-size: 16px;
+}
+
+.urlRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.urlText {
+  border: 2px solid var(--ink);
+  background: #fdfdf8;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.copyBtn {
+  border: 2px solid var(--ink);
+  background: #fff;
+  font-weight: 900;
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.copyBtn:hover { background: var(--lightblue); }
+
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.metric {
+  border: 2px solid var(--ink);
+  background: #fdfdf8;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.exportNote {
+  font-size: 11px;
+  font-weight: 800;
+  color: #555;
+}
+
+.fansPanel {
+  border-top: 2px solid var(--ink);
+  padding-top: 12px;
+}
+
+.noFans {
+  font-weight: 700;
+  font-size: 13px;
+  color: #555;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 3px solid var(--ink);
+  background: #fff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  text-align: left;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 10px 14px;
+  border-bottom: 3px solid var(--ink);
+  background: var(--lightblue);
+}
+
+.table td {
+  padding: 10px 14px;
+  border-bottom: 2px solid #ddd;
+  font-weight: 700;
+}
+
+/* Ortaklar */
+.affiliateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.affiliateCard {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.affiliateName {
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.affiliateCategory {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.affiliateDesc {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin-bottom: 6px;
+  flex: 1;
+}
