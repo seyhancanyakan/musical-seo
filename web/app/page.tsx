@@ -21,6 +21,7 @@ type Dict = {
     report: string;
     promoCard: string;
     syncManage: string;
+    myAds: string;
     curatorsFor: string;
     becomeCurator: string;
     curatorTypes: string;
@@ -122,6 +123,7 @@ const T: { tr: Dict; en: Dict } = {
       report: "🧠 Geri Bildirim Raporu",
       promoCard: "🎬 Tanıtım Kartı",
       syncManage: "🎬 Sync İlanlarım",
+      myAds: "🎙️ Reklamlarım",
       curatorsFor: "Küratörler İçin ▾",
       becomeCurator: "Küratör Ol",
       curatorTypes: "Küratör & Profesyonel Türleri",
@@ -234,6 +236,7 @@ const T: { tr: Dict; en: Dict } = {
       report: "🧠 Feedback Report",
       promoCard: "🎬 Promo Card",
       syncManage: "🎬 My Sync Listings",
+      myAds: "🎙️ My Ads",
       curatorsFor: "For Curators ▾",
       becomeCurator: "Become a Curator",
       curatorTypes: "Curator & Professional Types",
@@ -387,6 +390,9 @@ export default function HomePage() {
                 </Link>
                 <Link href="/sync/yonet" className={styles.dropdownLink}>
                   {t.nav.syncManage}
+                </Link>
+                <Link href="/reklamlarim" className={styles.dropdownLink}>
+                  {t.nav.myAds}
                 </Link>
               </div>
             </div>

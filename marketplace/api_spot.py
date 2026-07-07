@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from marketplace import spot_ai
+from marketplace import accounts, spot_ai
 
 router = APIRouter()
 
@@ -22,6 +22,14 @@ def _require_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
     expected = os.environ.get("MARKETPLACE_ADMIN_KEY")
     if not expected or x_admin_key != expected:
         raise HTTPException(status_code=403, detail="Geçersiz admin anahtarı")
+
+
+def _current_user(authorization: str | None = Header(default=None)) -> dict:
+    token = (authorization or "").removeprefix("Bearer ").strip()
+    user = accounts.user_by_token(token)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Giriş gerekli")
+    return user
 
 
 def _400(exc: ValueError) -> HTTPException:
@@ -133,6 +141,30 @@ def public_spot_produce(payload: AdProduce) -> dict:
         )
     except ValueError as exc:
         raise _400(exc)
+
+
+class SaveAd(BaseModel):
+    mix_asset_id: int
+    product_name: str = ""
+    plan: dict | None = None
+
+
+@router.post("/me/ads")
+def save_my_ad(payload: SaveAd, user: dict = Depends(_current_user)) -> dict:
+    """Uretilen reklami hesaba kaydet (Reklamlarim). Sadece giris yapan
+    sanatci/isletme kendi ureettigi reklami kaydeder."""
+    try:
+        return spot_ai.save_produced_ad(
+            user["id"], payload.mix_asset_id, payload.product_name, payload.plan
+        )
+    except ValueError as exc:
+        raise _400(exc)
+
+
+@router.get("/me/ads")
+def my_ads(user: dict = Depends(_current_user)) -> list[dict]:
+    """Kullanicinin urettigi reklamlar (dinlenebilir file_url ile)."""
+    return spot_ai.list_produced_ads(user["id"])
 
 
 class SfxCreate(BaseModel):

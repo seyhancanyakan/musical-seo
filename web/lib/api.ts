@@ -1735,3 +1735,29 @@ export const makeSfx = (payload: {
     method: "POST",
     body: JSON.stringify(payload),
   });
+
+/* --- Reklamlarim: sihirbazda uretilen reklamlarin hesaba kaydi ----------------- */
+
+export type ProducedAd = {
+  id: number;
+  created_at: string;
+  product_name: string | null;
+  mix_asset_id: number;
+  file_url: string;
+};
+
+/** Sihirbazda uretilen bir reklami (mix) hesaba kaydeder — best-effort cagri,
+ *  sihirbaz akisini bozmamasi icin caller hata gorse de devam edebilir. */
+export const saveMyAd = (payload: {
+  mix_asset_id: number;
+  product_name?: string;
+  plan?: unknown;
+}) =>
+  j<ProducedAd>(`/me/ads`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+/** Hesaba kaydedilmis (sihirbazda uretilen) reklamlarin listesi. */
+export const myAds = () => j<ProducedAd[]>(`/me/ads`, { headers: authHeaders() });

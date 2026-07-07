@@ -983,3 +983,74 @@ def produce_ad(plan: dict, voice_id: str = "default",
         "sfx": sfx_assets,
         "plan": plan,
     }
+
+
+# --- Reklamlarim: uretilen reklamlarin hesaba baglanmasi ---------------------
+
+def _produced_schema(conn) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS produced_ads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            user_id INTEGER NOT NULL,
+            product_name TEXT,
+            mix_asset_id INTEGER NOT NULL,
+            duration REAL,
+            plan_json TEXT
+        );
+        """
+    )
+
+
+def save_produced_ad(user_id: int, mix_asset_id: int, product_name: str = "",
+                     plan: dict | None = None) -> dict:
+    """Uretilen nihai reklami (mix) kullanicinin hesabina kaydet — sonradan
+    'Reklamlarim'da gorup dinleyebilsin. mix_asset_id kind='mix' olmali."""
+    asset = get_asset(mix_asset_id)
+    if asset is None or asset["kind"] != "mix":
+        raise ValueError(f"Reklam (mix) bulunamadı: {mix_asset_id}")
+    conn = _connect()
+    try:
+        _produced_schema(conn)
+        with conn:
+            cur = conn.execute(
+                "INSERT INTO produced_ads "
+                "(created_at, user_id, product_name, mix_asset_id, duration, plan_json) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (db.now_iso(), user_id, product_name.strip() or None, mix_asset_id,
+                 None, json.dumps(plan, ensure_ascii=False) if plan else None),
+            )
+            ad_id = int(cur.lastrowid)
+        row = conn.execute(
+            "SELECT * FROM produced_ads WHERE id = ?", (ad_id,)
+        ).fetchone()
+        return dict(row)
+    finally:
+        conn.close()
+
+
+def list_produced_ads(user_id: int) -> list[dict]:
+    """Kullanicinin urettigi reklamlar (yeni->eski), mix diskte olanlar."""
+    conn = _connect()
+    try:
+        _produced_schema(conn)
+        rows = conn.execute(
+            "SELECT pa.id, pa.created_at, pa.product_name, pa.mix_asset_id, "
+            "       pa.plan_json, sa.file_path "
+            "FROM produced_ads pa JOIN spot_assets sa ON sa.id = pa.mix_asset_id "
+            "WHERE pa.user_id = ? ORDER BY pa.id DESC",
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        if d.get("file_path") and Path(d["file_path"]).is_file():
+            out.append({
+                "id": d["id"], "created_at": d["created_at"],
+                "product_name": d["product_name"], "mix_asset_id": d["mix_asset_id"],
+                "file_url": f"/spot-file/{d['mix_asset_id']}",
+            })
+    return out

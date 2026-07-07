@@ -27,6 +27,8 @@ import {
   planAd,
   produceAd,
   makeMusic,
+  saveMyAd,
+  getToken,
   type AdPackage,
   type AdCampaign,
   type AdCampaignOrderBreakdown,
@@ -101,6 +103,9 @@ const T = {
     directorResultSummaryTemplate: "Müzik + {n} efekt + {sec} sn seslendirme",
     directorContinueBtn: "Kampanya Oluşturmaya Devam Et →",
     planRequiredError: "Önce bir reklam planı oluştur",
+    adSavedNote: "✓ Reklamlarıma kaydedildi",
+    adSaveLoginNote: "Giriş yaparsan reklamların hesabına kaydedilir",
+    adSaveLoginLink: "Giriş yap",
     steps: [
       "Hedef",
       "Spot Metni",
@@ -320,6 +325,9 @@ const T = {
     directorResultSummaryTemplate: "Music + {n} effects + {sec}s voice-over",
     directorContinueBtn: "Continue to Create Campaign →",
     planRequiredError: "Create an ad plan first",
+    adSavedNote: "✓ Saved to My Ads",
+    adSaveLoginNote: "Log in and your ads will be saved to your account",
+    adSaveLoginLink: "Log in",
     steps: [
       "Target",
       "Spot Script",
@@ -686,6 +694,10 @@ export default function CampaignWizardPage() {
   const [mixError, setMixError] = useState("");
   const [mixAudioUrl, setMixAudioUrl] = useState<string | null>(null);
   const [mixAssetId, setMixAssetId] = useState<number | null>(null);
+  /** Uretilen reklam giris yapmis kullanicinin hesabina (Reklamlarim) kaydedildi mi
+   *  — best-effort saveMyAd cagrisi basarili olunca true olur (bkz. handleProduceAd /
+   *  handleMixAd). Kaydetme basarisiz olsa da sihirbaz akisi bozulmaz. */
+  const [adSaved, setAdSaved] = useState(false);
 
   // --- Adim 6: ozet + onay --------------------------------------------------
   const [buyerName, setBuyerName] = useState("");
@@ -902,6 +914,23 @@ export default function CampaignWizardPage() {
     );
   }
 
+  /** Uretilen reklami (mix) giris yapmis kullanicinin hesabina kaydeder —
+   *  best-effort: token yoksa hic denemez, hata olursa sessizce yutar (sihirbaz
+   *  akisi asla bu yuzden durmaz). Basarili olunca "✓ Reklamlarıma kaydedildi"
+   *  notu gorunur (bkz. adSaved). */
+  async function persistAdIfLoggedIn(mixAssetIdToSave: number) {
+    if (!getToken()) return;
+    try {
+      const saved = await saveMyAd({
+        mix_asset_id: mixAssetIdToSave,
+        product_name: productName.trim() || undefined,
+      });
+      if (saved) setAdSaved(true);
+    } catch {
+      // Kayit basarisiz olsa da reklam zaten uretildi/indirilebilir — sessizce yoksay.
+    }
+  }
+
   /** Yonetmen modu adim 2: (duzenlenmis) plani tek cagride tam reklama
    *  cevirir. Basarili olunca mixAudioUrl/mixAssetId sihirbazin geri kalanina
    *  (kampanya olusturma) baglanir — kullanici adim-adim moda gecerse hazir. */
@@ -911,6 +940,7 @@ export default function CampaignWizardPage() {
       return;
     }
     setDirectorProduceError("");
+    setAdSaved(false);
     setDirectorProduceBusy(true);
     const result = await produceAd({
       plan: directorPlan,
@@ -925,6 +955,7 @@ export default function CampaignWizardPage() {
     setDirectorResult(result.data);
     setMixAudioUrl(apiFileUrl(result.data.mix_file_url));
     setMixAssetId(result.data.mix.id);
+    void persistAdIfLoggedIn(result.data.mix.id);
   }
 
   /** Yonetmen sonucundan adim-adim moda gecip kampanya olusturmaya devam
@@ -1020,6 +1051,7 @@ export default function CampaignWizardPage() {
       setMixError(t.mixNeedJingleError);
       return;
     }
+    setAdSaved(false);
     setMixBusy(true);
     const payload: {
       voice_asset_id: number;
@@ -1042,6 +1074,7 @@ export default function CampaignWizardPage() {
     }
     setMixAudioUrl(apiFileUrl(result.data.file_url));
     setMixAssetId(result.data.asset.id);
+    void persistAdIfLoggedIn(result.data.asset.id);
   }
 
   async function handleSubmitCampaign(e: FormEvent) {
@@ -1145,6 +1178,7 @@ export default function CampaignWizardPage() {
     setMixError("");
     setMixAudioUrl(null);
     setMixAssetId(null);
+    setAdSaved(false);
     setBuyerName("");
     setBuyerEmail("");
     setCampaign(null);
@@ -1518,6 +1552,14 @@ export default function CampaignWizardPage() {
                   >
                     {t.directorContinueBtn}
                   </button>
+                  {adSaved ? (
+                    <p className={styles.note}>{t.adSavedNote}</p>
+                  ) : (
+                    <p className={styles.note}>
+                      {t.adSaveLoginNote} —{" "}
+                      <Link href="/giris">{t.adSaveLoginLink}</Link>
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -2028,6 +2070,14 @@ export default function CampaignWizardPage() {
               >
                 {t.mixDownloadBtn}
               </a>
+              {adSaved ? (
+                <p className={styles.note}>{t.adSavedNote}</p>
+              ) : (
+                <p className={styles.note}>
+                  {t.adSaveLoginNote} —{" "}
+                  <Link href="/giris">{t.adSaveLoginLink}</Link>
+                </p>
+              )}
             </div>
           )}
 
