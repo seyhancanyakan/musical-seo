@@ -1481,6 +1481,10 @@ export type SpotVoice = {
   voice_id: string;
   name: string;
   category: string | null;
+  /** ElevenLabs'in hazir ornek klibi — secmeden ONCE dinlenebilir (ucretsiz, aninda). */
+  preview_url?: string | null;
+  /** ElevenLabs etiketleri (or. accent/age/gender) — rozet olarak gosterilir. */
+  labels?: Record<string, string> | null;
 };
 
 /** ELEVENLABS_API_KEY yoksa backend 3 sabit ornek ses doner (UI bozulmasin). */

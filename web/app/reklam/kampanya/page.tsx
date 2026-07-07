@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactElement,
+} from "react";
 import Link from "next/link";
 import {
   suggestAdPackages,
@@ -20,6 +26,7 @@ import {
   apiFileUrl,
   planAd,
   produceAd,
+  makeMusic,
   type AdPackage,
   type AdCampaign,
   type AdCampaignOrderBreakdown,
@@ -72,6 +79,10 @@ const T = {
     directorPlanTitle: "Reklam Planı (düzenlenebilir)",
     directorTotalSecondsLabel: "Toplam süre (sn)",
     directorMusicPromptLabel: "Müzik Açıklaması",
+    musicPreviewBtn: "🎧 Müziği Önce Dinle",
+    musicPreviewBusy: "Müzik üretiliyor...",
+    musicPreviewReadyLabel: "Müzik önizlemesi:",
+    musicPreviewError: "Müzik önizlemesi üretilemedi, tekrar dene.",
     directorVoiceoverLabel: "Seslendirme Metni",
     directorVoiceDelayLabel: "Seslendirme gecikmesi (sn)",
     directorSfxTitle: "Ses Efektleri",
@@ -159,6 +170,12 @@ const T = {
     voiceBusy: "Seslendiriliyor...",
     audioReadyLabel: "Hazır önizleme:",
     skipBtn: "Bu Adımı Atla",
+    // --- Ses secici (VoiceLibraryPicker) ---
+    voiceSearchPlaceholder: "Ses ara (isimle filtrele)...",
+    voicesEmpty: "Aramanla eşleşen ses yok.",
+    voiceListenLabel: "Dinle",
+    voiceSelectBtn: "Seç",
+    voiceSelectedBtn: "Seçili",
     // --- Adim 4 ---
     jingleStepTitle: "Jingle (opsiyonel)",
     autoJingleTitle: "AI ile Otomatik Jingle",
@@ -171,6 +188,7 @@ const T = {
     orDivider: "— veya —",
     jingleLibraryTitle: "Hazır Jingle Kütüphanesi",
     jingleLibraryEmpty: "Şu an hazır jingle yok.",
+    jinglePreviewUnavailable: "Bu jingle için önizleme henüz mevcut değil.",
     jingleReadyTitle: "Hazırlanan özel jingle talepleri",
     selectJingleBtn: "Bu Jingle'ı Seç",
     selectedJingleBtn: "Seçildi",
@@ -280,6 +298,10 @@ const T = {
     directorPlanTitle: "Ad Plan (editable)",
     directorTotalSecondsLabel: "Total duration (sec)",
     directorMusicPromptLabel: "Music Description",
+    musicPreviewBtn: "🎧 Preview the Music First",
+    musicPreviewBusy: "Generating music...",
+    musicPreviewReadyLabel: "Music preview:",
+    musicPreviewError: "Couldn't generate a music preview, try again.",
     directorVoiceoverLabel: "Voice-over Script",
     directorVoiceDelayLabel: "Voice-over delay (sec)",
     directorSfxTitle: "Sound Effects",
@@ -364,6 +386,12 @@ const T = {
     voiceBusy: "Synthesizing...",
     audioReadyLabel: "Preview ready:",
     skipBtn: "Skip This Step",
+    // --- Voice picker (VoiceLibraryPicker) ---
+    voiceSearchPlaceholder: "Search voices (filter by name)...",
+    voicesEmpty: "No voices match your search.",
+    voiceListenLabel: "Listen",
+    voiceSelectBtn: "Select",
+    voiceSelectedBtn: "Selected",
     jingleStepTitle: "Jingle (optional)",
     autoJingleTitle: "AI Auto-Generated Jingle",
     autoJingleNote:
@@ -375,6 +403,7 @@ const T = {
     orDivider: "— or —",
     jingleLibraryTitle: "Ready-Made Jingle Library",
     jingleLibraryEmpty: "No jingles ready right now.",
+    jinglePreviewUnavailable: "Preview isn't available yet for this jingle.",
     jingleReadyTitle: "Custom jingle requests ready",
     selectJingleBtn: "Select This Jingle",
     selectedJingleBtn: "Selected",
@@ -468,6 +497,111 @@ function statusPillClass(status: AdCampaignOrderBreakdown["status"]): string {
   return "nb-pill nb-pill--blue";
 }
 
+type VoiceLibraryPickerTexts = {
+  loadingLabel: string;
+  emptyLabel: string;
+  searchPlaceholder: string;
+  listenLabel: string;
+};
+
+/** Sesi SECMEDEN ONCE dinleyebilme + arama + kaydirilabilir kompakt liste.
+ *  Hem Reklam Yonetmeni'nde (plan sesi secimi) hem Adim-Adim'da (3. adim,
+ *  secim = dogrudan seslendirme) kullanilir — "Sec" aksiyonu caller'dan
+ *  renderAction ile gelir cunku iki modda farkli anlama gelir (sadece secim
+ *  vs. hemen seslendirme uretimi). Tek <audio> ref'i: baska sese basinca
+ *  oncekini durdurur (ayni anda tek ses calar). */
+function VoiceLibraryPicker({
+  voices,
+  loading,
+  texts,
+  renderAction,
+}: {
+  voices: SpotVoice[] | null;
+  loading: boolean;
+  texts: VoiceLibraryPickerTexts;
+  renderAction: (voice: SpotVoice) => ReactElement;
+}) {
+  const [query, setQuery] = useState("");
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, []);
+
+  function togglePreview(voice: SpotVoice) {
+    if (!voice.preview_url) return;
+    const audio = audioRef.current ?? new Audio();
+    if (!audioRef.current) {
+      audio.onended = () => setPlayingId(null);
+      audioRef.current = audio;
+    }
+    if (playingId === voice.voice_id) {
+      audio.pause();
+      setPlayingId(null);
+      return;
+    }
+    audio.src = voice.preview_url;
+    void audio.play();
+    setPlayingId(voice.voice_id);
+  }
+
+  const needle = query.trim().toLowerCase();
+  const filtered = (voices ?? []).filter((v) =>
+    needle ? v.name.toLowerCase().includes(needle) : true
+  );
+
+  return (
+    <div className={styles.voicePicker}>
+      {loading && <div className={styles.note}>{texts.loadingLabel}</div>}
+      <input
+        className="nb-input"
+        placeholder={texts.searchPlaceholder}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <div className={styles.voiceList}>
+        {!loading && filtered.length === 0 && (
+          <div className={styles.note}>{texts.emptyLabel}</div>
+        )}
+        {filtered.map((v) => {
+          const labelBadges = v.labels ? Object.values(v.labels).filter(Boolean) : [];
+          return (
+            <div key={v.voice_id} className={styles.voiceRow}>
+              <div className={styles.voiceRowInfo}>
+                <span className={styles.voiceRowName}>{v.name}</span>
+                <div className={styles.voiceRowBadges}>
+                  {v.category && <span className="nb-chip">{v.category}</span>}
+                  {labelBadges.slice(0, 3).map((label, i) => (
+                    <span key={i} className="nb-chip">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className={styles.voiceRowActions}>
+                <button
+                  type="button"
+                  className="nb-btn nb-btn--outline"
+                  onClick={() => togglePreview(v)}
+                  disabled={!v.preview_url}
+                  aria-label={texts.listenLabel}
+                  title={texts.listenLabel}
+                >
+                  {playingId === v.voice_id ? "⏸" : "▶"}
+                </button>
+                {renderAction(v)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function CampaignWizardPage() {
   const { locale } = useLocale();
   const t = pick(T, locale);
@@ -485,6 +619,10 @@ export default function CampaignWizardPage() {
   const [directorResult, setDirectorResult] = useState<ProduceAdResult | null>(
     null
   );
+  // --- Yonetmen: reklam uretilmeden once muzigi tek basina dinleme ----------
+  const [musicPreviewBusy, setMusicPreviewBusy] = useState(false);
+  const [musicPreviewError, setMusicPreviewError] = useState("");
+  const [musicPreviewUrl, setMusicPreviewUrl] = useState<string | null>(null);
 
   // --- Adim 1: hedef -----------------------------------------------------
   const [city, setCity] = useState("");
@@ -691,6 +829,8 @@ export default function CampaignWizardPage() {
   async function handleGeneratePlan() {
     setDirectorPlanError("");
     setDirectorResult(null);
+    setMusicPreviewUrl(null);
+    setMusicPreviewError("");
     if (!productName.trim()) {
       setDirectorPlanError(t.productNameRequiredError);
       return;
@@ -710,6 +850,24 @@ export default function CampaignWizardPage() {
     setDirectorPlan(result.data);
     // Adim-adim moda gecilirse spot metni zaten dolu olsun diye senkronlanir.
     setScriptText(result.data.voiceover);
+  }
+
+  /** Tam reklam uretilmeden ONCE sadece muzigi (plan.music_prompt) dinlemeyi
+   *  saglar — kullanici begenmezse metni duzenleyip tekrar dinleyebilir. */
+  async function handleMusicPreview() {
+    if (!directorPlan) return;
+    setMusicPreviewError("");
+    setMusicPreviewBusy(true);
+    const result = await makeMusic({
+      prompt: directorPlan.music_prompt,
+      seconds: directorPlan.total_seconds,
+    });
+    setMusicPreviewBusy(false);
+    if (result.error || !result.data) {
+      setMusicPreviewError(result.error ?? t.musicPreviewError);
+      return;
+    }
+    setMusicPreviewUrl(apiFileUrl(result.data.file_url));
   }
 
   function updatePlanField<K extends keyof AdPlan>(key: K, value: AdPlan[K]) {
@@ -959,6 +1117,9 @@ export default function CampaignWizardPage() {
     setDirectorPlanError("");
     setDirectorProduceError("");
     setDirectorResult(null);
+    setMusicPreviewBusy(false);
+    setMusicPreviewError("");
+    setMusicPreviewUrl(null);
     setCity("");
     setDayparts([]);
     setWeeks(2);
@@ -1106,22 +1267,33 @@ export default function CampaignWizardPage() {
 
           <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel}>{t.directorVoiceLabel}</label>
-            {voicesLoading && (
-              <div className={styles.note}>{t.voicesLoading}</div>
-            )}
-            <select
-              className="nb-input"
-              value={selectedVoiceId ?? ""}
-              onChange={(e) => setSelectedVoiceId(e.target.value || null)}
-              aria-label={t.directorVoiceLabel}
-            >
-              <option value="">—</option>
-              {voices?.map((v) => (
-                <option key={v.voice_id} value={v.voice_id}>
-                  {v.name}
-                </option>
-              ))}
-            </select>
+            <VoiceLibraryPicker
+              voices={voices}
+              loading={voicesLoading}
+              texts={{
+                loadingLabel: t.voicesLoading,
+                emptyLabel: t.voicesEmpty,
+                searchPlaceholder: t.voiceSearchPlaceholder,
+                listenLabel: t.voiceListenLabel,
+              }}
+              renderAction={(v) => (
+                <button
+                  type="button"
+                  className={`nb-btn ${
+                    selectedVoiceId === v.voice_id ? "nb-btn--green" : ""
+                  }`}
+                  onClick={() =>
+                    setSelectedVoiceId(
+                      selectedVoiceId === v.voice_id ? null : v.voice_id
+                    )
+                  }
+                >
+                  {selectedVoiceId === v.voice_id
+                    ? t.voiceSelectedBtn
+                    : t.voiceSelectBtn}
+                </button>
+              )}
+            />
           </div>
 
           <button
@@ -1165,10 +1337,32 @@ export default function CampaignWizardPage() {
                 <input
                   className="nb-input"
                   value={directorPlan.music_prompt}
-                  onChange={(e) =>
-                    updatePlanField("music_prompt", e.target.value)
-                  }
+                  onChange={(e) => {
+                    updatePlanField("music_prompt", e.target.value);
+                    setMusicPreviewUrl(null);
+                  }}
                 />
+                <button
+                  type="button"
+                  className="nb-btn nb-btn--outline"
+                  onClick={handleMusicPreview}
+                  disabled={musicPreviewBusy || !directorPlan.music_prompt.trim()}
+                >
+                  {musicPreviewBusy ? t.musicPreviewBusy : t.musicPreviewBtn}
+                </button>
+                {musicPreviewError && (
+                  <div className={styles.error}>{musicPreviewError}</div>
+                )}
+                {musicPreviewUrl && (
+                  <div className={styles.audioBox}>
+                    <span>{t.musicPreviewReadyLabel}</span>
+                    <audio
+                      controls
+                      src={musicPreviewUrl}
+                      className={styles.audioPlayer}
+                    />
+                  </div>
+                )}
               </div>
 
               <div className={styles.fieldGroup}>
@@ -1599,26 +1793,30 @@ export default function CampaignWizardPage() {
           <h2 className="nb-h">{t.voiceStepTitle}</h2>
           <p className={styles.note}>{t.voiceStepNote}</p>
 
-          {voicesLoading && <div className={styles.note}>{t.voicesLoading}</div>}
-
-          <div className={styles.voiceGrid}>
-            {voices?.map((v) => (
-              <div key={v.voice_id} className={`nb-card ${styles.voiceCard}`}>
-                <div className={styles.voiceName}>{v.name}</div>
-                {v.category && <span className="nb-chip">{v.category}</span>}
-                <button
-                  type="button"
-                  className="nb-btn"
-                  disabled={voiceBusy && selectedVoiceId === v.voice_id}
-                  onClick={() => handleSynthesize(v.voice_id)}
-                >
-                  {voiceBusy && selectedVoiceId === v.voice_id
-                    ? t.voiceBusy
-                    : t.voiceBtn}
-                </button>
-              </div>
-            ))}
-          </div>
+          <VoiceLibraryPicker
+            voices={voices}
+            loading={voicesLoading}
+            texts={{
+              loadingLabel: t.voicesLoading,
+              emptyLabel: t.voicesEmpty,
+              searchPlaceholder: t.voiceSearchPlaceholder,
+              listenLabel: t.voiceListenLabel,
+            }}
+            renderAction={(v) => (
+              <button
+                type="button"
+                className={`nb-btn ${
+                  selectedVoiceId === v.voice_id && audioUrl ? "nb-btn--green" : ""
+                }`}
+                disabled={voiceBusy && selectedVoiceId === v.voice_id}
+                onClick={() => handleSynthesize(v.voice_id)}
+              >
+                {voiceBusy && selectedVoiceId === v.voice_id
+                  ? t.voiceBusy
+                  : t.voiceBtn}
+              </button>
+            )}
+          />
 
           {voiceError && <div className={styles.error}>{voiceError}</div>}
 
@@ -1686,6 +1884,21 @@ export default function CampaignWizardPage() {
               {jingleLibrary.map((item) => (
                 <div key={item.path} className={`nb-card ${styles.jingleCard}`}>
                   <div className={styles.jingleName}>{item.file_name}</div>
+                  {/* Kutuphane dosyalari sunucuda ham dosya yolu olarak
+                      tutuluyor (data/jingles/*.mp3) — henuz HTTP uzerinden
+                      tek tek servis eden bir uc nokta yok, o yuzden dinleme
+                      butonu burada pasif kalir (bkz. selectedJingleBtn
+                      secimi hala calisir, mix asamasinda sunucu tarafinda
+                      dogrudan dosyadan okunur). */}
+                  <button
+                    type="button"
+                    className="nb-btn nb-btn--outline"
+                    disabled
+                    title={t.jinglePreviewUnavailable}
+                    aria-label={t.jinglePreviewUnavailable}
+                  >
+                    ▶
+                  </button>
                   <button
                     type="button"
                     className={`nb-btn ${
@@ -1710,6 +1923,13 @@ export default function CampaignWizardPage() {
                   <div key={item.id} className={`nb-card ${styles.jingleCard}`}>
                     <div className={styles.jingleName}>{item.brief}</div>
                     {item.style && <span className="nb-chip">{item.style}</span>}
+                    {item.file_path && (
+                      <audio
+                        controls
+                        src={jingleFileUrl(item.id)}
+                        className={styles.audioPlayer}
+                      />
+                    )}
                     <button
                       type="button"
                       className={`nb-btn ${

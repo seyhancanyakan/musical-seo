@@ -409,6 +409,10 @@ def list_voices() -> list[dict]:
                 "voice_id": v.get("voice_id"),
                 "name": v.get("name"),
                 "category": v.get("category"),
+                # preview_url: ElevenLabs'in her ses icin hazir ornek klibi —
+                # kullanici secmeden ONCE dinleyebilsin (ucretsiz, anında).
+                "preview_url": v.get("preview_url"),
+                "labels": v.get("labels") or {},
             }
             for v in voices
         ]

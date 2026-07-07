@@ -223,6 +223,19 @@ def public_spot_jingle_status(request_id: int) -> dict:
     return result
 
 
+@router.get("/spot-jingle-library-file/{file_name}")
+def spot_jingle_library_file(file_name: str) -> FileResponse:
+    """Kutuphane jingle'ini ADA gore servis et (onizleme). Guvenlik: sadece
+    basename + .mp3, dizin gezinmesi engellenir."""
+    safe = Path(file_name).name
+    if not safe.endswith(".mp3"):
+        raise HTTPException(status_code=404, detail="Jingle bulunamadı")
+    path = spot_ai.JINGLES_DIR / safe
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Jingle bulunamadı")
+    return FileResponse(path, media_type="audio/mpeg", filename=safe)
+
+
 @router.get("/spot-jingle-file/{request_id}")
 def spot_jingle_file(request_id: int) -> FileResponse:
     reqs = spot_ai.list_jingle_requests()
