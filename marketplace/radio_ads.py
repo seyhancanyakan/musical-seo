@@ -80,6 +80,18 @@ def _connect() -> sqlite3.Connection:
 
 # --- Envanter (radyo kuratoru) ----------------------------------------------
 
+def city_key(city: str | None) -> str | None:
+    """Sehir eslesmesi icin Turkce-duyarli normalizasyon: buyuk/kucuk + I/İ/ı
+    farkini yok say ('İstanbul' == 'istanbul' == 'ISTANBUL'). Bosluk kirpilir."""
+    if not city or not city.strip():
+        return None
+    s = city.strip()
+    for a, b in (("İ", "i"), ("I", "i"), ("ı", "i"), ("Ş", "ş"), ("Ğ", "ğ"),
+                 ("Ü", "ü"), ("Ö", "ö"), ("Ç", "ç")):
+        s = s.replace(a, b)
+    return s.lower()
+
+
 def create_listing(
     user: dict, station_name: str, slot_seconds: int, daypart: str,
     weekly_spots: int, price_week_try: int, description: str | None = None,
@@ -115,7 +127,7 @@ def create_listing(
                 """,
                 (db.now_iso(), curator_id, station_name.strip(), slot_seconds,
                  daypart, weekly_spots, price_week_try, description,
-                 city.strip() if city else None),
+                 city_key(city)),
             )
             listing_id = int(cur.lastrowid)
         row = conn.execute(
@@ -206,7 +218,7 @@ def public_catalog(
         params.append(max_price)
     if city:
         conditions.append("city = ?")
-        params.append(city.strip())
+        params.append(city_key(city))
     sql = "SELECT * FROM radio_ad_listings WHERE " + " AND ".join(conditions)
     sql += " ORDER BY id DESC"
     conn = _connect()

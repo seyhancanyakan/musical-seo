@@ -202,7 +202,8 @@ def create_campaign(
 
     pool = radio_ads.public_catalog()
     if cities:
-        cities_norm = {c.strip() for c in cities if c.strip()}
+        cities_norm = {radio_ads.city_key(c) for c in cities if c and c.strip()}
+        cities_norm.discard(None)
         if cities_norm:
             pool = [l for l in pool if (l.get("city") or "") in cities_norm]
     if dayparts:
