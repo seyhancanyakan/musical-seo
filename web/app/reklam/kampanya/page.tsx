@@ -1682,7 +1682,10 @@ export default function CampaignWizardPage() {
               type="button"
               className="nb-btn"
               disabled={!canAdvanceStep1}
-              onClick={() => setStep(2)}
+              // Yonetmen modu zaten reklami urettiyse (mixAudioUrl dolu),
+              // metin/ses/jingle/mix adimlarini (2-5) ATLA -> dogrudan ozet
+              // + kampanya olusturma adimina (6) git. Aksi halde normal akis.
+              onClick={() => setStep(mixAudioUrl ? 6 : 2)}
             >
               {t.nextBtn}
             </button>
