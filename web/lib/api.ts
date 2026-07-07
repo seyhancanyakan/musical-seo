@@ -1,8 +1,11 @@
 /** FastAPI istemcisi — tum sayfalar bu yardimcilari kullanir.
  *  Hata durumunda null doner; sayfalar demo veriye duser. */
 
+// 127.0.0.1 (localhost degil): Windows'ta tarayici 'localhost'u IPv6 ::1'e
+// cozup IPv4'e bagli backend'e ulasamayabiliyor ("Sunucuya ulasilamadi").
+// IPv4'u zorlariz; sayfa origin'i localhost:3100 kaldigi icin CORS etkilenmez.
 const API =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100";
+  process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8100";
 
 async function j<T>(path: string, init?: RequestInit): Promise<T | null> {
   try {
