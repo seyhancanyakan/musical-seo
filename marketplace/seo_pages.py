@@ -99,6 +99,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_build_queue_pending_unique
 PAGE_TYPES = ("artist", "song", "playlist")
 QUEUE_STATUSES = ("pending", "done", "thin", "failed")
 
+# Gunluk arka plan build cron'unun (bkz. marketplace.api._seo_build_cron) her
+# calistigi seferde isleyebilecegi AZAMI kayit sayisi — Google'a spam sinyali
+# vermemek icin sayfa uretimi kasten yavas/kademeli tutulur.
+# Gunluk uretim tavani. OLCULEN gercek hiz ~15sn/sanatci (6 platforma sirali
+# audit) -> tek gunluk sirali cron calismasi 24 saatte ~5-6K uretebilir. Bunun
+# uzeri guni asar. Daha yuksek uretim icin build_next_batch'i es-zamanli
+# (ThreadPoolExecutor, rate-limit'e saygili) yapmak gerekir -> ~20-40K/gun.
+# Simdilik dürüst sirali tavan:
+SEO_DAILY_BUILD_CAP = 5000
+
 _TURKISH_SLUG_MAP = {
     "ç": "c", "Ç": "c",
     "ğ": "g", "Ğ": "g",
@@ -303,6 +313,23 @@ def build_next_batch(limit: int = 100) -> dict:
         conn.close()
 
     return {"processed": processed, "built": built, "thin": thin, "failed": failed}
+
+
+def queue_stats() -> dict:
+    """Kuyrugun durum bazinda ozeti (operator gozlemi icin, ornegin
+    /seo/queue-stats admin uc noktasi). Her status icin sayim doner; hic
+    kaydi olmayan status 0 ile gorunur."""
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT status, COUNT(*) AS c FROM build_queue GROUP BY status"
+        ).fetchall()
+    finally:
+        conn.close()
+    counts = {status: 0 for status in QUEUE_STATUSES}
+    for row in rows:
+        counts[row["status"]] = row["c"]
+    return counts
 
 
 # --- Okuma (Next.js ISR data fetch) -------------------------------------------

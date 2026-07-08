@@ -624,3 +624,25 @@ def _sla_cron() -> None:
 
 
 threading.Thread(target=_sla_cron, daemon=True).start()
+
+
+# --- Yerlesik gunluk SEO build cron'u ----------------------------------------
+# Programatik SEO sayfalarini gunde 1 kez, kademeli (SEO_DAILY_BUILD_CAP ile
+# sinirli) uretir — kuyruk (build_queue) oncelik sirasina (priority DESC) gore
+# islenir, boylece once seed edilen top sanatcilar yayina girer, sonra kuyruga
+# eklenen digerleri gunden gune sirayla buyur. audit.run_audit ag erisimi
+# gerektirebilir; build_next_batch bunu zaten yakalar (failed olarak
+# isaretler), cron bu yuzden cokmez.
+
+def _seo_build_cron() -> None:
+    import time as _time
+    from marketplace import seo_pages
+    while True:
+        _time.sleep(24 * 60 * 60)  # gunde 1 kez
+        try:
+            seo_pages.build_next_batch(limit=seo_pages.SEO_DAILY_BUILD_CAP)
+        except Exception:
+            pass  # cron tek hatayla olmesin
+
+
+threading.Thread(target=_seo_build_cron, daemon=True).start()

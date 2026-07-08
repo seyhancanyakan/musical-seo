@@ -12,7 +12,7 @@ import os
 from fastapi import APIRouter, Header, HTTPException, Depends
 from pydantic import BaseModel
 
-from marketplace import accounts, leads, seo_pages
+from marketplace import accounts, catalog_scout, leads, seo_pages
 
 router = APIRouter()
 
@@ -113,3 +113,18 @@ def admin_build(limit: int = 100, _: None = Depends(_require_admin_key)) -> dict
         return seo_pages.build_next_batch(limit)
     except ValueError as exc:
         raise _400(exc)
+
+
+@router.post("/seo/seed-starter")
+def admin_seed_starter(_: None = Depends(_require_admin_key)) -> dict:
+    """Bundled top-sanatci listesini (catalog_scout.STARTER_TOP_ARTISTS) EN
+    YUKSEK oncelikle kuyruga ekler — gunluk build cron'u once bunlarla
+    baslasin diye. Operator bunu bir kere tetikler."""
+    return catalog_scout.seed_starter()
+
+
+@router.get("/seo/queue-stats")
+def admin_queue_stats(_: None = Depends(_require_admin_key)) -> dict:
+    """Kuyrugun durum bazinda ozeti (pending/done/thin/failed) — operator
+    seed + gunluk cron ilerlemesini gozlemlesin diye."""
+    return seo_pages.queue_stats()
