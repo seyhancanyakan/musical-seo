@@ -50,6 +50,12 @@ VERDICT_THRESHOLDS = (
 )
 VERDICT_FALLBACK = "sahte"
 
+# Kac sinyalin GERCEK veriye dayanmasi gerektigi. Veri kaynaklari (zaman-serisi,
+# cografi, audio, parca SEO) baglanmadiginda sinyaller notr 0.5 doner ve toplam
+# 50/100 cikar -> yanlislikla "cok_riskli" gorunur. "Kanit yok" != "sahte":
+# yeterli sinyal informatif degilse verdict 'veri_yetersiz' olur (asagi bkz).
+MIN_INFORMATIVE_SIGNALS = 2
+
 FOLLOWER_JUMP_SCALE = 1.0          # ardisik anlik goruntu arasi %100 sicrama = tam risk
 GEO_CONCENTRATION_FLOOR = 0.4      # bu payin altinda cografi yogunlasma normal sayilir
 GEO_CONCENTRATION_CEILING = 1.0
@@ -475,8 +481,22 @@ def analyze_playlist(
         ),
         1,
     )
-    verdict = _verdict_for(total_risk_score)
-    recommendation = _recommendation_for(verdict, signals)
+    # Veri kapsami: notr (0.5) fallback donen sinyaller "veri yok" demektir.
+    # Yeterli informatif sinyal yoksa risk skoru anlamsiz -> "sahte" gostermeyelim.
+    informative = sum(
+        1 for s in signals.values() if abs(s["score"] - 0.5) > 1e-9
+    )
+    if informative < MIN_INFORMATIVE_SIGNALS:
+        verdict = "veri_yetersiz"
+        recommendation = (
+            "Yeterli veri yok — bu skor GUVENILIR DEGIL ve 'sahte' anlamina "
+            "GELMEZ. Playlist zaman-serisi, cografi dagilim, audio profili ve "
+            "parca SEO kaynaklari henuz baglanmadigi icin sinyaller notr dondu. "
+            "Guvenilir bir risk analizi icin bu kaynaklarin entegrasyonu gerekir."
+        )
+    else:
+        verdict = _verdict_for(total_risk_score)
+        recommendation = _recommendation_for(verdict, signals)
     report_token = f"FRAUD-{secrets.token_hex(3).upper()}"
 
     report = {

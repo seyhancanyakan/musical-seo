@@ -159,11 +159,14 @@ def test_signal_weights_sum_to_one():
 
 # --- analyze_playlist integration (veri enjeksiyonu, network YOK) ------------
 
-def test_analyze_playlist_all_neutral_gives_midrange_score(fraud_db):
+def test_analyze_playlist_all_neutral_is_veri_yetersiz(fraud_db):
     report = fraud_forensics.analyze_playlist("https://deezer.com/playlist/1")
-    # Her sinyal notr (0.5) -> toplam skor tam 50.0 olmali
+    # Her sinyal notr (0.5) -> toplam skor 50.0 AMA hicbir sinyal informatif
+    # degil: "kanit yok" != "sahte", verdict 'veri_yetersiz' olmali (yanlislikla
+    # "cok_riskli/para odeme" GOSTERMEMELI).
     assert report["total_risk_score"] == pytest.approx(50.0)
-    assert report["verdict"] == "cok_riskli"
+    assert report["verdict"] == "veri_yetersiz"
+    assert "GUVENILIR DEGIL" in report["recommendation"]
     assert report["report_token"].startswith("FRAUD-")
     assert set(report["signals"].keys()) == set(fraud_forensics.SIGNAL_WEIGHTS.keys())
 

@@ -90,6 +90,12 @@ const VERDICT_MAP: Record<
     color: "var(--red)",
     emoji: "🚫",
   },
+  veri_yetersiz: {
+    tr: { pill: "◆ Veri Yetersiz", title: "Güvenilir analiz için veri gerekli" },
+    en: { pill: "◆ Insufficient Data", title: "Needs data for a reliable verdict" },
+    color: "var(--blue)",
+    emoji: "ℹ️",
+  },
 };
 
 const VERDICT_DEFAULT = {
