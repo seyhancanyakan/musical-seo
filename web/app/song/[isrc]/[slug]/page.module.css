@@ -1,0 +1,206 @@
+/* Tier-4 sarki sayfasi — artist sayfasiyla ayni neo-brutal dil (gauge + kartlar) */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.body {
+  padding: 34px 32px 56px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 60px 0;
+  text-align: center;
+  font-weight: 800;
+}
+
+.notBuilt {
+  padding: 32px;
+  max-width: 520px;
+  margin: 60px auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notifyForm {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.notifySent {
+  font-weight: 800;
+  color: var(--green);
+}
+
+.notifyError {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.head {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+.gauge {
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--ink);
+  position: relative;
+  flex: none;
+}
+
+.gaugeInner {
+  width: 130px;
+  height: 130px;
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.gaugeScore {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 40px;
+  line-height: 1;
+}
+
+.gaugeOf {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.headMeta {
+  flex: 1;
+  min-width: 260px;
+}
+
+.tagRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.title {
+  font-size: clamp(24px, 4vw, 40px);
+  margin: 4px 0 4px;
+}
+
+.artist {
+  font-size: 16px;
+  font-weight: 700;
+  color: #444;
+}
+
+.updated {
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.gateHeadline {
+  margin: 28px 0 6px;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.sectionTitle {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 16px;
+  margin: 0 0 14px;
+}
+
+.subTitle {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 13px;
+  margin: 22px 0 10px;
+  color: #444;
+}
+
+.noData {
+  color: #555;
+  font-size: 14px;
+}
+
+.subscoreGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.subscoreCard {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.subscoreKey {
+  font-size: 12px;
+  text-transform: capitalize;
+  color: #555;
+  font-weight: 700;
+}
+
+.subscoreVal {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listItem {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.listMeta {
+  font-size: 12px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.fraudCard {
+  margin-top: 32px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-weight: 700;
+}

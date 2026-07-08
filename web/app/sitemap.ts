@@ -4,7 +4,7 @@
  *  doner — asla firlatmaz (bkz. docs/PROGRAMATIK_SEO_WORKFLOW.md §10). */
 
 import type { MetadataRoute } from "next";
-import { getArtistSitemap } from "@/lib/api";
+import { getArtistSitemap, getSongSitemap, getPlaylistSitemap } from "@/lib/api";
 import { COMPARE_SLUGS } from "@/lib/compareData";
 import { BLOG_SLUGS } from "@/lib/blogData";
 
@@ -39,16 +39,42 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const artists = await getArtistSitemap();
-  if (!artists || artists.length === 0) {
-    return [...staticEntries, ...compareEntries, ...blogEntries];
-  }
-
-  const artistEntries: MetadataRoute.Sitemap = artists
+  const artistEntries: MetadataRoute.Sitemap = (artists ?? [])
     .filter((entry) => Boolean(entry?.slug))
     .map((entry) => ({
       url: `${SITE_URL}/artist/${encodeURIComponent(entry.slug)}`,
       lastModified: entry.last_refreshed_at ? new Date(entry.last_refreshed_at) : new Date(),
     }));
 
-  return [...staticEntries, ...compareEntries, ...blogEntries, ...artistEntries];
+  // Tier-4 (sarki) + Tier-5 (playlist) — build pipeline henuz baglanmadigi
+  // icin bu tablolar su an BOS (getSongSitemap/getPlaylistSitemap [] veya
+  // null doner) -> asagidaki map'ler hicbir sey eklemez, static/artist
+  // girdileri asla etkilenmez. seo_pages.pages_for_sitemap() song icin
+  // SADECE {isrc, last_refreshed_at} doner (slug YOK, canli backend'e karsi
+  // dogrulandi) — sayfa route'u /song/[isrc]/[slug] oldugu icin slug segmenti
+  // isrc'den turetilir (sayfa zaten isrc ile fetch eder, slug kozmetiktir).
+  const songs = await getSongSitemap();
+  const songEntries: MetadataRoute.Sitemap = (songs ?? [])
+    .filter((entry) => Boolean(entry?.isrc))
+    .map((entry) => ({
+      url: `${SITE_URL}/song/${encodeURIComponent(entry.isrc)}/${encodeURIComponent(entry.isrc)}`,
+      lastModified: entry.last_refreshed_at ? new Date(entry.last_refreshed_at) : new Date(),
+    }));
+
+  const playlists = await getPlaylistSitemap();
+  const playlistEntries: MetadataRoute.Sitemap = (playlists ?? [])
+    .filter((entry) => Boolean(entry?.pid))
+    .map((entry) => ({
+      url: `${SITE_URL}/playlist/${encodeURIComponent(entry.pid)}`,
+      lastModified: entry.last_refreshed_at ? new Date(entry.last_refreshed_at) : new Date(),
+    }));
+
+  return [
+    ...staticEntries,
+    ...compareEntries,
+    ...blogEntries,
+    ...artistEntries,
+    ...songEntries,
+    ...playlistEntries,
+  ];
 }

@@ -2058,6 +2058,57 @@ export const captureLead = (
 export const getArtistSitemap = () =>
   j<{ slug: string; last_refreshed_at?: string }[]>(`/seo/sitemap/artist`);
 
+/* --- Programatik SEO: Tier-4 sarki + Tier-5 playlist sayfalari ----------------- */
+
+/** seo_pages.get_song_page(isrc) donen dict (canli /seo/song/{isrc} yanitina
+ *  karsi dogrulandi). _parse_json_fields() SADECE data_json'i parse eder
+ *  (findings_json burada YOK, artist sayfasindan farkli). Sayfa hic
+ *  uretilmemisse (song/playlist build pipeline henuz baglanmadi) backend 404
+ *  doner -> j<T> null'a duser, sayfa "henuz hazir degil" durumunu gosterir. */
+export type SongPage = {
+  isrc: string;
+  slug: string;
+  artist: string;
+  title: string;
+  score: number | null;
+  bpm: number | null;
+  song_key: string | null;
+  data_json: Record<string, unknown>;
+  last_refreshed_at?: string;
+  indexed?: number;
+};
+
+/** Public — auth gerekmez (SSG/ISR data fetch). */
+export const getSongPage = (isrc: string) =>
+  j<SongPage>(`/seo/song/${encodeURIComponent(isrc)}`);
+
+/** seo_pages.get_playlist_page(pid) donen dict (canli /seo/playlist/{pid}
+ *  yanitina karsi dogrulandi). */
+export type PlaylistPage = {
+  platform_playlist_id: string;
+  slug: string;
+  title: string;
+  fraud_score: number | null;
+  verdict: string | null;
+  data_json: Record<string, unknown>;
+  last_refreshed_at?: string;
+  indexed?: number;
+};
+
+export const getPlaylistPage = (pid: string) =>
+  j<PlaylistPage>(`/seo/playlist/${encodeURIComponent(pid)}`);
+
+/** Sitemap shard'lari — seo_pages.pages_for_sitemap() DIKKAT: song icin
+ *  SADECE {isrc, last_refreshed_at} doner (slug YOK — _SITEMAP_TABLES'ta
+ *  song'un key_name'i "isrc"; artist'ten farkli, canli koda karsi
+ *  dogrulandi). Playlist icin key_name "pid". Sitemap uretimi bu yuzden
+ *  slug'i isrc/pid'den turetir (bkz. app/sitemap.ts). */
+export const getSongSitemap = () =>
+  j<{ isrc: string; last_refreshed_at?: string }[]>(`/seo/sitemap/song`);
+
+export const getPlaylistSitemap = () =>
+  j<{ pid: string; last_refreshed_at?: string }[]>(`/seo/sitemap/playlist`);
+
 /* --- Tier-2 ucretsiz araclar: BPM/key/ISRC/aylik-dinleyici --------------------- */
 /* Tumu PUBLIC (auth yok, kredi harcanmaz) — bkz. marketplace/api_tools.py.
  * jd kullanilir: found=false olsa da 200 doner, jd hatayi (or. HTTP hatasi)
