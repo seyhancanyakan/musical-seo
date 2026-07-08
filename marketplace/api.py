@@ -646,3 +646,19 @@ def _seo_build_cron() -> None:
 
 
 threading.Thread(target=_seo_build_cron, daemon=True).start()
+
+
+def _alerts_cron() -> None:
+    # Retention: gunluk alert taramasi (cover bulundu / sahte aktivite / ...) —
+    # kullaniciyi geri getiren e-posta/bildirim tetikleyicileri (bkz. alerts.py).
+    import time as _time
+    from marketplace import alerts
+    while True:
+        _time.sleep(24 * 60 * 60)  # gunde 1 kez
+        try:
+            alerts.run_daily()
+        except Exception:
+            pass  # cron tek hatayla olmesin
+
+
+threading.Thread(target=_alerts_cron, daemon=True).start()

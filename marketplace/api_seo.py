@@ -12,7 +12,7 @@ import os
 from fastapi import APIRouter, Header, HTTPException, Depends
 from pydantic import BaseModel
 
-from marketplace import accounts, catalog_scout, leads, seo_pages
+from marketplace import accounts, alerts, catalog_scout, indexnow, leads, seo_pages
 
 router = APIRouter()
 
@@ -128,3 +128,34 @@ def admin_queue_stats(_: None = Depends(_require_admin_key)) -> dict:
     """Kuyrugun durum bazinda ozeti (pending/done/thin/failed) — operator
     seed + gunluk cron ilerlemesini gozlemlesin diye."""
     return seo_pages.queue_stats()
+
+
+# --- Admin: IndexNow + retention alerts --------------------------------------
+
+@router.get("/seo/indexnow-key")
+def admin_indexnow_key(_: None = Depends(_require_admin_key)) -> dict:
+    """IndexNow anahtari + keyLocation — operator {key}.txt dosyasini site
+    kokune koysun diye. Cron her build sonrasi yeni URL'leri otomatik gonderir."""
+    key = indexnow.get_key()
+    return {"key": key, "key_location": f"{indexnow.SITE_URL}/{key}.txt"}
+
+
+@router.post("/seo/reindex")
+def admin_reindex(page_type: str = "artist", limit: int = 10000,
+                  _: None = Depends(_require_admin_key)) -> dict:
+    """Uretilmis sayfalarin URL'lerini IndexNow'a topluca yeniden bildir."""
+    try:
+        rows = seo_pages.pages_for_sitemap(page_type, 0, limit)
+    except ValueError as exc:
+        raise _400(exc)
+    slugs = [r.get("slug") for r in rows if r.get("slug")]
+    prefix = {"artist": "/artist/", "song": "/song/", "playlist": "/playlist/"}.get(
+        page_type, "/artist/"
+    )
+    return indexnow.submit_slugs(slugs, path_prefix=prefix)
+
+
+@router.post("/alerts/run")
+def admin_run_alerts(_: None = Depends(_require_admin_key)) -> dict:
+    """Retention alert taramasini elle tetikle (cron zaten gunluk calisir)."""
+    return alerts.run_daily()

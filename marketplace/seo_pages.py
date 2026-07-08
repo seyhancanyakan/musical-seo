@@ -279,6 +279,9 @@ def build_next_batch(limit: int = 100) -> dict:
     processed = len(queue_items)
     built = thin = failed = 0
     now = _now_iso()
+    # Bu turda basariyla YAZILAN sanatci sayfalarinin slug'lari — asama 2
+    # sonunda IndexNow'a bildirilecek (bkz. asagidaki hook + marketplace.indexnow).
+    built_slugs: list[str] = []
 
     # --- Asama 1: audit'leri es-zamanli calistir (DB yazimi YOK) --------------
     audit_outcomes: dict[int, tuple[str, Any]] = {}
@@ -368,8 +371,22 @@ def build_next_batch(limit: int = 100) -> dict:
                     (queue_id,),
                 )
             built += 1
+            built_slugs.append(slug)
     finally:
         conn.close()
+
+    # --- Asama 3: yeni yazilan sayfalari IndexNow'a bildir (Bing/Yandex aninda
+    # index — bkz. docs/PROGRAMATIK_SEO_WORKFLOW.md §10). Gec (lazy) import
+    # dongusel bagimliliktan kacinmak icindir. Bu adim ASLA build sonucunu
+    # etkilemez: indexnow modulunun kendisi zaten ag hatasina karsi guvenli
+    # (guarded) ama yine de savunma amacli try/except ile sariyoruz — beklenmedik
+    # bir indexnow hatasi build_next_batch'in donus degerini asla bozmasin.
+    if built_slugs:
+        try:
+            from marketplace import indexnow
+            indexnow.submit_slugs(built_slugs)
+        except Exception:
+            pass
 
     return {"processed": processed, "built": built, "thin": thin, "failed": failed}
 
