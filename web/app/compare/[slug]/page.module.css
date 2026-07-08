@@ -1,0 +1,160 @@
+/* Tier-1 karsilastirma sayfalari — neo-brutal Songdeck stili (server-rendered
+   statik SEO icerigi). nb-* cekirdek siniflari globals.css'ten gelir. */
+
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+.breadcrumb {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 18px;
+  color: #444;
+}
+.breadcrumb a {
+  color: var(--blue);
+  text-decoration: none;
+}
+.breadcrumb a:hover { text-decoration: underline; }
+
+.h1 {
+  font-size: clamp(28px, 5vw, 44px);
+  line-height: 1.05;
+  margin-bottom: 20px;
+}
+
+.versus {
+  display: inline-flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.intro {
+  font-size: 18px;
+  line-height: 1.6;
+  padding: 20px;
+  margin-bottom: 32px;
+  background: var(--lightblue);
+}
+
+.tableWrap {
+  overflow-x: auto;
+  margin-bottom: 36px;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #fff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
+}
+.table th,
+.table td {
+  border: 2px solid var(--ink);
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.table thead th {
+  background: var(--ink);
+  color: #fff;
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+.table tbody th {
+  background: var(--lightblue);
+  font-weight: 800;
+  width: 26%;
+}
+.table tbody tr:nth-child(even) td { background: #f5f5f0; }
+
+.section { margin-bottom: 28px; }
+.sectionHeading {
+  font-size: 22px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 3px solid var(--ink);
+}
+.sectionBody {
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.verdict {
+  padding: 24px;
+  margin: 36px 0;
+  background: var(--green);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+.verdictLabel {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.verdictBody {
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 600;
+}
+
+.faq { margin: 36px 0; }
+.faqTitle {
+  font-size: 24px;
+  margin-bottom: 16px;
+}
+.faqItem {
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.faqQ {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+.faqA {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.cta {
+  padding: 28px 24px;
+  margin-top: 40px;
+  background: var(--purple);
+  color: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--ink);
+}
+.ctaLabel {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.ctaBody {
+  font-size: 17px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.ctaBtns {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}

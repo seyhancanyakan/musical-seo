@@ -5,6 +5,7 @@
 
 import type { MetadataRoute } from "next";
 import { getArtistSitemap } from "@/lib/api";
+import { COMPARE_SLUGS } from "@/lib/compareData";
 
 export const revalidate = 3600;
 
@@ -25,8 +26,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
   }));
 
+  const compareEntries: MetadataRoute.Sitemap = COMPARE_SLUGS.map((slug) => ({
+    url: `${SITE_URL}/compare/${slug}`,
+    lastModified: new Date(),
+  }));
+
   const artists = await getArtistSitemap();
-  if (!artists || artists.length === 0) return staticEntries;
+  if (!artists || artists.length === 0) return [...staticEntries, ...compareEntries];
 
   const artistEntries: MetadataRoute.Sitemap = artists
     .filter((entry) => Boolean(entry?.slug))
@@ -35,5 +41,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: entry.last_refreshed_at ? new Date(entry.last_refreshed_at) : new Date(),
     }));
 
-  return [...staticEntries, ...artistEntries];
+  return [...staticEntries, ...compareEntries, ...artistEntries];
 }
