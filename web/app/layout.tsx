@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { LocaleProvider } from "@/lib/locale";
 import "./globals.css";
@@ -9,6 +9,22 @@ export const metadata: Metadata = {
     "SEO report card, systematic playlist pitching, verified results. " +
     "We don't sell guaranteed streams — we sell proof.",
 };
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+// Bu layout zaten cookies() kullandigi icin dogal olarak dinamik, ama Next
+// 15.5.x bunu ORTULU olarak cikarinca build sirasinda "statik govde"
+// (partial prerender) denemesi yapiyor ve bu adimda dahili bir metadata/
+// viewport cozumleme hatasina takiliyor: "Cannot read properties of
+// undefined (reading 'length')" (tum route'larda ayni hata, app kodundan
+// bagimsiz — bilinen Next.js dahili sorunu). `dynamic` acikca "force-dynamic"
+// olarak belirtilince Next bu statik govde denemesini tamamen atliyor ve
+// build hatasiz tamamlaniyor. Runtime davranisi degismiyor: rota zaten
+// cookies() nedeniyle her istekte sunucuda render ediliyordu.
+export const dynamic = "force-dynamic";
 
 export default async function RootLayout({
   children,

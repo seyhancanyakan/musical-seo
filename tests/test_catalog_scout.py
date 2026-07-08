@@ -123,38 +123,42 @@ def test_seed_starter_queues_all(seo_db):
 # --- build_next_batch: en yuksek oncelikten baslama ---------------------------
 
 def test_build_next_batch_consumes_highest_priority_first(seo_db, monkeypatch):
-    # Karisik sirayla ekle: dusuk, yuksek, orta oncelik.
+    # Karisik sirayla ekle: dusuk, yuksek, orta, en dusuk oncelik.
     seo_pages.enqueue_artist("Dusuk Oncelik", priority=1)
     seo_pages.enqueue_artist("Yuksek Oncelik", priority=1000)
     seo_pages.enqueue_artist("Orta Oncelik", priority=500)
+    seo_pages.enqueue_artist("En Dusuk Oncelik", priority=0)
 
-    call_order: list[str] = []
+    monkeypatch.setattr(seo_pages.audit, "run_audit", lambda q: _fake_result(q))
 
-    def _stub_audit(artist_name: str):
-        call_order.append(artist_name)
-        return _fake_result(artist_name)
-
-    monkeypatch.setattr(seo_pages.audit, "run_audit", _stub_audit)
-
+    # build_next_batch artik audit'leri es-zamanli (ThreadPoolExecutor)
+    # calistirdigi icin cagri SIRASI (call order) artik deterministik degil —
+    # onemli olan HANGI kayitlarin islendigi: secim hala SELECT ... ORDER BY
+    # priority DESC sorgusuyla yapiliyor, dolayisiyla limit=3 ile SADECE en
+    # yuksek 3 oncelik islenmeli, en dusuk oncelik kuyrukta (pending) kalmali.
     result = seo_pages.build_next_batch(limit=3)
 
     assert result == {"processed": 3, "built": 3, "thin": 0, "failed": 0}
-    assert call_order == ["Yuksek Oncelik", "Orta Oncelik", "Dusuk Oncelik"]
+    assert seo_pages.get_artist_page("yuksek-oncelik") is not None
+    assert seo_pages.get_artist_page("orta-oncelik") is not None
+    assert seo_pages.get_artist_page("dusuk-oncelik") is not None
+    assert seo_pages.get_artist_page("en-dusuk-oncelik") is None
 
 
 def test_build_next_batch_respects_starter_seed_order(seo_db, monkeypatch):
     catalog_scout.seed_from_list(["Ilk Sira", "Ikinci Sira", "Ucuncu Sira"], base_priority=100)
 
-    call_order: list[str] = []
+    monkeypatch.setattr(seo_pages.audit, "run_audit", lambda q: _fake_result(q))
 
-    def _stub_audit(artist_name: str):
-        call_order.append(artist_name)
-        return _fake_result(artist_name)
+    # Es-zamanli calistirma altinda cagri sirasi deterministik degil; seed
+    # sirasinin korunumu limit ile TRUNCATE ederek (kesip) test edilir: ilk
+    # iki isim (yuksek oncelik) islenmeli, ucuncusu kuyrukta kalmali.
+    result = seo_pages.build_next_batch(limit=2)
 
-    monkeypatch.setattr(seo_pages.audit, "run_audit", _stub_audit)
-    seo_pages.build_next_batch(limit=10)
-
-    assert call_order == ["Ilk Sira", "Ikinci Sira", "Ucuncu Sira"]
+    assert result["processed"] == 2
+    assert seo_pages.get_artist_page("ilk-sira") is not None
+    assert seo_pages.get_artist_page("ikinci-sira") is not None
+    assert seo_pages.get_artist_page("ucuncu-sira") is None
 
 
 # --- queue_stats ---------------------------------------------------------------

@@ -20,6 +20,7 @@ modul asla onun yuzunden cokmez (try/except ile 'failed' olarak isaretler).
 """
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import re
 import sqlite3
@@ -102,12 +103,23 @@ QUEUE_STATUSES = ("pending", "done", "thin", "failed")
 # Gunluk arka plan build cron'unun (bkz. marketplace.api._seo_build_cron) her
 # calistigi seferde isleyebilecegi AZAMI kayit sayisi — Google'a spam sinyali
 # vermemek icin sayfa uretimi kasten yavas/kademeli tutulur.
-# Gunluk uretim tavani. OLCULEN gercek hiz ~15sn/sanatci (6 platforma sirali
-# audit) -> tek gunluk sirali cron calismasi 24 saatte ~5-6K uretebilir. Bunun
-# uzeri guni asar. Daha yuksek uretim icin build_next_batch'i es-zamanli
-# (ThreadPoolExecutor, rate-limit'e saygili) yapmak gerekir -> ~20-40K/gun.
-# Simdilik dürüst sirali tavan:
+# Gunluk uretim tavani. Sirali (eski) calismada gercek hiz ~15sn/sanatci (6
+# platforma sirali audit) -> 24 saatte ~5-6K uretebiliyordu. build_next_batch
+# artik SEO_BUILD_CONCURRENCY kadar es-zamanli audit calistiriyor (bkz. asagi),
+# bu da gunluk tavani ~20-40K'a kadar cikarmaya izin verir. Tavan yine de
+# operator karariyla kontrollu tutulur (spam sinyali riskine karsi):
 SEO_DAILY_BUILD_CAP = 5000
+
+# build_next_batch icinde audit.run_audit CAGRILARININ es-zamanli calisacagi
+# maksimum thread sayisi. Audit suresinin buyuk kismi ag bekleme (6 kaynaga
+# istek) oldugu icin orta duzeyde es-zamanlilik toplam throughput'u carpar.
+# Cok yuksek bir deger, en siki oranli kaynagi (ozellikle MusicBrainz ~1
+# istek/saniye) zorlayip throttling'e / IP banına yol acar. 8, guvenli bir
+# orta nokta: rate-limit'e asiri yuklenmeden throughput'u belirgin artirir.
+# En siki kaynak yine de es-zamanlilik altinda throttle olabilir — sorun
+# degil, o audit'ler thin/failed'e duser ve sonraki cron calistirmasinda
+# tekrar denenir (audit zaten ag hatasina karsi guvenlidir).
+SEO_BUILD_CONCURRENCY = 8
 
 _TURKISH_SLUG_MAP = {
     "ç": "c", "Ç": "c",
@@ -210,45 +222,92 @@ def _result_to_data(result: Any) -> dict:
     return dict(getattr(result, "__dict__", {}))
 
 
+def _audit_one(page_type: str, ref: str) -> tuple[str, Any]:
+    """Tek bir kuyruk kaydi icin audit calistirir (ThreadPoolExecutor worker'i
+    icinde). Asla istisna firlatmaz — 'artist' disindaki turler ve
+    audit.run_audit hatalari 'failed' olarak donsun ki havuzdaki (pool) tek
+    bir hata butun batch'i cokertmesin. Donus: (outcome, result) — outcome
+    'failed' ise result None'dir, aksi halde audit.run_audit ciktisidir."""
+    if page_type != "artist":
+        return ("failed", None)
+    try:
+        result = audit.run_audit(ref)
+    except Exception:
+        return ("failed", None)
+    return ("audited", result)
+
+
 def build_next_batch(limit: int = 100) -> dict:
-    """Kuyruktan en fazla `limit` bekleyen kaydi alir, isler. 'artist' disindaki
-    turler Faz 1'de desteklenmiyor (failed olarak isaretlenir, cokme YOK).
-    audit.run_audit ag hatasi firlatirsa satir 'failed' olur, dongu devam eder.
-    Skor yoksa veya hicbir platformda bulunamadiysa (platform_count == 0)
-    satir 'thin' olarak isaretlenir, sayfa YAZILMAZ."""
+    """Kuyruktan en fazla `limit` bekleyen kaydi PRIORITY sirasiyla
+    (priority DESC, id ASC) alir. Audit'ler SEO_BUILD_CONCURRENCY kadar
+    es-zamanli (ThreadPoolExecutor) calistirilir — audit suresinin buyuk
+    kismi ag bekleme oldugu icin bu, gunluk throughput'u sirali calismaya
+    gore carpar (bkz. SEO_BUILD_CONCURRENCY yorumu).
+
+    Yuksek oncelikli kayitlar YINE once islenir: secim SELECT sorgusuyla
+    (priority DESC) yapilir ve DB yazimlari thread'lerin tamamlanma sirasina
+    degil, orijinal kuyruk id'sine gore uygulanir — thread zamanlamasi
+    sonucu etkilemez.
+
+    DB yazimlari (queue durumu + sayfa upsert) es-zamanli audit'ler TAMAMEN
+    bittikten SONRA, TEK bir sqlite baglantisi uzerinden sirali yapilir.
+    SQLite tek yazarli (single-writer) oldugu icin coklu thread'den ayni anda
+    yazmaya calismak 'database is locked' hatasina yol acardi.
+
+    'artist' disindaki turler Faz 1'de desteklenmiyor (failed olarak
+    isaretlenir, cokme YOK). audit.run_audit ag hatasi firlatirsa o kayit
+    'failed' olur; havuzdaki diger audit'ler etkilenmez (izole try/except,
+    bkz. _audit_one). Skor yoksa veya hicbir platformda bulunamadiysa
+    (platform_count == 0) satir 'thin' olarak isaretlenir, sayfa YAZILMAZ."""
     if limit <= 0:
         raise ValueError("limit pozitif bir sayi olmali")
 
     conn = _connect()
-    processed = built = thin = failed = 0
-    now = _now_iso()
     try:
         rows = conn.execute(
             "SELECT * FROM build_queue WHERE status = 'pending' "
             "ORDER BY priority DESC, id ASC LIMIT ?",
             (limit,),
         ).fetchall()
+        # Baglantiyi hemen kapatiyoruz: es-zamanli audit asamasi boyunca
+        # (network IO, saniyeler surebilir) acik bir sqlite baglantisi
+        # tutmuyoruz.
+        queue_items = [(row["id"], row["page_type"], row["ref"]) for row in rows]
+    finally:
+        conn.close()
 
-        for row in rows:
-            processed += 1
+    processed = len(queue_items)
+    built = thin = failed = 0
+    now = _now_iso()
 
-            if row["page_type"] != "artist":
-                with conn:
-                    conn.execute(
-                        "UPDATE build_queue SET status = 'failed' WHERE id = ?",
-                        (row["id"],),
-                    )
-                failed += 1
-                continue
-
-            artist_name = row["ref"]
+    # --- Asama 1: audit'leri es-zamanli calistir (DB yazimi YOK) --------------
+    audit_outcomes: dict[int, tuple[str, Any]] = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=SEO_BUILD_CONCURRENCY) as executor:
+        future_to_id = {
+            executor.submit(_audit_one, page_type, ref): queue_id
+            for queue_id, page_type, ref in queue_items
+        }
+        for future in concurrent.futures.as_completed(future_to_id):
+            queue_id = future_to_id[future]
             try:
-                result = audit.run_audit(artist_name)
+                audit_outcomes[queue_id] = future.result()
             except Exception:
+                # _audit_one zaten kendi icinde try/except ile sarili; buraya
+                # normal kosullarda dusmez — yine de savunma amacli 'failed'.
+                audit_outcomes[queue_id] = ("failed", None)
+
+    # --- Asama 2: TUM DB yazimlarini TEK baglanti + oncelik sirasinda uygula --
+    conn = _connect()
+    try:
+        for queue_id, page_type, ref in queue_items:
+            outcome, result = audit_outcomes.get(queue_id, ("failed", None))
+            artist_name = ref
+
+            if outcome == "failed":
                 with conn:
                     conn.execute(
                         "UPDATE build_queue SET status = 'failed' WHERE id = ?",
-                        (row["id"],),
+                        (queue_id,),
                     )
                 failed += 1
                 continue
@@ -261,7 +320,7 @@ def build_next_batch(limit: int = 100) -> dict:
                 with conn:
                     conn.execute(
                         "UPDATE build_queue SET status = 'thin' WHERE id = ?",
-                        (row["id"],),
+                        (queue_id,),
                     )
                 thin += 1
                 continue
@@ -306,7 +365,7 @@ def build_next_batch(limit: int = 100) -> dict:
                     )
                 conn.execute(
                     "UPDATE build_queue SET status = 'done' WHERE id = ?",
-                    (row["id"],),
+                    (queue_id,),
                 )
             built += 1
     finally:
