@@ -2005,3 +2005,55 @@ export const enableWatchdog = (trackQuery: string) =>
     headers: authHeaders(),
     body: JSON.stringify({ track_query: trackQuery }),
   });
+
+/* --- Programatik SEO: Tier-3 sanatci sayfalari + e-posta kapisi ---------------- */
+
+/** marketplace/seo_pages.py::_top_findings() ciktisi — en fazla 3 kayit,
+ *  audit.Finding alanlarinin alt kumesi (severity/category opsiyonel, message
+ *  zorunlu, action null olabilir). */
+export type ArtistPageFinding = {
+  severity?: string;
+  category?: string;
+  message: string;
+  action?: string | null;
+};
+
+/** seo_pages.get_artist_page(slug) donen dict. DIKKAT: _parse_json_fields()
+ *  DB kolonlarini (findings_json/data_json) parse eder ama anahtar adini
+ *  DEGISTIRMEZ — API yaniti hala `findings_json` (liste) ve `data_json`
+ *  (obje) alanlarini kullanir, `findings`/`data` DEGIL (canli backend'e
+ *  karsi dogrulandi). Sayfa hic uretilmemisse backend 404 doner -> j<T>
+ *  null'a duser (sayfa "henuz hazir degil" durumunu gosterir, asla cokmez). */
+export type ArtistPage = {
+  slug: string;
+  artist_name: string;
+  isni?: string | null;
+  score: number;
+  platform_count: number;
+  findings_json: ArtistPageFinding[];
+  data_json: Record<string, unknown>;
+  first_built_at?: string;
+  last_refreshed_at?: string;
+  indexed?: number;
+};
+
+/** Public — auth gerekmez (SSG/ISR data fetch). */
+export const getArtistPage = (slug: string) =>
+  j<ArtistPage>(`/seo/artist/${encodeURIComponent(slug)}`);
+
+/** E-posta kapisi lead yakalama — POST /leads/capture. Honeypot (website)
+ *  dolu ise backend sessizce {ok:true} doner (bot); jd ile Turkce hata da
+ *  gorunur olur (or. gecersiz e-posta). */
+export const captureLead = (
+  email: string,
+  source: string,
+  context?: Record<string, unknown>
+) =>
+  jd<{ ok: boolean }>(`/leads/capture`, {
+    method: "POST",
+    body: JSON.stringify({ email, source, context: context ?? null }),
+  });
+
+/** Sitemap shard'i (artist) — sadece slug + son yenileme zamani. */
+export const getArtistSitemap = () =>
+  j<{ slug: string; last_refreshed_at?: string }[]>(`/seo/sitemap/artist`);

@@ -1,0 +1,167 @@
+/* Tier-3 sanatci sayfasi — mavi neo-brutal (bkz. sahte-playlist/rapor) */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.body {
+  padding: 34px 32px 56px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 60px 0;
+  text-align: center;
+  font-weight: 800;
+}
+
+.notBuilt {
+  padding: 32px;
+  max-width: 520px;
+  margin: 60px auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notifyForm {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.notifySent {
+  font-weight: 800;
+  color: var(--green);
+}
+
+.notifyError {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+.head {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+.gauge {
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--ink);
+  position: relative;
+  flex: none;
+}
+
+.gaugeInner {
+  width: 130px;
+  height: 130px;
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.gaugeScore {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 40px;
+  line-height: 1;
+}
+
+.gaugeOf {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.headMeta {
+  flex: 1;
+  min-width: 260px;
+}
+
+.artistName {
+  font-size: clamp(24px, 4vw, 40px);
+  margin: 12px 0 4px;
+}
+
+.updated {
+  color: #555;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sectionTitle {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 16px;
+  margin: 28px 0 14px;
+}
+
+.findingGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 760px) {
+  .findingGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.finding {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+
+.findingMsg {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.findingAction {
+  margin: 0;
+  font-size: 13px;
+  color: #444;
+}
+
+.gateHeadline {
+  margin: 28px 0 6px;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.claimCard {
+  margin-top: 32px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.claimTitle {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 15px;
+}
