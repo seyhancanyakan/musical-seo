@@ -1,0 +1,111 @@
+/* Tek arac sayfasi (BPM/key/ISRC/aylik-dinleyici) — neo-brutal form + sonuc karti */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.body {
+  padding: 34px 32px 64px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: clamp(24px, 3.2vw, 36px);
+  margin: 14px 0 6px;
+}
+
+.lede {
+  color: #444;
+  font-size: 15px;
+  max-width: 62ch;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+
+.formCard {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lbl {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  display: block;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.errorBanner {
+  border: 3px solid var(--ink);
+  background: #fff0f0;
+  color: #7a0000;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.resultCard {
+  margin-top: 22px;
+  padding: 22px;
+}
+
+.resultHead {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 10px;
+}
+
+.resultGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #777;
+  font-weight: 700;
+}
+
+.statValue {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 26px;
+  color: var(--ink);
+}
+
+.notFoundNote {
+  font-size: 13px;
+  color: #7a5b00;
+  background: #fff8e0;
+  border: 3px solid var(--ink);
+  padding: 12px 16px;
+  margin-top: 12px;
+}
+
+.heuristicNote {
+  font-size: 12px;
+  color: #666;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.teaser {
+  margin-top: 32px;
+}

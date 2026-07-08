@@ -2057,3 +2057,62 @@ export const captureLead = (
 /** Sitemap shard'i (artist) — sadece slug + son yenileme zamani. */
 export const getArtistSitemap = () =>
   j<{ slug: string; last_refreshed_at?: string }[]>(`/seo/sitemap/artist`);
+
+/* --- Tier-2 ucretsiz araclar: BPM/key/ISRC/aylik-dinleyici --------------------- */
+/* Tumu PUBLIC (auth yok, kredi harcanmaz) — bkz. marketplace/api_tools.py.
+ * jd kullanilir: found=false olsa da 200 doner, jd hatayi (or. HTTP hatasi)
+ * ayirt eder — sayfalar found alanina bakarak "bulunamadi" durumunu gosterir. */
+
+export type BpmResult = {
+  query: string;
+  found: boolean;
+  artist: string | null;
+  title: string | null;
+  bpm: number | null;
+  energy: number | null;
+  brightness: number | null;
+};
+
+export const toolBpm = (query: string) =>
+  jd<BpmResult>(`/tools/bpm?query=${encodeURIComponent(query)}`);
+
+/** estimated_key SEZGISEL bir tahmindir (gercek chroma/pitch-class analizi
+ *  degil) — UI bunu acikca "tahmini" olarak etiketlemeli. */
+export type KeyResult = {
+  query: string;
+  found: boolean;
+  artist: string | null;
+  title: string | null;
+  estimated_key: string | null;
+  confidence: number | null;
+  note: string;
+};
+
+export const toolKey = (query: string) =>
+  jd<KeyResult>(`/tools/key?query=${encodeURIComponent(query)}`);
+
+export type IsrcResult = {
+  query: string;
+  found: boolean;
+  artist: string | null;
+  title: string | null;
+  isrc: string | null;
+  release_date: string | null;
+};
+
+export const toolIsrc = (query: string) =>
+  jd<IsrcResult>(`/tools/isrc?query=${encodeURIComponent(query)}`);
+
+/** monthly_listeners HER ZAMAN null'dur — Spotify public API'sinde bu metrik
+ *  yok; sayi asla uydurulmaz (bkz. api_tools.py docstring). */
+export type MonthlyListenersResult = {
+  query: string;
+  found: boolean;
+  artist: string | null;
+  title: string | null;
+  monthly_listeners: number | null;
+  note: string;
+};
+
+export const toolMonthlyListeners = (query: string) =>
+  jd<MonthlyListenersResult>(`/tools/monthly-listeners?query=${encodeURIComponent(query)}`);

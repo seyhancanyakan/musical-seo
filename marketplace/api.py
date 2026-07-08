@@ -46,7 +46,8 @@ app.include_router(api_features.router)
 from marketplace import (  # noqa: E402  (router kayitlari app tanimindan sonra)
     api_airplay, api_attribution, api_campaigns, api_cover_hunt, api_feedback,
     api_fingerprint, api_fraud, api_labels, api_promo, api_radio_ads,
-    api_release_timing, api_seo, api_smartlink, api_spot, api_sync, api_tracks,
+    api_release_timing, api_seo, api_smartlink, api_spot, api_sync, api_tools,
+    api_tracks,
 )
 
 app.include_router(api_campaigns.router)
@@ -73,6 +74,9 @@ app.include_router(api_cover_hunt.router)
 # Programatik SEO: public sayfa verisi (/seo/*) + e-posta kapisi (/leads/capture)
 # (docs/PROGRAMATIK_SEO_WORKFLOW.md).
 app.include_router(api_seo.router)
+
+# Tier-2 ucretsiz araclar: BPM/key/ISRC/aylik-dinleyici (docs/PROGRAMATIK_SEO_WORKFLOW.md §3).
+app.include_router(api_tools.router)
 
 
 class CuratorApply(BaseModel):

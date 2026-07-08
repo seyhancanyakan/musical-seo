@@ -1,0 +1,91 @@
+/* Araclar index — neo-brutal kart grid (bkz. sahte-playlist/page.module.css) */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.body {
+  padding: 34px 32px 64px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.title {
+  font-size: clamp(26px, 3.4vw, 40px);
+  margin: 14px 0 6px;
+}
+
+.lede {
+  color: #444;
+  font-size: 15px;
+  max-width: 62ch;
+  line-height: 1.5;
+  margin: 0 0 32px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px;
+  text-decoration: none;
+  color: var(--ink);
+  position: relative;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 9px 9px 0 var(--ink);
+}
+
+.emoji {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.cardTitle {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 17px;
+  text-transform: uppercase;
+  letter-spacing: -0.3px;
+}
+
+.cardDesc {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.45;
+  flex: 1;
+}
+
+.badge {
+  position: absolute;
+  top: -10px;
+  right: 14px;
+  background: var(--red);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  transform: rotate(-2deg);
+}
