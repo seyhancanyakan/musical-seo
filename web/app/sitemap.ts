@@ -6,6 +6,7 @@
 import type { MetadataRoute } from "next";
 import { getArtistSitemap } from "@/lib/api";
 import { COMPARE_SLUGS } from "@/lib/compareData";
+import { BLOG_SLUGS } from "@/lib/blogData";
 
 export const revalidate = 3600;
 
@@ -18,6 +19,7 @@ const STATIC_PATHS = [
   "/attribution",
   "/yayin-zamanlamasi",
   "/cover-avcisi",
+  "/blog",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -31,8 +33,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
   }));
 
+  const blogEntries: MetadataRoute.Sitemap = BLOG_SLUGS.map((slug) => ({
+    url: `${SITE_URL}/blog/${slug}`,
+    lastModified: new Date(),
+  }));
+
   const artists = await getArtistSitemap();
-  if (!artists || artists.length === 0) return [...staticEntries, ...compareEntries];
+  if (!artists || artists.length === 0) {
+    return [...staticEntries, ...compareEntries, ...blogEntries];
+  }
 
   const artistEntries: MetadataRoute.Sitemap = artists
     .filter((entry) => Boolean(entry?.slug))
@@ -41,5 +50,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: entry.last_refreshed_at ? new Date(entry.last_refreshed_at) : new Date(),
     }));
 
-  return [...staticEntries, ...compareEntries, ...artistEntries];
+  return [...staticEntries, ...compareEntries, ...blogEntries, ...artistEntries];
 }

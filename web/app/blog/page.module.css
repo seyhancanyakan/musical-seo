@@ -1,0 +1,95 @@
+/* Tier-6 blog index — neo-brutal Songdeck stili (server-rendered statik SEO).
+   nb-* cekirdek siniflari globals.css'ten gelir. */
+
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+
+.breadcrumb {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+  color: #444;
+}
+.breadcrumb a {
+  color: var(--blue);
+  text-decoration: none;
+}
+.breadcrumb a:hover { text-decoration: underline; }
+
+.header {
+  margin-bottom: 36px;
+}
+.h1 {
+  font-size: clamp(30px, 5vw, 50px);
+  line-height: 1.02;
+  margin-bottom: 14px;
+}
+.lede {
+  font-size: 18px;
+  line-height: 1.6;
+  max-width: 62ch;
+  padding: 16px 20px;
+  background: var(--lightblue);
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 26px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 20px;
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  text-decoration: none;
+  color: var(--ink);
+  transition: box-shadow 0.1s, transform 0.1s;
+}
+.card:hover {
+  box-shadow: 10px 10px 0 var(--ink);
+  transform: translate(-3px, -3px);
+}
+
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.cardNum {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 12px;
+}
+.cardTitle {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  font-size: 19px;
+  line-height: 1.12;
+  margin-bottom: 12px;
+}
+.cardExcerpt {
+  font-size: 15px;
+  line-height: 1.55;
+  color: #222;
+  margin-bottom: 18px;
+  flex: 1;
+}
+.cardCta {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--blue);
+}
