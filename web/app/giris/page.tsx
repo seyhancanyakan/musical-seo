@@ -149,13 +149,20 @@ export default function GirisPage() {
     }
 
     setToken(result.token);
-    router.push(result.user.role === "curator" ? "/curator/inbox" : "/gonder");
+    // Admin sifresiyle giren dogrudan admin paneline; kurator inbox'a; digeri gonder.
+    const dest =
+      result.user.role === "admin"
+        ? "/admin"
+        : result.user.role === "curator"
+          ? "/curator/inbox"
+          : "/gonder";
+    router.push(dest);
   }
 
   return (
     <div className={styles.wrap}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Link href="/" className={styles.logo}>MuzikSEO</Link>
+        <Link href="/" className={styles.logo}>Songdeck</Link>
         <LangToggle />
       </div>
 

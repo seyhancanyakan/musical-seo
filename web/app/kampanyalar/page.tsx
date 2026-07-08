@@ -259,7 +259,7 @@ export default function KampanyalarPage() {
   return (
     <div className={styles.wrap}>
       <div className={styles.top}>
-        <Link href="/" className={styles.logo}>MuzikSEO</Link>
+        <Link href="/" className={styles.logo}>Songdeck</Link>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {user && (
             <div className={styles.wallet}>{t.walletCredits(user.credits, user.name)}</div>

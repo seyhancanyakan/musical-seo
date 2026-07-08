@@ -1,0 +1,184 @@
+/* Atif raporu — mockup ekran 04 */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--blue);
+  border-bottom: 3px solid var(--ink);
+  padding: 12px 20px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  text-decoration: none;
+}
+
+.brand em {
+  font-style: normal;
+  color: var(--green);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.body {
+  padding: 34px 32px 56px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 60px 0;
+  text-align: center;
+  font-weight: 800;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.trackName {
+  font-size: clamp(22px, 3vw, 34px);
+  margin: 10px 0 2px;
+}
+
+.trackSub {
+  color: #555;
+  font-family: Consolas, monospace;
+  font-size: 13px;
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .kpiRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi {
+  padding: 16px;
+}
+
+.kpiVal {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.kpiLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #555;
+  margin-top: 4px;
+}
+
+.chartCard {
+  padding: 20px;
+  margin-bottom: 18px;
+}
+
+.lbl {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+  display: block;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+@media (max-width: 760px) {
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.channelsCard {
+  padding: 20px;
+}
+
+.roibar {
+  display: grid;
+  grid-template-columns: 110px 1fr 70px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 2px solid #eee;
+}
+
+.roibar:last-child {
+  border-bottom: 0;
+}
+
+.roibarChannel {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.roibarTrack {
+  height: 22px;
+  border: 2px solid var(--ink);
+  background: #f2f2ee;
+}
+
+.roibarFill {
+  display: block;
+  height: 100%;
+}
+
+.roibarAmt {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-align: right;
+  font-size: 15px;
+}
+
+.recoCard {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background: #f7f2ff;
+  border-color: var(--purple) !important;
+}
+
+.recoText {
+  margin-top: 10px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.recoChips {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}

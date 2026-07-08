@@ -1,4 +1,4 @@
-/* MuzikSEO — ana sayfa (mavi neo-brutal mockup C/p1 birebir port) */
+/* Songdeck — ana sayfa (mavi neo-brutal mockup C/p1 birebir port) */
 
 .wrap {
   max-width: 1440px;
@@ -263,9 +263,11 @@
 
 .heroTitle {
   font-size: 68px;
-  /* 1.02 cok sikiydi: vurgulu span'in 3px cercevesi + Turkce buyuk harf
-     aksanlari (Ğ/Ü) alt satirla ust uste biniyordu. */
-  line-height: 1.18;
+  /* Vurgulu span'in mavi kutusu (arka plan + 3px cerceve) komsu satirla
+     cakismasin: line-height 1.18 hala yetersizdi -> Turkce buyuk harf
+     noktalari/aksanlari (İ/Ü/Ğ) ust/alt satirla ust uste biniyordu.
+     1.35 kutu ile komsu satir arasinda net bosluk birakir. */
+  line-height: 1.35;
   max-width: 920px;
   margin-bottom: 28px;
 }
@@ -438,5 +440,89 @@
   }
   .menu {
     gap: 20px;
+  }
+}
+
+/* ---- Mobil hamburger menu (<=720px): masaustu .menu tamamen gizlenir,
+   hamburger butonu belirir; tiklaninca menu, bar altina dikey panel
+   olarak acilir. Masaustu davranisi (>720px) hic degismez. ---- */
+.hamburger {
+  display: none;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #fff;
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+.hamburger:hover {
+  box-shadow: 5px 5px 0 var(--ink);
+}
+
+@media (max-width: 720px) {
+  .hamburger {
+    display: flex;
+  }
+  .navWrap {
+    height: auto;
+    min-height: 72px;
+    padding: 14px 20px;
+  }
+  .logo {
+    font-size: 20px;
+  }
+  /* Masaustu menu varsayilan olarak gizli; sadece hamburger acinca gorunur */
+  .menu {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    order: 3;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 3px solid var(--ink);
+  }
+  .menuOpen {
+    display: flex;
+  }
+  .menuGroup {
+    width: 100%;
+  }
+  .menuGroupBtn,
+  .menuLink {
+    width: 100%;
+    padding: 12px 4px;
+    border-bottom: 2px solid #eee;
+    text-align: left;
+  }
+  /* Dropdown (Sanatcilar/Kuratorler icin) mobilde absolute konumlanmasin —
+     tasan/kayan kutu yerine akista (in-flow) alt menu olsun. */
+  .dropdown {
+    position: static;
+    min-width: 0;
+    width: 100%;
+    box-shadow: none;
+    border: none;
+    border-left: 4px solid var(--blue);
+    padding: 4px 0 4px 12px;
+    margin-bottom: 6px;
+  }
+  .dropdownLink {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+  .menu :global(.nb-btn) {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 8px;
   }
 }

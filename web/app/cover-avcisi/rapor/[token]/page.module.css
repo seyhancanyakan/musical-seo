@@ -1,0 +1,179 @@
+/* Cover hunt raporu — mockup ekran 08 */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--blue);
+  border-bottom: 3px solid var(--ink);
+  padding: 12px 20px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  text-decoration: none;
+}
+
+.brand em {
+  font-style: normal;
+  color: var(--green);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.body {
+  padding: 34px 32px 56px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 60px 0;
+  text-align: center;
+  font-weight: 800;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.trackName {
+  font-size: clamp(22px, 3vw, 34px);
+  margin: 10px 0 2px;
+}
+
+.trackSub {
+  color: #555;
+  font-size: 13px;
+}
+
+.kpiRow {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .kpiRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi {
+  padding: 16px;
+}
+
+.kpiVal {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.kpiLabel {
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #555;
+  margin-top: 4px;
+}
+
+.candList {
+  display: grid;
+  gap: 12px;
+}
+
+.cand {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.candBelowThreshold {
+  opacity: 0.62;
+}
+
+.thumb {
+  width: 64px;
+  height: 48px;
+  border: 2px solid var(--ink);
+  background: linear-gradient(135deg, #222, #555);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 20px;
+}
+
+.candTitle {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.candMeta {
+  color: #666;
+  font-size: 12px;
+}
+
+.reasons {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.simwrap {
+  text-align: right;
+}
+
+.sim {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.simLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #555;
+  font-weight: 700;
+}
+
+.candActions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.miniPill {
+  font-size: 9px;
+  padding: 3px 7px;
+}
+
+.bottomActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}

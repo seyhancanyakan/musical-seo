@@ -161,7 +161,7 @@ export default function KanitPage() {
     <>
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
-          <Link href="/" className={styles.logo}>MuzikSEO</Link>
+          <Link href="/" className={styles.logo}>Songdeck</Link>
           <div className={styles.navLinks}>
             {t.nav.map((link) => (
               <Link

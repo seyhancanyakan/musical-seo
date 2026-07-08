@@ -141,3 +141,23 @@ def sla_hours(priority: bool = False, pro_artist: bool = False,
 
 def instant_payout_fee(amount_usd: float) -> float:
     return round(amount_usd * INSTANT_PAYOUT_FEE_RATE, 2)
+
+
+# --- Nis ozellikler (fraud / attribution / release-timing / cover) ------------
+# Hepsi kredi bazli; Pro uyeye temel rapor ucretsiz (premium._charge_unless_pro
+# paterni). Sabitler burada tek yerde; modul ve API katmani buradan import eder.
+
+# Ozellik #1 — Sahte Playlist Dedektoru
+FRAUD_REPORT_COST = 2           # tek adli analiz
+FRAUD_REPORT_GUARANTEE_COST = 5  # sigorta: "guvenli" dedik, zarar gelirse telif karsilanir
+
+# Ozellik #2 — Promosyon ROI Atif Motoru
+ATTRIBUTION_REPORT_COST = 1     # mevcut "etki raporu"nun gelismis hali
+
+# Ozellik #3 — Optimum Yayin Tarihi
+RELEASE_TIMING_REPORT_COST = 1
+
+# Ozellik #4 — Cover/Derivative Avcisi
+COVER_HUNT_COST = 2             # tek seferlik av
+COVER_HUNT_WATCHDOG_COST = 5   # /ay surekli izleme
+COVER_LICENSE_COMMISSION = 0.15  # lisanslanirsa %15 (syncmarket ile uyumlu)

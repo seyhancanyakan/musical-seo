@@ -159,6 +159,58 @@
   }
 }
 
+/* ---- Mobil: sabit 240px sidebar'li grid tek kolona duser, sidebar ustte
+   yatay kaydirilan bir menu serieddine donusur (mobil app menusu gibi).
+   Boylece ana icerik + radar VFX paneli ekran disina tasmaz. ---- */
+@media (max-width: 720px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+    max-width: 100%;
+  }
+  .topbar {
+    grid-column: 1 / 2;
+    height: auto;
+    min-height: 64px;
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .sidebar {
+    grid-column: 1 / 2;
+    border-right: none;
+    border-bottom: 3px solid var(--ink);
+    padding: 0;
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sidebarLink {
+    padding: 12px 16px;
+    font-size: 13px;
+    white-space: nowrap;
+    border-left: none;
+    border-bottom: 4px solid transparent;
+  }
+  .sidebarLinkActive,
+  .sidebarLinkActive:hover {
+    border-left: none;
+    border-bottom: 4px solid var(--ink);
+  }
+  .main {
+    padding: 20px 16px;
+  }
+  .pageTitle {
+    font-size: 24px;
+  }
+  .searchRow {
+    flex-wrap: wrap;
+  }
+  .stageRail {
+    flex-wrap: wrap;
+  }
+}
+
 .plCard {
   background: #fff;
   padding: 24px;

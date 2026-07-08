@@ -1761,3 +1761,247 @@ export const saveMyAd = (payload: {
 
 /** Hesaba kaydedilmis (sihirbazda uretilen) reklamlarin listesi. */
 export const myAds = () => j<ProducedAd[]>(`/me/ads`, { headers: authHeaders() });
+
+/* --- Nis ozellik #1: Sahte Playlist / Adli Analiz ------------------------------ */
+
+/** fraud_forensics.analyze_playlist() 5 sinyalini (0..1 skor + aciklama +
+ *  kanit objesi) doner — anahtarlar SABIT: follower_anomaly, track_churn,
+ *  geo_cluster, audio_label_mismatch, track_seo_poverty. */
+export type FraudSignalDetail = {
+  score: number; // 0..1
+  detail: string;
+  evidence: Record<string, unknown>;
+};
+
+export type FraudVerdict = "guvenli" | "riskli" | "cok_riskli" | "sahte";
+
+export type FraudReport = {
+  report_token?: string;
+  playlist_url: string;
+  playlist_title: string;
+  total_risk_score: number; // 0..100
+  verdict: FraudVerdict;
+  signals: Record<string, FraudSignalDetail>;
+  recommendation: string;
+};
+
+/** Playlist adli risk analizi baslatir (kredi harcar) — hata (or. yetersiz kredi)
+ *  jd.error alaninda gorunur olur. */
+export const analyzeFraud = (playlistUrl: string) =>
+  jd<FraudReport>(`/fraud/analyze`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ playlist_url: playlistUrl }),
+  });
+
+/** Paylasilabilir/public rapor — auth gerekmez. */
+export const getFraudReport = (token: string) =>
+  j<FraudReport>(`/fraud/report/${encodeURIComponent(token)}`);
+
+export const getFraudHistory = () =>
+  j<FraudReport[]>(`/fraud/history`, { headers: authHeaders() });
+
+/* --- Nis ozellik #2: ROI Atif Motoru -------------------------------------------- */
+
+/** attribution.build_attribution_report() ciktisi — changepoint/series alanlari
+ *  saklanmiyor, sadece kanal bazli toplu breakdown persist edilir. */
+export type AttributionBreakdownItem = {
+  channel: string; // "radyo" | "playlist" | "organik" (backend sabit degerleri)
+  events: number;
+  attributed_delta: number;
+  roi_per_credit: number | null;
+};
+
+/** POST /attribution/report doner {period:{start,end}} icin nested seklinde,
+ *  ama GET /attribution/report/{token} attribution_reports DB satirini duz
+ *  donduruyor: period_start/period_end kolonlari (nested 'period' YOK).
+ *  Ikisi de tolere edilir. */
+export type AttributionReport = {
+  report_token?: string;
+  track_query: string;
+  period?: { start: string; end: string };
+  period_start?: string;
+  period_end?: string;
+  total_score_delta: number;
+  breakdown: AttributionBreakdownItem[];
+  recommendation: string;
+};
+
+export const buildAttribution = (payload: {
+  track_query: string;
+  period_start: string;
+  period_end: string;
+}) =>
+  jd<AttributionReport>(`/attribution/report`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+export const getAttributionReport = (token: string) =>
+  j<AttributionReport>(`/attribution/report/${encodeURIComponent(token)}`);
+
+export const getAttributionHistory = () =>
+  j<AttributionReport[]>(`/attribution/history`, { headers: authHeaders() });
+
+/* --- Nis ozellik #3: Yayin Zamanlamasi Danismani -------------------------------- */
+
+/** release_timing.advise_release() 4 sinyalini + birlesik tavsiyeyi doner. */
+export type ReleaseFinding = {
+  severity: string;
+  category: string;
+  message: string;
+  action: string | null;
+};
+
+export type ReleaseReadiness = {
+  score: number; // 0..100
+  findings: ReleaseFinding[];
+  fixable_issues: string[];
+};
+
+export type ReleaseCompetition = {
+  competition: "low" | "medium" | "high" | string;
+  score: number;
+  alternatives: string[];
+};
+
+export type ReleaseCompetitorItem = {
+  title: string | null;
+  artist: string | null;
+  date: string | null;
+};
+
+export type ReleaseCompetitors = {
+  competitor_count: number;
+  competitors: ReleaseCompetitorItem[];
+  risk: "low" | "medium" | "high" | string;
+};
+
+export type ReleaseDay = {
+  recommended_day: string;
+  reason: string;
+  score: number;
+  nearest_friday: string;
+};
+
+export type ReleaseTimingReport = {
+  report_token?: string;
+  track_query: string;
+  target_date: string;
+  readiness: ReleaseReadiness;
+  competition: ReleaseCompetition;
+  competitors: ReleaseCompetitors;
+  day: ReleaseDay;
+  overall_verdict: "hazir" | "hazirlan" | "ertele" | string;
+  recommended_date: string;
+  action_plan: string[];
+  projected_score: number;
+};
+
+export const adviseRelease = (payload: { track_query: string; target_date: string }) =>
+  jd<ReleaseTimingReport>(`/release-timing/advise`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+export const getReleaseReport = (token: string) =>
+  j<ReleaseTimingReport>(`/release-timing/report/${encodeURIComponent(token)}`);
+
+export const getReleaseHistory = () =>
+  j<ReleaseTimingReport[]>(`/release-timing/history`, { headers: authHeaders() });
+
+/* --- Nis ozellik #4: Cover / Derivative Avcisi ---------------------------------- */
+
+export type CoverAudioProfile = {
+  bpm: number;
+  energy: number;
+  brightness: number;
+  key: string;
+};
+
+/** cover_hunter.get_report()/candidates_for() ham DB satiri 'similarity_score'
+ *  kullanir; POST /cover-hunt/start'in aninda skorlanmis listesi 'similarity'
+ *  kullanir — ikisi de tolere edilir (bkz. rapor sayfasindaki simOf helper). */
+export type CoverCandidate = {
+  id?: number;
+  hunt_id?: number;
+  created_at?: string;
+  source?: string; // youtube | lyrics | tiktok
+  url?: string;
+  title?: string;
+  channel?: string;
+  similarity?: number; // 0..1
+  similarity_score?: number; // 0..1 (DB kolon adi)
+  match_reasons?: string[];
+  status?: "pending" | "approved" | "rejected" | "licensed" | "claimed" | string;
+  // Asagidakiler gercek API'de yok; sadece aday-detay demo onizlemesi icin
+  // opsiyonel alanlar — API null/eksik donerse sayfa demo veriye duser.
+  platform?: string;
+  views?: number;
+  confidence?: "high" | "medium" | "low";
+  original_profile?: CoverAudioProfile | null;
+  candidate_profile?: CoverAudioProfile | null;
+  license_offer_usd?: number | null;
+  match_notes?: string | null;
+};
+
+/** cover_hunter.get_report() ciktisi — candidates_found/high_confidence/
+ *  medium_confidence/estimated_unlicensed_revenue SADECE POST /cover-hunt/start
+ *  aninda hesaplanir ve cover_hunts tablosunda saklanmaz; bu yuzden GET
+ *  /cover-hunt/report/{token} bu alanlari DONDURMEZ. Rapor sayfasi eksikse
+ *  candidates dizisinden turetip fallback uygular. */
+export type CoverHunt = {
+  id?: number;
+  hunt_id?: number;
+  report_token?: string;
+  original_query?: string;
+  status?: string;
+  created_at?: string;
+  candidates_found?: number;
+  high_confidence?: number;
+  medium_confidence?: number;
+  estimated_unlicensed_revenue?: string;
+  candidates?: CoverCandidate[];
+};
+
+export const startCoverHunt = (trackQuery: string) =>
+  jd<CoverHunt>(`/cover-hunt/start`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ track_query: trackQuery }),
+  });
+
+export const getCoverReport = (token: string) =>
+  j<CoverHunt>(`/cover-hunt/report/${encodeURIComponent(token)}`);
+
+export const getCoverCandidates = (huntId: number, status?: string) =>
+  j<CoverCandidate[]>(
+    `/cover-hunt/candidates?hunt_id=${huntId}${status ? `&status=${status}` : ""}`
+  );
+
+/** Tek aday detayi icin ayri bir GET ucu backend'de yok — bu cagri her zaman
+ *  null doner, sayfa bunu bilerek demo veriye duser. */
+export const getCoverCandidate = (id: number) =>
+  j<CoverCandidate>(`/cover-hunt/candidates/${id}`);
+
+export const reviewCandidate = (id: number, verdict: "approved" | "rejected") =>
+  jd<CoverCandidate>(`/cover-hunt/candidates/${id}/review`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ verdict }),
+  });
+
+export const coverLicense = (id: number) =>
+  jd<{ id: number; status: string; offer_usd: number }>(
+    `/cover-hunt/candidates/${id}/license`,
+    { method: "POST", headers: authHeaders() }
+  );
+
+export const enableWatchdog = (trackQuery: string) =>
+  jd<{ track_query: string; enabled: boolean }>(`/cover-hunt/watchdog/enable`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ track_query: trackQuery }),
+  });

@@ -58,7 +58,7 @@ const TONE_OPTIONS = ["enerjik", "samimi", "profesyonel", "eglenceli"] as const;
 
 const T = {
   tr: {
-    logo: "MuzikSEO",
+    logo: "Songdeck",
     heading: "Kampanya Sihirbazı",
     intro:
       "6 adımda kendi radyo reklam kampanyanı kur: hedefini seç, spotunu AI ile yaz, istersen seslendir ve jingle ekle, müzik + sesi birleştir, sonra tek onayla yayına al.",
@@ -140,6 +140,8 @@ const T = {
     packageWeeklySpots: "haftalık tahmini spot",
     packageTotal: "toplam",
     packageEmpty: "Bu filtrelerle eşleşen ilan yok.",
+    selectPackageFirst:
+      "Devam etmek için önce \"Paketleri Gör\"e bas, sonra bir paket (ya da Özel) seç.",
     selectBtn: "Bu Paketi Seç",
     selectedBtn: "Seçildi",
     customOption: "Özel: filtrelerimle devam et",
@@ -238,7 +240,7 @@ const T = {
     summaryMixNo: "Yok",
     couponNote:
       "Kampanya onaylandığında benzersiz bir kupon kodu oluşturulur ve spot metnine eklenir.",
-    commissionNote: "Toplam bedele %18 MüzikSEO komisyonu dahildir.",
+    commissionNote: "Toplam bedele %18 Songdeck komisyonu dahildir.",
     buyerNameLabel: "Adın / Şirket adın",
     buyerNamePlaceholder: "Ad Soyad veya şirket adı",
     buyerEmailLabel: "E-posta",
@@ -282,7 +284,7 @@ const T = {
     newCampaignBtn: "Yeni Kampanya Başlat",
   },
   en: {
-    logo: "MuzikSEO",
+    logo: "Songdeck",
     heading: "Campaign Wizard",
     intro:
       "Set up your own radio ad campaign in 6 steps: pick a target, write your spot with AI, optionally add voice + jingle, merge the music and voice, then confirm once to go live.",
@@ -361,6 +363,8 @@ const T = {
     packageWeeklySpots: "est. weekly spots",
     packageTotal: "total",
     packageEmpty: "No listings match these filters.",
+    selectPackageFirst:
+      "To continue, tap \"Show Packages\" first, then pick a package (or Custom).",
     selectBtn: "Select This Package",
     selectedBtn: "Selected",
     customOption: "Custom: continue with my filters",
@@ -454,7 +458,7 @@ const T = {
     summaryMixNo: "None",
     couponNote:
       "A unique coupon code is generated once the campaign is confirmed and added to the spot script.",
-    commissionNote: "The total includes an 18% MuzikSEO commission.",
+    commissionNote: "The total includes an 18% Songdeck commission.",
     buyerNameLabel: "Your name / Company",
     buyerNamePlaceholder: "Full name or company name",
     buyerEmailLabel: "Email",
@@ -1723,11 +1727,21 @@ export default function CampaignWizardPage() {
             <button
               type="button"
               className="nb-btn"
-              disabled={!canAdvanceStep1}
-              // Yonetmen modu zaten reklami urettiyse (mixAudioUrl dolu),
-              // metin/ses/jingle/mix adimlarini (2-5) ATLA -> dogrudan ozet
-              // + kampanya olusturma adimina (6) git. Aksi halde normal akis.
-              onClick={() => setStep(mixAudioUrl ? 6 : 2)}
+              // Buton ARTIK disabled degil: paket secili degilse sessizce
+              // olmek yerine kullaniciya neden ilerlemedigini soyluyoruz
+              // (eski bug: sehir yazinca secim sifirlaniyor, buton disabled
+              // kaliyor, tiklayinca hicbir sey olmuyor -> "orda kaldi").
+              onClick={() => {
+                if (!canAdvanceStep1) {
+                  setPackagesError(t.selectPackageFirst);
+                  return;
+                }
+                setPackagesError("");
+                // Yonetmen modu zaten reklami urettiyse (mixAudioUrl dolu),
+                // metin/ses/jingle/mix adimlarini (2-5) ATLA -> dogrudan ozet
+                // + kampanya olusturma adimina (6) git. Aksi halde normal akis.
+                setStep(mixAudioUrl ? 6 : 2);
+              }}
             >
               {t.nextBtn}
             </button>

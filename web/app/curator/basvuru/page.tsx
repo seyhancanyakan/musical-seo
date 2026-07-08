@@ -116,7 +116,7 @@ export default function CuratorBasvuruPage() {
     <>
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
-          <Link href="/" className={styles.logo}>MuzikSEO</Link>
+          <Link href="/" className={styles.logo}>Songdeck</Link>
           <LangToggle />
         </div>
       </nav>

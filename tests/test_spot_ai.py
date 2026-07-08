@@ -19,6 +19,10 @@ def spot_env(tmp_path, monkeypatch):
     monkeypatch.setattr(spot_ai, "JINGLES_DIR", tmp_path / "jingles")
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
+    # Gercek .env'deki z.ai/LLM ayarlari testlere sizmasin (deterministik izolasyon)
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("LLM_API_URL", raising=False)
+    monkeypatch.delenv("LLM_MODEL", raising=False)
 
 
 # --- generate_script: sablon fallback ---------------------------------------
@@ -82,7 +86,7 @@ def test_generate_script_uses_claude_when_key_present(spot_env, monkeypatch):
     assert result["notes"] == ""
     assert "Claude tarafından" in result["text"]
     assert captured["headers"]["x-api-key"] == "test-key"
-    assert captured["json"]["model"] == spot_ai._ANTHROPIC_MODEL
+    assert captured["json"]["model"] == spot_ai._DEFAULT_LLM_MODEL
 
 
 def test_generate_script_claude_error_status_raises(spot_env, monkeypatch):
@@ -182,7 +186,10 @@ def test_list_voices_uses_api_when_key_present(spot_env, monkeypatch):
     monkeypatch.setattr(spot_ai.requests, "get", lambda *a, **k: _FakeResp())
 
     voices = spot_ai.list_voices()
-    assert voices == [{"voice_id": "v1", "name": "Ses Bir", "category": "premade"}]
+    assert voices == [{
+        "voice_id": "v1", "name": "Ses Bir", "category": "premade",
+        "preview_url": None, "labels": {},
+    }]
 
 
 def test_list_voices_falls_back_on_request_error(spot_env, monkeypatch):

@@ -136,7 +136,7 @@ const T = {
     sentNote: "✓ Gönderildi olarak işaretlendi.",
     noSelection: "Önizlemek için soldan bir playlist seç.",
     inviteText: (title: string, origin: string) =>
-      `Merhaba! ${title} listeni MuzikSEO curator ağına davet etmek istiyoruz. ` +
+      `Merhaba! ${title} listeni Songdeck curator ağına davet etmek istiyoruz. ` +
       `Sanatçılardan doğrudan, sana uygun şarkı gönderimi alırsın; kabul/ret tek tık. ` +
       `Başvuru: ${origin}/curator/basvuru`,
     demoMessages: [
@@ -189,7 +189,7 @@ const T = {
     sentNote: "✓ Marked as sent.",
     noSelection: "Select a playlist on the left to preview.",
     inviteText: (title: string, origin: string) =>
-      `Hi! We'd like to invite your ${title} playlist to the MuzikSEO curator network. ` +
+      `Hi! We'd like to invite your ${title} playlist to the Songdeck curator network. ` +
       `You'll get song submissions directly from artists tailored to your list; accept/reject with one tap. ` +
       `Apply: ${origin}/curator/basvuru`,
     demoMessages: [
@@ -366,7 +366,7 @@ export default function PlaylistlerPage() {
   return (
     <div className={styles.shell}>
       <div className={styles.topbar}>
-        <Link href="/" className={styles.logo}>MuzikSEO</Link>
+        <Link href="/" className={styles.logo}>Songdeck</Link>
         <div className={styles.userChip}>👤 Duman {t.userChipSuffix}</div>
         <LangToggle />
       </div>

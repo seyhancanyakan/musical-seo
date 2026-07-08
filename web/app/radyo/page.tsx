@@ -168,7 +168,7 @@ export default function RadyoPage() {
     <div className={styles.wrap}>
       <div className={styles.top}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/" className={styles.logo}>MuzikSEO</Link>
+          <Link href="/" className={styles.logo}>Songdeck</Link>
           <LangToggle />
         </div>
         {user && (

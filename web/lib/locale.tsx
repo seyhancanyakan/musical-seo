@@ -49,6 +49,14 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     setLocaleState(detectClientLocale());
   }, []);
 
+  // <html lang> her zaman aktif dili yansitsin: text-transform:uppercase
+  // Turkce casing kurallarini uygulasin (i -> İ). Dil degisince reload gerekmez.
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = locale;
+    }
+  }, [locale]);
+
   function setLocale(l: Locale) {
     setLocaleState(l);
     if (typeof document !== "undefined") {

@@ -143,7 +143,7 @@ export default function PublicKarnePage() {
   return (
     <div className={styles.wrap}>
       <div className={styles.topbar}>
-        <Link href="/" className={styles.logo}>MuzikSEO</Link>
+        <Link href="/" className={styles.logo}>Songdeck</Link>
         <LangToggle />
       </div>
 

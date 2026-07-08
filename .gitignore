@@ -13,3 +13,4 @@ web/tsconfig.tsbuildinfo
 *.tsbuildinfo
 .gstack/
 data/youtube_quota.json
+web/.next_old_bak/

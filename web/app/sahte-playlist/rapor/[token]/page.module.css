@@ -1,0 +1,204 @@
+/* Sahte Playlist raporu — mockup ekran 02 */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  background: var(--blue);
+  border-bottom: 3px solid var(--ink);
+  padding: 12px 20px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  text-decoration: none;
+}
+
+.brand em {
+  font-style: normal;
+  color: var(--green);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.body {
+  padding: 34px 32px 56px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.loading {
+  padding: 60px 0;
+  text-align: center;
+  font-weight: 800;
+}
+
+.head {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 26px;
+}
+
+.gauge {
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--ink);
+  position: relative;
+  flex: none;
+}
+
+.gaugeInner {
+  width: 130px;
+  height: 130px;
+  background: #fff;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.gaugeScore {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 40px;
+  line-height: 1;
+}
+
+.gaugeOf {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.headMeta {
+  flex: 1;
+  min-width: 260px;
+}
+
+.trackName {
+  font-size: clamp(22px, 3vw, 34px);
+  margin: 12px 0 4px;
+}
+
+.trackSub {
+  color: #555;
+  font-family: Consolas, monospace;
+  font-size: 13px;
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 3px solid var(--ink);
+  padding: 16px 20px;
+  box-shadow: 6px 6px 0 var(--ink);
+  margin-top: 16px;
+  background: #fff5f5;
+}
+
+.verdictEmoji {
+  font-size: 30px;
+}
+
+.verdictTitle {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 22px;
+  text-transform: uppercase;
+}
+
+.verdictText {
+  margin: 0;
+  font-size: 14px;
+}
+
+.signalGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 760px) {
+  .signalGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.signal {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signalTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.signalTop h4 {
+  font-family: "Arial Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  margin: 0;
+}
+
+.signalVal {
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 15px;
+}
+
+.signal p {
+  margin: 0;
+  font-size: 13px;
+  color: #444;
+  line-height: 1.45;
+}
+
+.meter {
+  height: 14px;
+  border: 2px solid var(--ink);
+  background: #eee;
+  overflow: hidden;
+}
+
+.meterFill {
+  display: block;
+  height: 100%;
+}
+
+.evidence {
+  font-family: Consolas, monospace;
+  font-size: 11.5px;
+  color: #666;
+  background: #f3f3ee;
+  border: 2px dashed #bbb;
+  padding: 6px 8px;
+}
+
+.actionsRow {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}

@@ -44,8 +44,9 @@ app.include_router(api_features.router)
 # Gelir dalga-2: akilli link + affiliate, sync/lisans pazari, label B2B,
 # radyo airplay takibi, animasyonlu tanitim karti, geri bildirim sentezi.
 from marketplace import (  # noqa: E402  (router kayitlari app tanimindan sonra)
-    api_airplay, api_campaigns, api_feedback, api_fingerprint, api_labels,
-    api_promo, api_radio_ads, api_smartlink, api_spot, api_sync, api_tracks,
+    api_airplay, api_attribution, api_campaigns, api_cover_hunt, api_feedback,
+    api_fingerprint, api_fraud, api_labels, api_promo, api_radio_ads,
+    api_release_timing, api_seo, api_smartlink, api_spot, api_sync, api_tracks,
 )
 
 app.include_router(api_campaigns.router)
@@ -61,6 +62,17 @@ app.include_router(api_airplay.router)
 app.include_router(api_promo.router)
 app.include_router(api_feedback.router)
 app.include_router(api_fingerprint.router)
+
+# Nis ozellikler: sahte playlist adli analizi, ROI atif, yayin zamanlamasi,
+# cover avcisi (docs/NIS_OZELLIKLER_WORKFLOW.md).
+app.include_router(api_fraud.router)
+app.include_router(api_attribution.router)
+app.include_router(api_release_timing.router)
+app.include_router(api_cover_hunt.router)
+
+# Programatik SEO: public sayfa verisi (/seo/*) + e-posta kapisi (/leads/capture)
+# (docs/PROGRAMATIK_SEO_WORKFLOW.md).
+app.include_router(api_seo.router)
 
 
 class CuratorApply(BaseModel):

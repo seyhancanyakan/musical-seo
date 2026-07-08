@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import styles from "./page.module.css";
-import { useLocale, pick, LangToggle } from "../lib/locale";
+import { useLocale, pick } from "../lib/locale";
+import SiteHeader from "../components/SiteHeader";
 
 type Dict = {
   nav: {
@@ -22,6 +23,10 @@ type Dict = {
     promoCard: string;
     syncManage: string;
     myAds: string;
+    fraudCheck: string;
+    attribution: string;
+    releaseTiming: string;
+    coverHunter: string;
     curatorsFor: string;
     becomeCurator: string;
     curatorTypes: string;
@@ -124,6 +129,10 @@ const T: { tr: Dict; en: Dict } = {
       promoCard: "🎬 Tanıtım Kartı",
       syncManage: "🎬 Sync İlanlarım",
       myAds: "🎙️ Reklamlarım",
+      fraudCheck: "⚖ Sahte Playlist Analizi",
+      attribution: "📈 ROI Atıf Motoru",
+      releaseTiming: "🗓 Yayın Zamanlaması",
+      coverHunter: "🎯 Cover Avcısı",
       curatorsFor: "Küratörler İçin ▾",
       becomeCurator: "Küratör Ol",
       curatorTypes: "Küratör & Profesyonel Türleri",
@@ -185,7 +194,7 @@ const T: { tr: Dict; en: Dict } = {
       tag: "Sık Sorulanlar",
       title: "MERAK EDİLENLER",
       q1: "Label'sız kullanabilir miyim?",
-      a1: "Evet. MuzikSEO bağımsız ve kendi işini yöneten sanatçılar için kuruldu — label ya da PR ajansı şartı yok.",
+      a1: "Evet. Songdeck bağımsız ve kendi işini yöneten sanatçılar için kuruldu — label ya da PR ajansı şartı yok.",
       q2: "Küratör cevap vermezse ne olur?",
       a2: "72 saat içinde yanıt gelmezse kredin otomatik iade edilir. Elle talep gerekmez; sistem SLA'yı kendisi işletir.",
       q3: "Kredi nedir, nasıl çalışır?",
@@ -211,7 +220,7 @@ const T: { tr: Dict; en: Dict } = {
       becomeCurator: "Küratör Ol",
       professionalTypes: "Profesyonel Türleri",
       inbox: "Gelen Kutusu",
-      chip: "MuzikSEO © 2026",
+      chip: "Songdeck © 2026",
       trustPart1: "Her hafta ",
       trustBold1: "340+",
       trustPart2: " yerleşim doğrulanıyor · ",
@@ -237,6 +246,10 @@ const T: { tr: Dict; en: Dict } = {
       promoCard: "🎬 Promo Card",
       syncManage: "🎬 My Sync Listings",
       myAds: "🎙️ My Ads",
+      fraudCheck: "⚖ Fake Playlist Analysis",
+      attribution: "📈 ROI Attribution Engine",
+      releaseTiming: "🗓 Release Timing",
+      coverHunter: "🎯 Cover Hunter",
       curatorsFor: "For Curators ▾",
       becomeCurator: "Become a Curator",
       curatorTypes: "Curator & Professional Types",
@@ -298,7 +311,7 @@ const T: { tr: Dict; en: Dict } = {
       tag: "FAQ",
       title: "COMMON QUESTIONS",
       q1: "Can I use this without a label?",
-      a1: "Yes. MuzikSEO was built for independent artists managing their own careers — no label or PR agency required.",
+      a1: "Yes. Songdeck was built for independent artists managing their own careers — no label or PR agency required.",
       q2: "What happens if a curator doesn't respond?",
       a2: "If no response arrives within 72 hours, your credit is refunded automatically. No manual request needed — the system enforces the SLA itself.",
       q3: "What is a credit, and how does it work?",
@@ -324,7 +337,7 @@ const T: { tr: Dict; en: Dict } = {
       becomeCurator: "Become a Curator",
       professionalTypes: "Professional Types",
       inbox: "Inbox",
-      chip: "MuzikSEO © 2026",
+      chip: "Songdeck © 2026",
       trustPart1: "Every week ",
       trustBold1: "340+",
       trustPart2: " placements verified · ",
@@ -340,97 +353,7 @@ export default function HomePage() {
 
   return (
     <>
-      <nav className={styles.nav}>
-        <div className={styles.navWrap}>
-          <div className={styles.logo}>MuzikSEO</div>
-          <div className={styles.menu}>
-            <div className={styles.menuGroup}>
-              <button type="button" className={styles.menuGroupBtn}>
-                {t.nav.artistsFor}
-              </button>
-              <div className={styles.dropdown}>
-                <a href="#nasil-calisir" className={styles.dropdownLink}>
-                  {t.nav.howItWorks}
-                </a>
-                <Link href="/karne" className={styles.dropdownLink}>
-                  {t.nav.artistTips}
-                </Link>
-                <Link href="/playlistler" className={styles.dropdownLink}>
-                  {t.nav.playlistMatch}
-                </Link>
-                <Link href="/kanit" className={styles.dropdownLink}>
-                  {t.nav.proofBoard}
-                </Link>
-                <Link href="/gonder" className={styles.dropdownLink}>
-                  {t.nav.submitSong}
-                </Link>
-                <Link href="/panel" className={styles.dropdownLink}>
-                  {t.nav.arBoard}
-                </Link>
-                <Link href="/takvim" className={styles.dropdownLink}>
-                  {t.nav.releasePlan}
-                </Link>
-                <Link href="/lig" className={styles.dropdownLink}>
-                  {t.nav.league}
-                </Link>
-                <Link href="/pro" className={styles.dropdownLink}>
-                  {t.nav.artistPro}
-                </Link>
-                <Link href="/linkler" className={styles.dropdownLink}>
-                  {t.nav.smartLinks}
-                </Link>
-                <Link href="/radyo" className={styles.dropdownLink}>
-                  {t.nav.radio}
-                </Link>
-                <Link href="/rapor" className={styles.dropdownLink}>
-                  {t.nav.report}
-                </Link>
-                <Link href="/tanitim" className={styles.dropdownLink}>
-                  {t.nav.promoCard}
-                </Link>
-                <Link href="/sync/yonet" className={styles.dropdownLink}>
-                  {t.nav.syncManage}
-                </Link>
-                <Link href="/reklamlarim" className={styles.dropdownLink}>
-                  {t.nav.myAds}
-                </Link>
-              </div>
-            </div>
-            <div className={styles.menuGroup}>
-              <button type="button" className={styles.menuGroupBtn}>
-                {t.nav.curatorsFor}
-              </button>
-              <div className={styles.dropdown}>
-                <Link href="/giris" className={styles.dropdownLink}>
-                  {t.nav.becomeCurator}
-                </Link>
-                <a href="#kuratorler" className={styles.dropdownLink}>
-                  {t.nav.curatorTypes}
-                </a>
-                <Link href="/curator/inbox" className={styles.dropdownLink}>
-                  {t.nav.inbox}
-                </Link>
-                <Link href="/reklam/yonet" className={styles.dropdownLink}>
-                  {t.nav.adInventory}
-                </Link>
-              </div>
-            </div>
-            <Link href="/reklam" className={styles.menuLink}>
-              {t.nav.radioAds}
-            </Link>
-            <Link href="/admin" className={styles.menuLink}>
-              {t.nav.admin}
-            </Link>
-            <Link href="/giris" className={styles.menuLink}>
-              {t.nav.login}
-            </Link>
-            <LangToggle />
-            <Link href="/giris" className="nb-btn">
-              {t.nav.join}
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <SiteHeader />
 
       <header className={styles.hero}>
         <div className={styles.wrap}>
@@ -558,6 +481,10 @@ export default function HomePage() {
             <Link href="/reklam">
               {locale === "tr" ? "Radyo Reklamı" : "Radio Ads"}
             </Link>
+            <Link href="/sahte-playlist">{t.nav.fraudCheck}</Link>
+            <Link href="/attribution">{t.nav.attribution}</Link>
+            <Link href="/yayin-zamanlamasi">{t.nav.releaseTiming}</Link>
+            <Link href="/cover-avcisi">{t.nav.coverHunter}</Link>
           </div>
           <div className={styles.footerCol}>
             <h4>{t.footer.artistsHeading}</h4>
