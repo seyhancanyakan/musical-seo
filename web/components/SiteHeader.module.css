@@ -38,7 +38,7 @@
 }
 
 .logoAccent {
-  color: #ff7a1a;
+  color: var(--purple);
 }
 
 .menu {
