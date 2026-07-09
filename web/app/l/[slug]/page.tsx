@@ -38,7 +38,7 @@ const T = {
     subscribeSuccess: "✓ Kaydedildi — çıkışında haber vereceğiz.",
     subscribeRepeat: "Zaten kayıtlısın — tekrar haber vereceğiz.",
     subscribeError: "Kaydedilemedi — tekrar dene.",
-    badge: "Songdeck",
+    badge: "Sozy Echo",
   },
   en: {
     loading: "Loading...",
@@ -58,7 +58,7 @@ const T = {
     subscribeSuccess: "✓ Saved — we'll let you know when it's out.",
     subscribeRepeat: "You're already signed up — we'll notify you.",
     subscribeError: "Couldn't save — try again.",
-    badge: "Songdeck",
+    badge: "Sozy Echo",
   },
 } as const;
 
@@ -175,7 +175,7 @@ export default function PublicSmartLinkPage() {
   return (
     <div className={styles.wrap}>
       <div className={styles.topbar}>
-        <span className={styles.brandTag}>Songdeck</span>
+        <span className={styles.brandTag}>Sozy Echo</span>
         <LangToggle />
       </div>
 

@@ -33,7 +33,7 @@ import requests
 _KEY_PATH = Path(__file__).resolve().parent.parent / "data" / "indexnow_key.txt"
 
 INDEXNOW_URL = "https://api.indexnow.org/indexnow"
-SITE_URL = os.environ.get("SEO_SITE_URL", "http://localhost:3100").rstrip("/")
+SITE_URL = os.environ.get("SEO_SITE_URL", "https://sozyecho.live").rstrip("/")
 
 # IndexNow protokolu tek istekte azami 10.000 URL kabul eder.
 _BATCH_MAX = 10000

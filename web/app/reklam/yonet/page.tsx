@@ -55,7 +55,7 @@ function parseNumber(raw: string): number {
 
 const T = {
   tr: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     gateTitle: "Giriş gerekli",
     gateText: "Radyo envanterini yönetmek için küratör hesabınla giriş yap.",
     gateLink: "Giriş / Kayıt",
@@ -107,7 +107,7 @@ const T = {
     verifiedPlaysLabel: "Doğrulanan yayın",
   },
   en: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     gateTitle: "Login required",
     gateText: "Log in with your curator account to manage your radio inventory.",
     gateLink: "Login / Sign Up",

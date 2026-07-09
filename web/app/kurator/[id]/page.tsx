@@ -110,7 +110,7 @@ export default function CuratorProfilePage() {
   return (
     <div className={styles.wrap}>
       <div className={styles.topbar}>
-        <Link href="/" className={styles.logo}>Songdeck</Link>
+        <Link href="/" className={styles.logo}>Sozy Echo</Link>
         <LangToggle />
       </div>
 

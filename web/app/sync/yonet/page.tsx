@@ -45,7 +45,7 @@ function parsePrice(raw: string): number {
 
 const T = {
   tr: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     gateTitle: "Giriş gerekli",
     gateText: "Sync ilanlarını yönetmek için sanatçı hesabınla giriş yap.",
     gateLink: "Giriş / Kayıt",
@@ -91,7 +91,7 @@ const T = {
     messageLabel: "Mesaj",
   },
   en: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     gateTitle: "Login required",
     gateText: "Log in with your artist account to manage your sync listings.",
     gateLink: "Login / Sign Up",

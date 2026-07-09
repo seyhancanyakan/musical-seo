@@ -68,8 +68,8 @@ export default async function BlogPostRoute(
     headline: post.h1,
     description: post.metaDescription,
     url: `${SITE_URL}/blog/${post.slug}`,
-    author: { "@type": "Organization", name: "Songdeck" },
-    publisher: { "@type": "Organization", name: "Songdeck" },
+    author: { "@type": "Organization", name: "Sozy Echo" },
+    publisher: { "@type": "Organization", name: "Sozy Echo" },
   };
 
   const faqLd = {
@@ -95,7 +95,7 @@ export default async function BlogPostRoute(
 
       <article className={styles.wrap}>
         <nav className={styles.breadcrumb}>
-          <Link href="/">Songdeck</Link> / <Link href="/blog">Blog</Link> /{" "}
+          <Link href="/">Sozy Echo</Link> / <Link href="/blog">Blog</Link> /{" "}
           {post.slug}
         </nav>
 
@@ -130,7 +130,7 @@ export default async function BlogPostRoute(
         </section>
 
         <div className={styles.cta}>
-          <div className={styles.ctaLabel}>Try Songdeck Free</div>
+          <div className={styles.ctaLabel}>Try Sozy Echo Free</div>
           <p className={styles.ctaBody}>{post.cta}</p>
           <div className={styles.ctaBtns}>
             <Link href="/giris" className="nb-btn nb-btn--green">

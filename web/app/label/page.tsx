@@ -156,7 +156,7 @@ export default function LabelPage() {
   return (
     <div className={styles.wrap}>
       <div className={styles.top}>
-        <Link href="/" className={styles.logo}>Songdeck</Link>
+        <Link href="/" className={styles.logo}>Sozy Echo</Link>
         <LangToggle />
       </div>
 

@@ -30,7 +30,7 @@ function availableUseKinds(listing: SyncListing): UseKind[] {
 
 const T = {
   tr: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     manageLink: "Sanatçı mısın? İlan aç",
     heading: "Sync / Lisans Kataloğu",
     intro:
@@ -64,7 +64,7 @@ const T = {
     nameRequiredError: "Ad ve e-posta zorunlu.",
   },
   en: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     manageLink: "Are you an artist? Open a listing",
     heading: "Sync / License Catalog",
     intro:

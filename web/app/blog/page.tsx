@@ -10,12 +10,12 @@ import styles from "./page.module.css";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100";
 
 export const metadata: Metadata = {
-  title: "Songdeck Blog — Music SEO, Distribution & Playlist Guides",
+  title: "Sozy Echo Blog — Music SEO, Distribution & Playlist Guides",
   description:
     "Practical, no-hype guides for independent artists: Spotify editorial pitching, ISRC and metadata, fake-playlist detection, music SEO, copyright, and release timing.",
   alternates: { canonical: `${SITE_URL}/blog` },
   openGraph: {
-    title: "Songdeck Blog — Music SEO, Distribution & Playlist Guides",
+    title: "Sozy Echo Blog — Music SEO, Distribution & Playlist Guides",
     description:
       "Practical, no-hype guides for independent artists: Spotify pitching, ISRC and metadata, fake-playlist detection, music SEO, copyright, and release timing.",
     url: `${SITE_URL}/blog`,
@@ -28,11 +28,11 @@ export default function BlogIndexPage() {
     <>
       <main className={styles.wrap}>
         <nav className={styles.breadcrumb}>
-          <Link href="/">Songdeck</Link> / Blog
+          <Link href="/">Sozy Echo</Link> / Blog
         </nav>
 
         <header className={styles.header}>
-          <h1 className={styles.h1}>The Songdeck Blog</h1>
+          <h1 className={styles.h1}>The Sozy Echo Blog</h1>
           <p className={styles.lede}>
             Practical, no-hype guides for independent artists — Spotify editorial
             pitching, ISRC and metadata, fake-playlist detection, music SEO,

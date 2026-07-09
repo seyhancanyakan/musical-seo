@@ -58,7 +58,7 @@ const TONE_OPTIONS = ["enerjik", "samimi", "profesyonel", "eglenceli"] as const;
 
 const T = {
   tr: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     heading: "Kampanya Sihirbazı",
     intro:
       "6 adımda kendi radyo reklam kampanyanı kur: hedefini seç, spotunu AI ile yaz, istersen seslendir ve jingle ekle, müzik + sesi birleştir, sonra tek onayla yayına al.",
@@ -240,7 +240,7 @@ const T = {
     summaryMixNo: "Yok",
     couponNote:
       "Kampanya onaylandığında benzersiz bir kupon kodu oluşturulur ve spot metnine eklenir.",
-    commissionNote: "Toplam bedele %18 Songdeck komisyonu dahildir.",
+    commissionNote: "Toplam bedele %18 Sozy Echo komisyonu dahildir.",
     buyerNameLabel: "Adın / Şirket adın",
     buyerNamePlaceholder: "Ad Soyad veya şirket adı",
     buyerEmailLabel: "E-posta",
@@ -284,7 +284,7 @@ const T = {
     newCampaignBtn: "Yeni Kampanya Başlat",
   },
   en: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     heading: "Campaign Wizard",
     intro:
       "Set up your own radio ad campaign in 6 steps: pick a target, write your spot with AI, optionally add voice + jingle, merge the music and voice, then confirm once to go live.",
@@ -458,7 +458,7 @@ const T = {
     summaryMixNo: "None",
     couponNote:
       "A unique coupon code is generated once the campaign is confirmed and added to the spot script.",
-    commissionNote: "The total includes an 18% Songdeck commission.",
+    commissionNote: "The total includes an 18% Sozy Echo commission.",
     buyerNameLabel: "Your name / Company",
     buyerNamePlaceholder: "Full name or company name",
     buyerEmailLabel: "Email",

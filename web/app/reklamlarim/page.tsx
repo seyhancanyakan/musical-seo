@@ -8,7 +8,7 @@ import styles from "./page.module.css";
 
 const T = {
   tr: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     gateTitle: "Giriş gerekli",
     gateText: "Ürettiğin reklamları görmek için hesabınla giriş yap.",
     gateLink: "Giriş / Kayıt",
@@ -22,7 +22,7 @@ const T = {
     unnamedProduct: "Adsız ürün/sanatçı",
   },
   en: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     gateTitle: "Login required",
     gateText: "Log in with your account to see the ads you've produced.",
     gateLink: "Login / Sign Up",

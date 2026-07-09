@@ -2,7 +2,7 @@
 
 /** Paylasilan site header — ana sayfa + tum nis sayfalari (sahte-playlist,
  *  attribution, yayin-zamanlamasi, cover-avcisi ve rapor/aday alt sayfalari)
- *  tarafindan kullanilir. Nis sayfalarindaki bagimsiz "SONGDECK" topnav'ini
+ *  tarafindan kullanilir. Nis sayfalarindaki bagimsiz "SOZY ECHO" topnav'ini
  *  degistirir — tek, tutarli neo-brutal header.
  *
  *  "Sanatcilar Icin" menusu tek dropdown icinde 4 gruba ayrilir (19 duz link
@@ -226,7 +226,7 @@ export default function SiteHeader() {
     <nav className={styles.nav}>
       <div className={styles.navWrap}>
         <Link href="/" className={styles.logo}>
-          SONG<span className={styles.logoAccent}>DECK</span>
+          SOZY<span className={styles.logoAccent}>ECHO</span>
         </Link>
         <button
           type="button"

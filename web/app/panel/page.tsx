@@ -224,7 +224,7 @@ export default function PanelPage() {
   return (
     <div className={styles.wrap}>
       <div className={styles.top}>
-        <Link href="/" className={styles.logo}>Songdeck</Link>
+        <Link href="/" className={styles.logo}>Sozy Echo</Link>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {user && (
             <div className={styles.wallet}>💳 {user.credits} {t.creditsWord} · {user.name}</div>

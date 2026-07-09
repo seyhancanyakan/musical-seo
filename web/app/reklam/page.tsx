@@ -18,7 +18,7 @@ const DAYPARTS: Daypart[] = ["sabah", "gunduz", "drive", "aksam", "gece"];
 
 const T = {
   tr: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     manageLink: "Radyo işletmecisi misin? Envanterini listele",
     heading: "Radyo Reklam Pazarı",
     intro:
@@ -57,7 +57,7 @@ const T = {
     wizardCta: "🚀 Kampanya Başlat — şehrini seç, AI spotunu üret",
   },
   en: {
-    logo: "Songdeck",
+    logo: "Sozy Echo",
     manageLink: "Are you a radio operator? List your inventory",
     heading: "Radio Ad Marketplace",
     intro:

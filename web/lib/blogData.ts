@@ -64,7 +64,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "Yes. Pitching an unreleased track helps ensure it reaches your followers via Release Radar and puts it in consideration across the editorial pool, so it's worth doing for every release regardless of outcome.",
       },
     ],
-    cta: "Before you pitch, make sure your artist profile and track metadata are working for you — run your release through Songdeck's free SEO score to catch weak tags, missing credits, and profile gaps that quietly cost you discovery.",
+    cta: "Before you pitch, make sure your artist profile and track metadata are working for you — run your release through Sozy Echo's free SEO score to catch weak tags, missing credits, and profile gaps that quietly cost you discovery.",
   },
   {
     slug: "what-is-isrc-and-why-it-matters",
@@ -115,7 +115,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "An ISRC identifies one recording (a single track). A UPC identifies a release or product, such as an album or single package. One album has a single UPC but a separate ISRC for each track on it.",
       },
     ],
-    cta: "Not sure which ISRC is attached to a track, or whether a re-upload created a duplicate? Use Songdeck's free ISRC lookup to check a recording's code and metadata in seconds before it costs you royalties.",
+    cta: "Not sure which ISRC is attached to a track, or whether a re-upload created a duplicate? Use Sozy Echo's free ISRC lookup to check a recording's code and metadata in seconds before it costs you royalties.",
   },
   {
     slug: "how-to-check-if-a-spotify-playlist-is-fake",
@@ -166,7 +166,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "Compare the playlist's follower count to the actual play counts on its individual tracks. A large following with very low per-track streams is the strongest quick indicator that the audience is inflated and not really listening.",
       },
     ],
-    cta: "Not sure about a playlist that just landed in your inbox? Run it through Songdeck's free fake-playlist checker to see the follower-to-engagement signals and bot red flags before you pitch or pay a cent.",
+    cta: "Not sure about a playlist that just landed in your inbox? Run it through Sozy Echo's free fake-playlist checker to see the follower-to-engagement signals and bot red flags before you pitch or pay a cent.",
   },
   {
     slug: "spotify-bot-detection-explained",
@@ -217,7 +217,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "Streams are judged by whether they're artificial, not by your intent, so plays from a bot-driven vendor can still be scrubbed even if you were unaware. That's why vetting any paid promotion before you buy is the only reliable protection.",
       },
     ],
-    cta: "Worried a recent promo or playlist placement looks botted? Run it through Songdeck's free fake-playlist and bot-detection checker to see the engagement red flags before those streams get scrubbed.",
+    cta: "Worried a recent promo or playlist placement looks botted? Run it through Sozy Echo's free fake-playlist and bot-detection checker to see the engagement red flags before those streams get scrubbed.",
   },
   {
     slug: "music-seo-guide-2026",
@@ -268,7 +268,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "No. Artificial or bot-driven streams and pay-for-placement schemes now risk takedowns, withheld royalties, and profile penalties on the major platforms, and they corrupt the engagement signals recommendation systems rely on. Real saves and shares from actual listeners are what compound; purchased numbers work against you.",
       },
     ],
-    cta: "Not sure where your discovery is leaking? Run your artist name and latest release through Songdeck's free SEO score to spot metadata gaps, duplicate profiles, and missing ISRCs in a couple of minutes.",
+    cta: "Not sure where your discovery is leaking? Run your artist name and latest release through Sozy Echo's free SEO score to spot metadata gaps, duplicate profiles, and missing ISRCs in a couple of minutes.",
   },
   {
     slug: "how-to-copyright-your-music",
@@ -319,7 +319,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "No — these are separate systems. A PRO collects performance royalties when your songs are played or streamed; it does not register your copyright or give you the legal enforcement benefits of a Copyright Office registration. Most independent artists should do both, plus set up mechanical royalty collection through the MLC.",
       },
     ],
-    cta: "Before you register, make sure the recording metadata is right — mismatched ISRCs and titles cause royalty leakage even after you copyright a song. Use Songdeck's free ISRC lookup to confirm your recordings are correctly identified across platforms.",
+    cta: "Before you register, make sure the recording metadata is right — mismatched ISRCs and titles cause royalty leakage even after you copyright a song. Use Sozy Echo's free ISRC lookup to confirm your recordings are correctly identified across platforms.",
   },
   {
     slug: "how-to-find-unauthorized-covers-of-your-song",
@@ -366,7 +366,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "YouTube's Content ID (usually accessed through a distributor or rights partner) is the strongest option for video, since it fingerprint-matches new uploads continuously. For broader coverage, some distributor dashboards and third-party rights tools monitor multiple platforms and flag new versions by audio match rather than just title text, catching uploads that manual search would miss.",
       },
     ],
-    cta: "Manually searching every platform is exhausting and always a step behind. Run your song through Songdeck's free cover finder to surface cover, remix, and karaoke versions across platforms in one pass — then decide what to license, monetize, or take down.",
+    cta: "Manually searching every platform is exhausting and always a step behind. Run your song through Sozy Echo's free cover finder to surface cover, remix, and karaoke versions across platforms in one pass — then decide what to license, monetize, or take down.",
   },
   {
     slug: "spotify-vs-apple-music-for-artists",
@@ -417,7 +417,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "It can be, but it's a trade-off, not free money. Discovery Mode increases algorithmic promotion of chosen tracks in exchange for a reduced royalty rate on the streams it generates. It can make sense for a track you're actively trying to break, but switching it on across your whole catalog by reflex can quietly cut your per-stream earnings. Decide track by track.",
       },
     ],
-    cta: "Higher payouts mean nothing if fake streams get your track flagged and your royalties withheld. Run any release through Songdeck's free fake-playlist checker to confirm your streams are coming from real listeners before you invest in promotion on either platform.",
+    cta: "Higher payouts mean nothing if fake streams get your track flagged and your royalties withheld. Run any release through Sozy Echo's free fake-playlist checker to confirm your streams are coming from real listeners before you invest in promotion on either platform.",
   },
   {
     slug: "how-music-playlist-payola-works",
@@ -464,7 +464,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "Look at engagement quality rather than raw follower count: a real playlist's followers save tracks, complete songs, and return. If a playlist has huge numbers but almost no meaningful engagement, that is a red flag. A fake-playlist checker can surface these ratios quickly.",
       },
     ],
-    cta: "Before you pay for any placement, run the playlist through Songdeck's free fake-playlist checker to see whether its listeners look real or bot-padded. It takes seconds and can save your catalog from a costly mistake.",
+    cta: "Before you pay for any placement, run the playlist through Sozy Echo's free fake-playlist checker to see whether its listeners look real or bot-padded. It takes seconds and can save your catalog from a costly mistake.",
   },
   {
     slug: "best-time-to-release-a-song",
@@ -511,7 +511,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "It matters most if your audience is concentrated in one time zone — releasing at midnight there gives the song a full first day. Early engagement can feed algorithmic discovery, so concentrating promotion so real fans listen early is more impactful than obsessing over the precise minute.",
       },
     ],
-    cta: "Not sure which Friday to target or how much runway you need to pitch? Songdeck's free release-timing tool maps a working backward schedule from your ideal date so your pitch window and delivery deadlines line up.",
+    cta: "Not sure which Friday to target or how much runway you need to pitch? Sozy Echo's free release-timing tool maps a working backward schedule from your ideal date so your pitch window and delivery deadlines line up.",
   },
   {
     slug: "how-to-get-more-spotify-monthly-listeners",
@@ -558,7 +558,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "You cannot pitch algorithmic playlists directly — you earn them through engagement quality (saves, completion, playlist adds, returns) and a consistent release cadence. Strong day-one engagement from your existing fans makes the system more likely to push a new song to new listeners.",
       },
     ],
-    cta: "Want to know whether your track is set up to earn real engagement before you promote it? Run it through Songdeck's free SEO score to check your metadata and profile signals, and use the fake-playlist checker to vet any playlist before you pitch.",
+    cta: "Want to know whether your track is set up to earn real engagement before you promote it? Run it through Sozy Echo's free SEO score to check your metadata and profile signals, and use the fake-playlist checker to vet any playlist before you pitch.",
   },
   {
     slug: "music-metadata-checklist-before-release",
@@ -605,7 +605,7 @@ export const BLOG_POSTS: BlogPost[] = [
         a: "Generally no. Distributors typically collect recording (master) royalties, while songwriting and publishing royalties flow through a separate system — your PRO and, where relevant, a publishing administrator. Register your works and settle splits with co-writers in writing before release.",
       },
     ],
-    cta: "Before you deliver, run your release through Songdeck's free metadata and SEO score to catch spelling mismatches, missing credits, and identifier issues — and use the ISRC lookup to confirm your codes are valid and unique.",
+    cta: "Before you deliver, run your release through Sozy Echo's free metadata and SEO score to catch spelling mismatches, missing credits, and identifier issues — and use the ISRC lookup to confirm your codes are valid and unique.",
   },
 ];
 

@@ -8,7 +8,7 @@ Ortam degiskenleri (hepsi opsiyonel, env-driven):
                         "skipped": "no_key"} doner (mevcut davranis
                         DEGISMEZ — anahtar yoksa hicbir sey postalanmaz).
     RESEND_FROM      - gonderen adresi (varsayilan:
-                        "Songdeck <onboarding@resend.dev>").
+                        "Sozy Echo <onboarding@resend.dev>").
     MAIL_MONTHLY_CAP - aylik gonderim tavani (varsayilan 2900 — Resend
                         ucretsiz katmaninin 3000/ay sinirinin ALTINDA
                         tampon payi birakir).
@@ -51,7 +51,7 @@ envutil.load_env()  # RESEND_API_KEY / RESEND_FROM / MAIL_*_CAP .env'den gelsin
 _RESEND_URL = "https://api.resend.com/emails"
 _REQUEST_TIMEOUT_SECONDS = 10
 
-_DEFAULT_FROM = "Songdeck <onboarding@resend.dev>"
+_DEFAULT_FROM = "Sozy Echo <onboarding@resend.dev>"
 _DEFAULT_MONTHLY_CAP = 2900   # Resend ucretsiz katman: 3000/ay — tampon payi
 _DEFAULT_DAILY_CAP = 95       # Resend ucretsiz katman: 100/gun — tampon payi
 

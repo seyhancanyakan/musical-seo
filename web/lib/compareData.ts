@@ -78,7 +78,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "For most independent artists releasing music regularly, DistroKid's flat unlimited-upload model is the cheaper, simpler choice. Choose TuneCore if you release less frequently and want its stronger publishing administration and sync focus to squeeze every royalty out of a smaller catalog. Both let you keep 100% of your earnings, so it really comes down to release cadence and whether publishing collection matters to you.",
-    "cta": "Before you commit to either distributor, run your artist name and tracks through Songdeck's free tools — our unique fake-playlist checker flags shady placements, the cover-version finder surfaces songs you can capitalize on, and a free SEO score shows how discoverable your profile really is. Sign up free to see where you stand.",
+    "cta": "Before you commit to either distributor, run your artist name and tracks through Sozy Echo's free tools — our unique fake-playlist checker flags shady placements, the cover-version finder surfaces songs you can capitalize on, and a free SEO score shows how discoverable your profile really is. Sign up free to see where you stand.",
     "faq": [
       {
         "q": "Is DistroKid cheaper than TuneCore?",
@@ -154,7 +154,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Frequent releasers should almost always pick DistroKid — the flat annual fee makes each upload cheap and delivery is fast. CD Baby is the better call for artists who release occasionally, don't want a recurring bill, and value permanence, sync opportunities and physical distribution. Think about renewal risk: if you'd stop paying DistroKid someday, CD Baby's pay-once model protects your catalog.",
-    "cta": "Whichever route you pick, check your groundwork first with Songdeck's free tools: our fake-playlist checker spots bot-driven placements before they burn you, the cover-version finder reveals tracks worth covering, and a free SEO score grades your discoverability. Create a free account to run the checks.",
+    "cta": "Whichever route you pick, check your groundwork first with Sozy Echo's free tools: our fake-playlist checker spots bot-driven placements before they burn you, the cover-version finder reveals tracks worth covering, and a free SEO score grades your discoverability. Create a free account to run the checks.",
     "faq": [
       {
         "q": "Does CD Baby charge a yearly fee like DistroKid?",
@@ -230,7 +230,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "If money is tight or you just want to get your first tracks live, Amuse's free tier is the obvious starting point. Once you're releasing regularly and want faster delivery, richer tooling and unlimited uploads, DistroKid's flat fee becomes worth it. Many artists sensibly start free on Amuse and graduate to DistroKid as their output grows.",
-    "cta": "Free or paid, don't skip the fundamentals — Songdeck's free fake-playlist checker protects you from bot placements, the cover-version finder uncovers songs worth recording, and a free SEO score shows how findable you are. Sign up free and run all three before your next release.",
+    "cta": "Free or paid, don't skip the fundamentals — Sozy Echo's free fake-playlist checker protects you from bot placements, the cover-version finder uncovers songs worth recording, and a free SEO score shows how findable you are. Sign up free and run all three before your next release.",
     "faq": [
       {
         "q": "Is Amuse really free?",
@@ -311,7 +311,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "TuneCore is the stronger choice for prolific releasers and songwriters who want deep publishing administration under a single subscription. CD Baby wins for occasional releasers who prefer paying once, keeping music live forever, and accessing physical distribution and sync. Match the pricing model to your release cadence: subscription for volume, one-time for permanence.",
-    "cta": "Either way, verify your promo foundation with Songdeck's free tools — the fake-playlist checker exposes bot placements, the cover-version finder finds tracks worth covering, and a free SEO score reveals your discoverability. Sign up free and check before you distribute.",
+    "cta": "Either way, verify your promo foundation with Sozy Echo's free tools — the fake-playlist checker exposes bot placements, the cover-version finder finds tracks worth covering, and a free SEO score reveals your discoverability. Sign up free and check before you distribute.",
     "faq": [
       {
         "q": "Which is cheaper, TuneCore or CD Baby?",
@@ -392,7 +392,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "CD Baby is the better fit for artists who want permanence, sync and physical options and don't mind paying once per release. Amuse is ideal for newer, budget-conscious artists who want free, fast, mobile releasing with full royalties. If you're just starting out, begin free on Amuse; if you want a release to live forever without renewals, CD Baby's pay-once model is hard to beat.",
-    "cta": "Before your next drop, run Songdeck's free tools: the fake-playlist checker catches bot-driven playlists, the cover-version finder surfaces songs worth recording, and a free SEO score shows how discoverable you are. Create a free account and check in minutes.",
+    "cta": "Before your next drop, run Sozy Echo's free tools: the fake-playlist checker catches bot-driven playlists, the cover-version finder surfaces songs worth recording, and a free SEO score shows how discoverable you are. Create a free account and check in minutes.",
     "faq": [
       {
         "q": "Is Amuse cheaper than CD Baby?",
@@ -468,7 +468,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "For pure, low-cost distribution with 100% royalties, DistroKid is the efficient pick. UnitedMasters makes sense if you want more than distribution — brand partnerships, sync placements and marketing muscle — and are comfortable with its free-tier revenue share or paid tiers. Prolific releasers lean DistroKid; opportunity-seekers lean UnitedMasters.",
-    "cta": "However you distribute, protect and sharpen your rollout with Songdeck's free tools — the fake-playlist checker flags bot placements, the cover-version finder reveals songs worth covering, and a free SEO score grades your discoverability. Sign up free to run them all.",
+    "cta": "However you distribute, protect and sharpen your rollout with Sozy Echo's free tools — the fake-playlist checker flags bot placements, the cover-version finder reveals songs worth covering, and a free SEO score grades your discoverability. Sign up free to run them all.",
     "faq": [
       {
         "q": "Does UnitedMasters take a cut of my royalties?",
@@ -544,7 +544,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "TuneCore is the better platform for songwriters focused on capturing every publishing royalty through strong administration. UnitedMasters suits artists who prioritize brand deals, sync exposure and a free entry point over publishing depth. Decide by asking whether royalty collection or opportunity access matters more to your career right now.",
-    "cta": "Whichever you choose, tighten your promo game with Songdeck's free tools: the fake-playlist checker catches bot placements, the cover-version finder surfaces songs worth recording, and a free SEO score reveals your discoverability. Sign up free and run the checks today.",
+    "cta": "Whichever you choose, tighten your promo game with Sozy Echo's free tools: the fake-playlist checker catches bot placements, the cover-version finder surfaces songs worth recording, and a free SEO score reveals your discoverability. Sign up free and run the checks today.",
     "faq": [
       {
         "q": "Which is better for publishing royalties, TuneCore or UnitedMasters?",
@@ -620,7 +620,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "For artists who want to distribute free without giving up any royalties, Amuse is the stronger everyday choice. UnitedMasters earns its place if you're actively chasing brand partnerships and sync placements and value that opportunity pipeline over keeping 100% on the free tier. Match the platform to whether royalty retention or deal access is your bigger goal.",
-    "cta": "Free distribution still needs smart promotion — Songdeck's free tools have you covered: the fake-playlist checker exposes bot placements, the cover-version finder finds songs worth recording, and a free SEO score shows your discoverability. Sign up free and check before you release.",
+    "cta": "Free distribution still needs smart promotion — Sozy Echo's free tools have you covered: the fake-playlist checker exposes bot placements, the cover-version finder finds songs worth recording, and a free SEO score shows your discoverability. Sign up free and check before you release.",
     "faq": [
       {
         "q": "Do both Amuse and UnitedMasters let me keep 100% of royalties?",
@@ -696,7 +696,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "DistroKid is the safe pick for prolific artists who prioritize fast delivery and a rich add-on marketplace. Ditto is worth a serious look if you want unlimited distribution plus label-style services like mastering, promo and label formation under one roof. With pricing so similar, decide based on whether you want pure speed or bundled support.",
-    "cta": "Both get your music live — Songdeck helps you promote it safely. Our free fake-playlist checker flags bot placements, the cover-version finder reveals songs worth recording, and a free SEO score grades your discoverability. Sign up free and run all three.",
+    "cta": "Both get your music live — Sozy Echo helps you promote it safely. Our free fake-playlist checker flags bot placements, the cover-version finder reveals songs worth recording, and a free SEO score grades your discoverability. Sign up free and run all three.",
     "faq": [
       {
         "q": "Do DistroKid and Ditto both offer unlimited uploads?",
@@ -772,7 +772,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "TuneCore is the stronger choice for songwriters focused on capturing publishing royalties through robust administration. Ditto suits high-volume releasers who want unlimited uploads and label-style support for a predictable flat fee. Decide based on whether publishing collection or release volume plus label services is more important to your career.",
-    "cta": "Whichever distributor you choose, promote smart with Songdeck's free tools — the fake-playlist checker catches bot placements, the cover-version finder surfaces songs worth recording, and a free SEO score reveals your discoverability. Sign up free and check before your next release.",
+    "cta": "Whichever distributor you choose, promote smart with Sozy Echo's free tools — the fake-playlist checker catches bot placements, the cover-version finder surfaces songs worth recording, and a free SEO score reveals your discoverability. Sign up free and check before your next release.",
     "faq": [
       {
         "q": "Which is better for publishing royalties, TuneCore or Ditto?",
@@ -862,7 +862,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Groover has a noticeably stronger European curator base, making it the better first choice for artists targeting France, Germany and the EU. SubmitHub still works well in Europe but skews more US-centric overall."
       }
     ],
-    "cta": "Before you spend a single credit, run your target playlists through Songdeck's free fake-playlist checker to weed out bot-inflated placements — then grab your free SEO score and try the cover-version finder when you sign up."
+    "cta": "Before you spend a single credit, run your target playlists through Sozy Echo's free fake-playlist checker to weed out bot-inflated placements — then grab your free SEO score and try the cover-version finder when you sign up."
   },
   {
     "slug": "submithub-vs-playlistpush",
@@ -938,7 +938,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "No reputable platform guarantees adds. SubmitHub guarantees feedback on premium; Playlist Push guarantees curators will review and respond. Real placements always depend on the song and targeting."
       }
     ],
-    "cta": "Whichever you choose, verify the playlists you land on are real — Songdeck's free fake-playlist checker flags bot-inflated lists in seconds, and signing up adds a free SEO score plus a cover-version finder at no cost."
+    "cta": "Whichever you choose, verify the playlists you land on are real — Sozy Echo's free fake-playlist checker flags bot-inflated lists in seconds, and signing up adds a free SEO score plus a cover-version finder at no cost."
   },
   {
     "slug": "groover-vs-playlistpush",
@@ -1014,7 +1014,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Yes — every Groover curator must respond within 7 days or your Groove is refunded. Playlist Push guarantees curators review your track within the campaign, but neither guarantees a placement."
       }
     ],
-    "cta": "Don't let a paid campaign land you on a fake list — Songdeck's free fake-playlist checker spots bot-inflated placements instantly, and a free account also unlocks an SEO score and cover-version finder."
+    "cta": "Don't let a paid campaign land you on a fake list — Sozy Echo's free fake-playlist checker spots bot-inflated placements instantly, and a free account also unlocks an SEO score and cover-version finder."
   },
   {
     "slug": "submithub-vs-dailyplaylists",
@@ -1090,7 +1090,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "SubmitHub, by far. It covers blogs, YouTube, TikTok, radio and labels alongside playlists, whereas Daily Playlists is centered on Spotify playlist curators."
       }
     ],
-    "cta": "Cheap volume pitching only pays off if the playlists are real — run them through Songdeck's free fake-playlist checker first, and claim your free SEO score and cover-version finder when you sign up."
+    "cta": "Cheap volume pitching only pays off if the playlists are real — run them through Sozy Echo's free fake-playlist checker first, and claim your free SEO score and cover-version finder when you sign up."
   },
   {
     "slug": "groover-vs-dailyplaylists",
@@ -1166,7 +1166,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Yes. Groover has a notably stronger European curator base, making it a better fit for artists targeting France, Germany and the wider EU, while Daily Playlists casts a broader but shallower net."
       }
     ],
-    "cta": "Before trusting any playlist add, check it with Songdeck's free fake-playlist checker to avoid bot-inflated lists — and a free account also throws in an SEO score and cover-version finder too."
+    "cta": "Before trusting any playlist add, check it with Sozy Echo's free fake-playlist checker to avoid bot-inflated lists — and a free account also throws in an SEO score and cover-version finder too."
   },
   {
     "slug": "playlistpush-vs-dailyplaylists",
@@ -1242,7 +1242,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "They can, but the campaign fees make it better suited to artists with budget and a proven-feeling track. Beginners testing songs on a tight budget usually get more value starting with a low-cost tool like Daily Playlists."
       }
     ],
-    "cta": "Big campaign or budget subscription, verify every placement is genuine — Songdeck's free fake-playlist checker flags bot-inflated lists, and a free account also gives you an SEO score and a cover-version finder."
+    "cta": "Big campaign or budget subscription, verify every placement is genuine — Sozy Echo's free fake-playlist checker flags bot-inflated lists, and a free account also gives you an SEO score and a cover-version finder."
   },
   {
     "slug": "submithub-vs-musosoup",
@@ -1318,7 +1318,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "SubmitHub, on premium credits, guarantees a written reply. MusoSoup is more oriented toward securing coverage than delivering detailed feedback, so if learning why curators pass matters most, SubmitHub has the edge."
       }
     ],
-    "cta": "Coverage only counts if the playlists are legit — Songdeck's free fake-playlist checker exposes bot-inflated lists instantly, and signing up adds a free SEO score plus a cover-version finder."
+    "cta": "Coverage only counts if the playlists are legit — Sozy Echo's free fake-playlist checker exposes bot-inflated lists instantly, and signing up adds a free SEO score plus a cover-version finder."
   },
   {
     "slug": "groover-vs-musosoup",
@@ -1394,7 +1394,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Groover charges per submission (a couple of euros each), so cost scales with outreach. MusoSoup lets you set a capped campaign budget that curators claim from, giving predictable spend. Check current rates on both before you commit."
       }
     ],
-    "cta": "Real coverage means real playlists — run any add through Songdeck's free fake-playlist checker to catch bot-inflated lists, and get a free SEO score and cover-version finder when you sign up."
+    "cta": "Real coverage means real playlists — run any add through Sozy Echo's free fake-playlist checker to catch bot-inflated lists, and get a free SEO score and cover-version finder when you sign up."
   },
   {
     "slug": "playlistpush-vs-soundcampaign",
@@ -1470,7 +1470,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Playlist Push is the larger, more established platform with a broad US curator base. SoundCampaign is smaller but growing and competes primarily on price and value for the same campaign model."
       }
     ],
-    "cta": "Paid campaigns are only worth it on real playlists — Songdeck's free fake-playlist checker flags bot-inflated lists in seconds, and a free account also unlocks an SEO score and cover-version finder."
+    "cta": "Paid campaigns are only worth it on real playlists — Sozy Echo's free fake-playlist checker flags bot-inflated lists in seconds, and a free account also unlocks an SEO score and cover-version finder."
   },
   {
     "slug": "submithub-vs-soundplate",
@@ -1546,7 +1546,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Beyond playlist pitching, Soundplate provides smart links (Soundplate Clicks), an opportunities board and label services, making it more of a broader artist platform than a pure submission marketplace like SubmitHub."
       }
     ],
-    "cta": "Free or paid pitching, always confirm the playlist is genuine — Songdeck's free fake-playlist checker catches bot-inflated lists, and a free account also gives you an SEO score and a cover-version finder to protect your releases."
+    "cta": "Free or paid pitching, always confirm the playlist is genuine — Sozy Echo's free fake-playlist checker catches bot-inflated lists, and a free account also gives you an SEO score and a cover-version finder to protect your releases."
   },
   {
     "slug": "chartmetric-vs-soundcharts",
@@ -1626,7 +1626,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Both track editorial and algorithmic playlists well. Chartmetric stands out for historical playlist depth; Soundcharts stands out for tight real-time add/remove alerting."
       }
     ],
-    "cta": "Before you pay for any analytics suite, run your track through Songdeck's free tools — check any playlist for fake/bot activity with our fake-playlist checker, find every cover of a song with our cover version finder, and get a free SEO score for your release. Create a free account and see what your music data really looks like."
+    "cta": "Before you pay for any analytics suite, run your track through Sozy Echo's free tools — check any playlist for fake/bot activity with our fake-playlist checker, find every cover of a song with our cover version finder, and get a free SEO score for your release. Create a free account and see what your music data really looks like."
   },
   {
     "slug": "chartmetric-vs-viberate",
@@ -1706,7 +1706,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Both provide entry-level or free access so you can evaluate them. Paid tiers differ, so check current pricing on each site before subscribing."
       }
     ],
-    "cta": "Whichever analytics tool you land on, verify your playlist placements first with Songdeck's free fake-playlist checker, discover every cover of your songs with our cover finder, and grab a free SEO score for your release. Sign up free — no card needed — and start with clean data."
+    "cta": "Whichever analytics tool you land on, verify your playlist placements first with Sozy Echo's free fake-playlist checker, discover every cover of your songs with our cover finder, and grab a free SEO score for your release. Sign up free — no card needed — and start with clean data."
   },
   {
     "slug": "soundcharts-vs-viberate",
@@ -1786,7 +1786,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Soundcharts is built around real-time monitoring and alerting, which is its core strength. Viberate focuses more on clear dashboards than instant team alerting."
       }
     ],
-    "cta": "Before committing to any monitoring tool, sanity-check your playlists with Songdeck's free fake-playlist checker, uncover every cover of your tracks with our cover finder, and get a free SEO score for your release. Create a free Songdeck account and start with data you can trust."
+    "cta": "Before committing to any monitoring tool, sanity-check your playlists with Sozy Echo's free fake-playlist checker, uncover every cover of your tracks with our cover finder, and get a free SEO score for your release. Create a free Sozy Echo account and start with data you can trust."
   },
   {
     "slug": "chartmetric-vs-spotontrack",
@@ -1866,7 +1866,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Chartmetric has a useful free plan. SpotOnTrack is more trial/entry-oriented — check its current site for free or introductory options."
       }
     ],
-    "cta": "No matter which tracker you choose, confirm your playlist adds are real with Songdeck's free fake-playlist checker, find every cover of your songs with our cover finder, and get a free SEO score for your release. Sign up free and protect your placements before you invest in paid tools."
+    "cta": "No matter which tracker you choose, confirm your playlist adds are real with Sozy Echo's free fake-playlist checker, find every cover of your songs with our cover finder, and get a free SEO score for your release. Sign up free and protect your placements before you invest in paid tools."
   },
   {
     "slug": "soundcharts-vs-spotontrack",
@@ -1946,7 +1946,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Labels usually benefit more from Soundcharts thanks to real-time roster monitoring and API integration. SpotOnTrack fits smaller operations or artists tracking their own catalog."
       }
     ],
-    "cta": "Before you subscribe to any tracker, verify your playlist adds with Songdeck's free fake-playlist checker, find every cover of your tracks with our cover finder, and get a free SEO score for your release. Create a free account and start with data you can trust."
+    "cta": "Before you subscribe to any tracker, verify your playlist adds with Sozy Echo's free fake-playlist checker, find every cover of your tracks with our cover finder, and get a free SEO score for your release. Create a free account and start with data you can trust."
   },
   {
     "slug": "viberate-vs-spotontrack",
@@ -2026,7 +2026,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "SpotOnTrack is purpose-built for playlist and chart tracking and keeps it simple. Viberate covers playlists too but as part of a wider analytics view."
       }
     ],
-    "cta": "Whichever you choose, confirm your playlist adds are legitimate with Songdeck's free fake-playlist checker, discover every cover of your songs with our cover finder, and get a free SEO score for your release. Sign up free and start with trustworthy data."
+    "cta": "Whichever you choose, confirm your playlist adds are legitimate with Sozy Echo's free fake-playlist checker, discover every cover of your songs with our cover finder, and get a free SEO score for your release. Sign up free and start with trustworthy data."
   },
   {
     "slug": "distrokid-alternatives",
@@ -2074,7 +2074,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Amuse is the best-known distributor with a free tier. Free plans usually have limitations, so compare them against paid options if you release often or need extra services."
       }
     ],
-    "cta": "Distribution gets your music out — Songdeck helps it get heard. Use our free tools to check any playlist for fake/bot activity, find every cover of your songs, and score your release's SEO before it goes live. Create a free account and give your next release its best shot."
+    "cta": "Distribution gets your music out — Sozy Echo helps it get heard. Use our free tools to check any playlist for fake/bot activity, find every cover of your songs, and score your release's SEO before it goes live. Create a free account and give your next release its best shot."
   },
   {
     "slug": "tunecore-alternatives",
@@ -2122,7 +2122,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "CD Baby and DistroKid both offer publishing administration add-ons, and UnitedMasters provides its own services. Compare current terms, since coverage and commission structures vary by provider."
       }
     ],
-    "cta": "Once your distributor is sorted, make sure your music actually gets discovered. Songdeck's free tools check any playlist for fake/bot activity, find every cover of your songs, and give your release an SEO score. Sign up free and release with confidence."
+    "cta": "Once your distributor is sorted, make sure your music actually gets discovered. Sozy Echo's free tools check any playlist for fake/bot activity, find every cover of your songs, and give your release an SEO score. Sign up free and release with confidence."
   },
   {
     "slug": "cdbaby-alternatives",
@@ -2170,7 +2170,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Several do. TuneCore and DistroKid offer publishing administration add-ons, and CD Baby itself is known for publishing services. Compare current terms, since coverage and commissions vary by provider."
       }
     ],
-    "cta": "After you pick a distributor, help your releases get found. Songdeck's free tools check playlists for fake/bot activity, find every cover of your songs, and score your release's SEO. Create a free account and give your music the visibility it deserves."
+    "cta": "After you pick a distributor, help your releases get found. Sozy Echo's free tools check playlists for fake/bot activity, find every cover of your songs, and score your release's SEO. Create a free account and give your music the visibility it deserves."
   },
   {
     "slug": "submithub-alternatives",
@@ -2218,7 +2218,7 @@ export const COMPARE_PAGES: ComparePage[] = [
         "a": "Stick to platforms with transparent curator vetting, avoid anyone guaranteeing streams, and verify each playlist for bot activity before accepting a placement. A free fake-playlist checker helps you screen offers before you commit."
       }
     ],
-    "cta": "Before you accept any curator placement, run the playlist through Songdeck's free fake-playlist checker so you never pay for bot-driven streams. You can also find every cover of your songs and get a free SEO score for your release. Sign up free and pitch smarter."
+    "cta": "Before you accept any curator placement, run the playlist through Sozy Echo's free fake-playlist checker so you never pay for bot-driven streams. You can also find every cover of your songs and get a free SEO score for your release. Sign up free and pitch smarter."
   },
   {
     "slug": "groover-alternatives",
@@ -2248,7 +2248,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "For most artists leaving Groover, SubmitHub is the natural first stop — same feedback-guarantee logic, larger roster, and clearer per-curator stats. Budget-focused DIY artists should try MusoSoup or Daily Playlists for cheaper submissions, while artists who want a hands-off, placement-oriented campaign and have a larger budget will get more from Playlist Push. Test small on one platform before scaling.",
-    "cta": "Before you spend a cent on any curator, run your target playlists through Songdeck's free fake-playlist checker to spot bot-inflated placements — plus a free SEO score for your artist profile. Create a free account and vet before you pitch.",
+    "cta": "Before you spend a cent on any curator, run your target playlists through Sozy Echo's free fake-playlist checker to spot bot-inflated placements — plus a free SEO score for your artist profile. Create a free account and vet before you pitch.",
     "faq": [
       {
         "q": "Is SubmitHub cheaper than Groover?",
@@ -2292,7 +2292,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "If Playlist Push's minimum is the blocker, start self-serve with SubmitHub or Daily Playlists to control targeting at a low cost, or use MusoSoup for the cheapest broad reach. Choose SoundCampaign or Soundplate Clicks if you specifically want a managed, hands-off campaign without Playlist Push's price tag. Whatever you pick, verify placements before scaling.",
-    "cta": "Don't pay for placements you can't trust — check any playlist you're offered with Songdeck's free fake-playlist detector, and grab a free SEO score for your release page. Sign up free and campaign smarter.",
+    "cta": "Don't pay for placements you can't trust — check any playlist you're offered with Sozy Echo's free fake-playlist detector, and grab a free SEO score for your release page. Sign up free and campaign smarter.",
     "faq": [
       {
         "q": "Why is Playlist Push so expensive?",
@@ -2336,7 +2336,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Labels and managers who need the deepest cross-platform data will still want Chartmetric or its closest rival Soundcharts. Independent artists and smaller teams should look at Viberate for broad analytics at a friendlier price, or SpotOnTrack if playlist tracking is the real goal — and lean on free first-party dashboards before paying for anything.",
-    "cta": "Analytics tell you what happened; Songdeck's free tools tell you what to fix — run a free SEO score on your artist profile and use the free fake-playlist checker to audit where your streams really come from. Create a free account to start.",
+    "cta": "Analytics tell you what happened; Sozy Echo's free tools tell you what to fix — run a free SEO score on your artist profile and use the free fake-playlist checker to audit where your streams really come from. Create a free account to start.",
     "faq": [
       {
         "q": "Is there a free alternative to Chartmetric?",
@@ -2380,7 +2380,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Prolific artists who release monthly get the best value from DistroKid's flat annual, unlimited-upload model. Occasional releasers who hate subscriptions should look at CD Baby's pay-once structure. Artists starting with no budget should begin on Amuse or UnitedMasters' free tiers and upgrade once revenue justifies it. Prioritise keeping 100% of royalties and check each platform's current pricing before you commit.",
-    "cta": "Once you're live everywhere, make sure people can actually find you: run a free SEO score on your release page with Songdeck, and use the free fake-playlist checker to protect your new tracks from bad placements. Sign up free to get started.",
+    "cta": "Once you're live everywhere, make sure people can actually find you: run a free SEO score on your release page with Sozy Echo, and use the free fake-playlist checker to protect your new tracks from bad placements. Sign up free to get started.",
     "faq": [
       {
         "q": "Which distributor lets me keep 100% of my royalties?",
@@ -2424,7 +2424,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Always start with the free Spotify for Artists editorial pitch. For paid outreach, SubmitHub gives the best control and transparency for most artists, Groover is strong if you want guaranteed feedback, and MusoSoup or Daily Playlists win on budget. Reserve Playlist Push for when you want a bigger, hands-off managed campaign — and verify every placement.",
-    "cta": "The single most important step in playlist pitching is avoiding fake playlists — Songdeck's free fake-playlist checker flags bot-inflated lists before you spend a cent, and a free SEO score helps your release page rank. Create a free account and pitch with confidence.",
+    "cta": "The single most important step in playlist pitching is avoiding fake playlists — Sozy Echo's free fake-playlist checker flags bot-inflated lists before you spend a cent, and a free SEO score helps your release page rank. Create a free account and pitch with confidence.",
     "faq": [
       {
         "q": "Can I get on Spotify editorial playlists with a paid service?",
@@ -2468,7 +2468,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "For control and transparency, SubmitHub is the best all-round pitching tool for most independent artists. Choose Groover when guaranteed feedback matters, MusoSoup for cheap broad reach, and Playlist Push for hands-off managed campaigns with a larger budget. Layer all of them on top of your free Spotify for Artists editorial pitch — and screen every playlist before you pay.",
-    "cta": "Great pitching starts with knowing which playlists are real — use Songdeck's free fake-playlist checker to vet curators before you spend, plus a free SEO score to sharpen your release page. Sign up free and pitch smarter.",
+    "cta": "Great pitching starts with knowing which playlists are real — use Sozy Echo's free fake-playlist checker to vet curators before you spend, plus a free SEO score to sharpen your release page. Sign up free and pitch smarter.",
     "faq": [
       {
         "q": "What's the difference between self-serve and managed pitching tools?",
@@ -2512,7 +2512,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Solo artists should lean on free Spotify/Apple for Artists dashboards, adding SpotOnTrack if playlist tracking matters. Growing independents and small teams get the best value from Viberate. Labels, managers and A&R who need the deepest cross-platform data and discovery should invest in Chartmetric or Soundcharts. Buy the smallest tool that answers your actual questions.",
-    "cta": "Data shows what happened — Songdeck's free tools help you act on it: get a free SEO score for your artist profile and use the free fake-playlist checker to confirm your streams are real, not bot-driven. Create a free account to start.",
+    "cta": "Data shows what happened — Sozy Echo's free tools help you act on it: get a free SEO score for your artist profile and use the free fake-playlist checker to confirm your streams are real, not bot-driven. Create a free account to start.",
     "faq": [
       {
         "q": "Do I need a paid analytics tool as an independent artist?",
@@ -2556,7 +2556,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "For a brand-new artist with zero budget, Amuse's free tier is the cleanest way to get on Spotify and Apple Music while keeping your royalties. UnitedMasters is the better free pick if you want brand and sync opportunities and don't mind a royalty cut early on. As your streams and release frequency grow, run the numbers on a flat-fee service — free often stops being the cheapest option at scale.",
-    "cta": "Getting distributed is step one; getting discovered is the hard part — run a free SEO score on your release page with Songdeck and use the free fake-playlist checker to keep your new tracks safe. Sign up free to get going.",
+    "cta": "Getting distributed is step one; getting discovered is the hard part — run a free SEO score on your release page with Sozy Echo and use the free fake-playlist checker to keep your new tracks safe. Sign up free to get going.",
     "faq": [
       {
         "q": "Is free music distribution actually free?",
@@ -2600,7 +2600,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "If you release rarely, the cheapest route is Amuse's free tier or CD Baby's pay-once model — no recurring bill. If you release often, DistroKid's flat annual fee for unlimited uploads is the lowest per-release cost. Watch royalty-percentage tiers, which get expensive as streams grow: what's cheapest today may not be at scale, so recalculate yearly.",
-    "cta": "Cheap distribution is wasted if no one finds your track — get a free SEO score for your release page from Songdeck and use the free fake-playlist checker to protect your streams. Create a free account and make every release count.",
+    "cta": "Cheap distribution is wasted if no one finds your track — get a free SEO score for your release page from Sozy Echo and use the free fake-playlist checker to protect your streams. Create a free account and make every release count.",
     "faq": [
       {
         "q": "What's the cheapest way to distribute music?",
@@ -2644,7 +2644,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Frequent releasers should choose DistroKid for its flat annual fee, unlimited uploads and automatic splits. Occasional releasers who hate subscriptions are best served by CD Baby's pay-once model with publishing support. New artists with no budget should launch on Amuse or UnitedMasters and upgrade as revenue grows. Prioritise keeping 100% of royalties, clean splits and catalogue security over the lowest sticker price.",
-    "cta": "Distribution gets you live — Songdeck helps you get heard: run a free SEO score on your artist and release pages, and use the free fake-playlist checker plus cover-version finder to grow safely. Sign up free and take control of your independent career.",
+    "cta": "Distribution gets you live — Sozy Echo helps you get heard: run a free SEO score on your artist and release pages, and use the free fake-playlist checker plus cover-version finder to grow safely. Sign up free and take control of your independent career.",
     "faq": [
       {
         "q": "What's the best distributor for an independent artist who collaborates?",
@@ -2688,7 +2688,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "SubmitHub is a legitimate, transparent tool and one of the safest paid-pitching options because refunds and response stats keep curators honest. Use it for feedback and mid-tier playlist/blog reach, target tightly, and never expect a hit from spray-and-pray. Pair it with organic outreach for best results.",
-    "cta": "Before you spend a cent on SubmitHub, run your track through Songdeck's free tools — a free SEO/discoverability score plus our unique free fake-playlist checker so you don't burn credits chasing bot-inflated playlists. Sign up free to check first, pitch smarter.",
+    "cta": "Before you spend a cent on SubmitHub, run your track through Sozy Echo's free tools — a free SEO/discoverability score plus our unique free fake-playlist checker so you don't burn credits chasing bot-inflated playlists. Sign up free to check first, pitch smarter.",
     "faq": [
       {
         "q": "Is SubmitHub legit or a scam?",
@@ -2732,7 +2732,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Groover is a solid, artist-friendly choice thanks to its guaranteed-reply model and strong European curator base. Choose Groover when you want quality feedback and relationship-building; choose SubmitHub when you want higher send volume at lower per-credit cost. Many artists use both across a release cycle.",
-    "cta": "Don't waste Grooviz on playlists padded with fake streams — check any curator's playlist with Songdeck's free fake-playlist checker first, and get a free SEO score for your release. Sign up free and pitch with confidence.",
+    "cta": "Don't waste Grooviz on playlists padded with fake streams — check any curator's playlist with Sozy Echo's free fake-playlist checker first, and get a free SEO score for your release. Sign up free and pitch with confidence.",
     "faq": [
       {
         "q": "Does Groover really guarantee feedback?",
@@ -2776,7 +2776,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Playlist Push is one of the more established paid-campaign services and can widen your reach if you approach it as marketing spend. Use it when you have budget and a genuinely competitive track; avoid it if you're expecting streams to pay back the cost or if the playlists on offer look artificially inflated.",
-    "cta": "Protect your budget: before and after any campaign, use Songdeck's free fake-playlist checker to confirm the playlists adding you are real, plus a free SEO score to see how discoverable your track is. Sign up free and campaign smarter.",
+    "cta": "Protect your budget: before and after any campaign, use Sozy Echo's free fake-playlist checker to confirm the playlists adding you are real, plus a free SEO score to see how discoverable your track is. Sign up free and campaign smarter.",
     "faq": [
       {
         "q": "Is Playlist Push safe for my Spotify account?",
@@ -2820,7 +2820,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "DistroKid remains the go-to for high-output independent artists thanks to unlimited uploads, 100% royalties and fast payouts. Pick it if you release often and don't mind an annual subscription; choose a one-time-fee distributor like CD Baby if you release rarely and want your music to stay up without renewing.",
-    "cta": "Once you're live on stores, make sure you're actually discoverable: run your release through Songdeck's free SEO score, and use our free fake-playlist checker before accepting any playlist pitch. Sign up free to get more from every DistroKid release.",
+    "cta": "Once you're live on stores, make sure you're actually discoverable: run your release through Sozy Echo's free SEO score, and use our free fake-playlist checker before accepting any playlist pitch. Sign up free to get more from every DistroKid release.",
     "faq": [
       {
         "q": "Does DistroKid take a cut of royalties?",
@@ -2864,7 +2864,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "TuneCore is a dependable, feature-complete distributor whose standout is publishing administration for songwriters. Choose it when collecting publishing royalties matters and you want an established platform; choose DistroKid for the cheapest high-volume uploads, or CD Baby if you prefer a one-time fee with no annual renewal.",
-    "cta": "Distribution gets you on the shelf — discoverability sells the record. Check your release with Songdeck's free SEO score and screen any playlist offer with our free fake-playlist checker before you accept. Sign up free and make each TuneCore release work harder.",
+    "cta": "Distribution gets you on the shelf — discoverability sells the record. Check your release with Sozy Echo's free SEO score and screen any playlist offer with our free fake-playlist checker before you accept. Sign up free and make each TuneCore release work harder.",
     "faq": [
       {
         "q": "Does TuneCore keep any of my royalties?",
@@ -2908,7 +2908,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Chartmetric is the most comprehensive independent music analytics tool available and worth it for professionals doing A&R, scouting or serious marketing. Start on the free tier to learn the interface; upgrade when you need playlist history, exports and multi-artist monitoring. Casual artists can skip it and rely on native platform stats.",
-    "cta": "Chartmetric shows you the data; Songdeck helps you act on the vulnerable parts. Use our free fake-playlist checker to spot bot-inflated playlists in your data, plus a free SEO score for your own profile. Sign up free to complement your analytics.",
+    "cta": "Chartmetric shows you the data; Sozy Echo helps you act on the vulnerable parts. Use our free fake-playlist checker to spot bot-inflated playlists in your data, plus a free SEO score for your own profile. Sign up free to complement your analytics.",
     "faq": [
       {
         "q": "Does Chartmetric have a free plan?",
@@ -2952,7 +2952,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Amuse is one of the best free ways to distribute music and keep 100% of your royalties, making it ideal for newcomers and tight budgets. Stay on free while you're finding your feet; move to Pro when release timing, faster payouts and advanced splits start to matter. Heavy releasers should still price-compare against DistroKid.",
-    "cta": "Free distribution is only half the battle — visibility is the rest. Run your Amuse release through Songdeck's free SEO score and vet any playlist pitch with our free fake-playlist checker before you accept. Sign up free and launch smarter.",
+    "cta": "Free distribution is only half the battle — visibility is the rest. Run your Amuse release through Sozy Echo's free SEO score and vet any playlist pitch with our free fake-playlist checker before you accept. Sign up free and launch smarter.",
     "faq": [
       {
         "q": "Is Amuse really free?",
@@ -2996,7 +2996,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "CD Baby is the strongest choice when you value a one-time fee, long-term availability, and extras like physical, sync and publishing. Choose it if you release rarely or want your catalog to stay live without renewing; choose DistroKid if you release constantly and want the lowest cost per release with full royalty retention.",
-    "cta": "However you distribute, make sure people can find you: get a free SEO score from Songdeck and screen any playlist pitch with our free fake-playlist checker before accepting. Sign up free and protect your release.",
+    "cta": "However you distribute, make sure people can find you: get a free SEO score from Sozy Echo and screen any playlist pitch with our free fake-playlist checker before accepting. Sign up free and protect your release.",
     "faq": [
       {
         "q": "Does CD Baby charge annually?",
@@ -3040,7 +3040,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "Daily Playlists is a reasonable curator-submission tool whose subscription model favors consistent, high-volume pitchers. Choose it if you're releasing often and want predictable monthly costs; choose credit-based SubmitHub or feedback-guaranteed Groover if you pitch occasionally or want a transparency layer. As always, vet the playlists you're added to.",
-    "cta": "Subscription pitching only pays off if the playlists are real. Screen every add with Songdeck's free fake-playlist checker and get a free SEO score for your track before you submit. Sign up free and stop paying for placements that don't count.",
+    "cta": "Subscription pitching only pays off if the playlists are real. Screen every add with Sozy Echo's free fake-playlist checker and get a free SEO score for your track before you submit. Sign up free and stop paying for placements that don't count.",
     "faq": [
       {
         "q": "Is Daily Playlists legit?",
@@ -3084,7 +3084,7 @@ export const COMPARE_PAGES: ComparePage[] = [
       }
     ],
     "verdict": "MusoSoup is a cost-effective way to gather blog coverage, playlist adds and social proof through opt-in curators, ideal for building an EPK on a budget. Use it for press and credibility, keep disclosure rules in mind, and prioritize genuine curators. If you want purely organic coverage or big streaming numbers, temper expectations.",
-    "cta": "Before you approve curators, make sure their playlists are real: run them through Songdeck's free fake-playlist checker, and grab a free SEO score for your release. Sign up free and spend your campaign budget only on legit coverage.",
+    "cta": "Before you approve curators, make sure their playlists are real: run them through Sozy Echo's free fake-playlist checker, and grab a free SEO score for your release. Sign up free and spend your campaign budget only on legit coverage.",
     "faq": [
       {
         "q": "Is MusoSoup legit or pay-to-play?",

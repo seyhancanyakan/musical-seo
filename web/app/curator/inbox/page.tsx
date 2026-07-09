@@ -590,7 +590,7 @@ export default function CuratorInboxPage() {
     <div>
       <nav className={styles.topbar}>
         <div className={styles.topbarInner}>
-          <Link href="/" className={styles.logo}>Songdeck</Link>
+          <Link href="/" className={styles.logo}>Sozy Echo</Link>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div className={styles.userChip}>
               {user ? t.userChip(user.name) : `👤 ${t.curatorPanel}`}

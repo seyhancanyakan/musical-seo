@@ -157,7 +157,7 @@ export default function GirisPage() {
   return (
     <div className={styles.wrap}>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Link href="/" className={styles.logo}>Songdeck</Link>
+        <Link href="/" className={styles.logo}>Sozy Echo</Link>
         <LangToggle />
       </div>
 

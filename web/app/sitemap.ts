@@ -10,7 +10,7 @@ import { BLOG_SLUGS } from "@/lib/blogData";
 
 export const revalidate = 3600;
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://sozyecho.live";
 
 // Ana sayfa + 4 nis arac sayfasi (bkz. SiteHeader toolLinks).
 const STATIC_PATHS = [

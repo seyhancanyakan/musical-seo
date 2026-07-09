@@ -309,7 +309,7 @@ export default function KarnePage() {
   return (
     <div className={styles.shell}>
       <div className={styles.topbar}>
-        <Link href="/" className={styles.logo}>Songdeck</Link>
+        <Link href="/" className={styles.logo}>Sozy Echo</Link>
         <div className={styles.userChip}>
           👤 {data.resolved_artist} {t.userChipSuffix}
         </div>

@@ -5,7 +5,8 @@ import SiteHeader from "@/components/SiteHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Songdeck — Get your music the visibility it deserves",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "https://sozyecho.live"),
+  title: "Sozy Echo — Get your music the visibility it deserves",
   description:
     "SEO report card, systematic playlist pitching, verified results. " +
     "We don't sell guaranteed streams — we sell proof.",

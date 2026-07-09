@@ -2,7 +2,7 @@
 
 Email-safe kisitlar: harici CSS yok (bircok mail istemcisi <style> ya da
 harici sayfa yuklemesini engeller/bozar), tum stil INLINE, duzen basit
-tek-sutun tablo (email istemcileri arasinda en tutarli render). Songdeck
+tek-sutun tablo (email istemcileri arasinda en tutarli render). Sozy Echo
 marka rengi (#2d6bff) + net bir CTA butonu ile 'neo-brutal-ish' ama sade bir
 gorunum hedeflenir.
 
@@ -17,7 +17,7 @@ import html
 import os
 
 _BRAND_BLUE = "#2d6bff"
-_DEFAULT_SITE_URL = "http://localhost:3100"
+_DEFAULT_SITE_URL = "https://sozyecho.live"
 
 
 def _site_url() -> str:
@@ -43,7 +43,7 @@ def _wrap(title: str, body_html: str, cta_label: str, cta_href: str | None = Non
           <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
             <tr>
               <td style="background:{_BRAND_BLUE};padding:20px 32px;">
-                <span style="color:#ffffff;font-size:20px;font-weight:bold;">Songdeck</span>
+                <span style="color:#ffffff;font-size:20px;font-weight:bold;">Sozy Echo</span>
               </td>
             </tr>
             <tr>
@@ -61,7 +61,7 @@ def _wrap(title: str, body_html: str, cta_label: str, cta_href: str | None = Non
             </tr>
             <tr>
               <td style="padding:16px 32px;color:#8a8f98;font-size:12px;border-top:1px solid #f0f0f0;">
-                Songdeck &mdash; muzik SEO platformu.
+                Sozy Echo &mdash; muzik SEO platformu.
               </td>
             </tr>
           </table>
@@ -74,10 +74,10 @@ def _wrap(title: str, body_html: str, cta_label: str, cta_href: str | None = Non
 
 def welcome_email(name: str) -> tuple[str, str]:
     """Ilk e-posta yakalamasinda (huni girisi) karsilama maili."""
-    subject = "Songdeck'e hos geldin!"
+    subject = "Sozy Echo'e hos geldin!"
     body = f"""
         <p style="margin:0 0 16px;">{_greeting(name)}</p>
-        <p style="margin:0 0 16px;">Songdeck'e katildigin icin tesekkurler!
+        <p style="margin:0 0 16px;">Sozy Echo'e katildigin icin tesekkurler!
         Sarkinin SEO potansiyelini gormek ve takibe almak icin ucretsiz
         raporunu inceleyebilirsin.</p>
     """
