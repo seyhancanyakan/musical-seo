@@ -292,12 +292,14 @@ def test_get_report_roundtrip_includes_recomputed_data_coverage(fraud_db):
 
 # --- veri_yetersiz esigi renormalizasyondan sonra da korunur -----------------
 
-def test_analyze_playlist_veri_yetersiz_when_below_min_informative(fraud_db):
-    # Sadece track_seo_poverty informatif olur (1 sinyal) -> esik (2) altinda.
+def test_single_informative_signal_gives_real_verdict(fraud_db):
+    # MIN_INFORMATIVE=1: sadece track_seo_poverty informatif (1 sinyal) olsa bile
+    # veri_yetersiz DEGIL — renormalize edilmis gercek verdict uretilir; guven
+    # duzeyi data_coverage (1/5) ile gosterilir.
     report = fraud_forensics.analyze_playlist(
         "https://deezer.com/playlist/only-one-signal", track_scores=[10, 15],
     )
-    assert report["verdict"] == "veri_yetersiz"
+    assert report["verdict"] != "veri_yetersiz"
     assert report["data_coverage"]["informative_signals"] == 1
 
 

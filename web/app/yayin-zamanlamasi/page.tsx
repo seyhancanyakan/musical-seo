@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { adviseRelease } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 const DEMO_QUERY = "Deniz Ada — Kıyı";
@@ -108,7 +107,6 @@ export default function ReleaseTimingPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
 
       <main className={styles.body}>
         <span className="nb-pill nb-pill--blue">{t.pill}</span>

@@ -8,7 +8,6 @@ import {
   type AttributionReport,
 } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 /** Backend'in sabit kanal degerleri: "radyo" | "playlist" | "organik". */
@@ -102,7 +101,6 @@ export default function AttributionReportPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
 
       <main className={styles.body}>
         {loading ? (

@@ -6,7 +6,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
 import { getComparePage, COMPARE_SLUGS } from "@/lib/compareData";
 import styles from "./page.module.css";
 
@@ -69,7 +68,6 @@ export default async function ComparePageRoute(
 
   return (
     <>
-      <SiteHeader />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}

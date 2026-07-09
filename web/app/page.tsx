@@ -3,7 +3,6 @@
 import Link from "next/link";
 import styles from "./page.module.css";
 import { useLocale, pick } from "../lib/locale";
-import SiteHeader from "../components/SiteHeader";
 
 type Dict = {
   nav: {
@@ -353,7 +352,6 @@ export default function HomePage() {
 
   return (
     <>
-      <SiteHeader />
 
       <header className={styles.hero}>
         <div className={styles.wrap}>

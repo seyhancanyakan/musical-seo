@@ -4,7 +4,6 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
 import { BLOG_POSTS } from "@/lib/blogData";
 import styles from "./page.module.css";
 
@@ -27,7 +26,6 @@ export const metadata: Metadata = {
 export default function BlogIndexPage() {
   return (
     <>
-      <SiteHeader />
       <main className={styles.wrap}>
         <nav className={styles.breadcrumb}>
           <Link href="/">Songdeck</Link> / Blog

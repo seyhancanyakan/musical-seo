@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { buildAttribution } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 const DEMO_QUERY = "Mira — Gece Yarısı";
@@ -113,7 +112,6 @@ export default function AttributionPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
 
       <main className={styles.body}>
         <span className="nb-pill nb-pill--purple">{t.pill}</span>

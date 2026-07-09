@@ -149,14 +149,9 @@ export default function GirisPage() {
     }
 
     setToken(result.token);
-    // Admin sifresiyle giren dogrudan admin paneline; kurator inbox'a; digeri gonder.
-    const dest =
-      result.user.role === "admin"
-        ? "/admin"
-        : result.user.role === "curator"
-          ? "/curator/inbox"
-          : "/gonder";
-    router.push(dest);
+    // Admin sifresiyle giren dogrudan admin paneline; diger herkes ANA SAYFAYA
+    // (girisli halde kalir — ustte isim+kredi+cikis gorunur).
+    router.push(result.user.role === "admin" ? "/admin" : "/");
   }
 
   return (

@@ -21,7 +21,6 @@ import {
   type PlaylistPage,
 } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 const T = {
@@ -184,7 +183,6 @@ export default function PlaylistSeoPage() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <SiteHeader />
         <main className={styles.body}>
           <div className={styles.loading}>{t.loading}</div>
         </main>
@@ -195,7 +193,6 @@ export default function PlaylistSeoPage() {
   if (!page) {
     return (
       <div className={styles.page}>
-        <SiteHeader />
         <main className={styles.body}>
           <NotBuiltYet pid={pid} t={t} />
         </main>
@@ -217,7 +214,6 @@ export default function PlaylistSeoPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}

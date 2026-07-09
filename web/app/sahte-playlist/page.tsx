@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { analyzeFraud } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 const DEMO_URL = "https://open.spotify.com/playlist/37i9dQZF1DX...";
@@ -104,7 +103,6 @@ export default function SahtePlaylistPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
 
       <main className={styles.body}>
         <span className="nb-pill nb-pill--red">{t.pill}</span>

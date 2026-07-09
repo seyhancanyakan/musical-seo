@@ -17,7 +17,6 @@ import {
   type ArtistPageFinding,
 } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import EmailGate from "@/components/EmailGate";
 import styles from "./page.module.css";
 
@@ -170,7 +169,6 @@ export default function ArtistSeoPage() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <SiteHeader />
         <main className={styles.body}>
           <div className={styles.loading}>{t.loading}</div>
         </main>
@@ -181,7 +179,6 @@ export default function ArtistSeoPage() {
   if (!page) {
     return (
       <div className={styles.page}>
-        <SiteHeader />
         <main className={styles.body}>
           <NotBuiltYet slug={slug} t={t} />
         </main>
@@ -214,7 +211,6 @@ export default function ArtistSeoPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
       <script
         type="application/ld+json"
         // Guvenli: JSON.stringify ile bu bilesenin kendi ureti verisi; kullanici

@@ -8,7 +8,6 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
-import SiteHeader from "@/components/SiteHeader";
 import EmailGate from "@/components/EmailGate";
 import { useLocale, pick } from "@/lib/locale";
 import {
@@ -292,7 +291,6 @@ export default function ToolPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
       <script
         type="application/ld+json"
         // Guvenli: sabit sablon + bu bilesenin kendi metinleri; kullanici girdisi yok.

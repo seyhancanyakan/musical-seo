@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { LocaleProvider } from "@/lib/locale";
+import SiteHeader from "@/components/SiteHeader";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -39,7 +40,10 @@ export default async function RootLayout({
           enjekte edip (or. data-smart-converter-loaded) sahte hydration
           uyarisi uretiyor; sadece bu elementin attribute farklarini susturur. */}
       <body suppressHydrationWarning>
-        <LocaleProvider>{children}</LocaleProvider>
+        <LocaleProvider>
+          <SiteHeader />
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   );

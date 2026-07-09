@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { enableWatchdog, startCoverHunt } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 const DEMO_QUERY = "Selin Kaya — Yağmur Sonrası";
@@ -104,7 +103,6 @@ export default function CoverAvcisiPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
 
       <main className={styles.body}>
         <span className="nb-pill nb-pill--green">{t.pill}</span>

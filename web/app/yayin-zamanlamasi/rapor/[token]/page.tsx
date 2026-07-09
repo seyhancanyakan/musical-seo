@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getReleaseReport, type ReleaseTimingReport } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 const DEMO_REPORT: ReleaseTimingReport = {
@@ -181,7 +180,6 @@ export default function ReleaseReportPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
 
       <main className={styles.body}>
         {loading ? (

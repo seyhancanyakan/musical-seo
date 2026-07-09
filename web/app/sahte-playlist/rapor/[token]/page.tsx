@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getFraudReport, type FraudReport, type FraudSignalDetail } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 /** Backend'in sabit 5 sinyal anahtari — sirali gosterim + bilinmeyen anahtar
@@ -173,7 +172,6 @@ export default function FraudReportPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
 
       <main className={styles.body}>
         {loading ? (

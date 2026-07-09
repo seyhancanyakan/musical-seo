@@ -6,7 +6,6 @@
  *  tam sayfalarina sahip dunya-ilk ozellikler — burada da one cikarilir. */
 
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
 import { useLocale, pick } from "@/lib/locale";
 import styles from "./page.module.css";
 
@@ -117,7 +116,6 @@ export default function ToolsIndexPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
       <main className={styles.body}>
         <h1 className={`nb-h ${styles.title}`}>{t.title}</h1>
         <p className={styles.lede}>{t.lede}</p>

@@ -6,7 +6,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import SiteHeader from "@/components/SiteHeader";
 import { getBlogPost, BLOG_SLUGS } from "@/lib/blogData";
 import styles from "./page.module.css";
 
@@ -85,7 +84,6 @@ export default async function BlogPostRoute(
 
   return (
     <>
-      <SiteHeader />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleLd) }}

@@ -10,7 +10,6 @@ import {
   type CoverHunt,
 } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import styles from "./page.module.css";
 
 const HIGH_CONFIDENCE_THRESHOLD = 0.8;
@@ -176,7 +175,6 @@ export default function CoverHuntReportPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
 
       <main className={styles.body}>
         {loading ? (

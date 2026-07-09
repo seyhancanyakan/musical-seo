@@ -75,11 +75,15 @@ VERDICT_THRESHOLDS = (
 )
 VERDICT_FALLBACK = "sahte"
 
-# Kac sinyalin GERCEK veriye dayanmasi gerektigi. Veri kaynaklari (zaman-serisi,
-# cografi, audio, parca SEO) baglanmadiginda sinyaller notr 0.5 doner ve toplam
-# 50/100 cikar -> yanlislikla "cok_riskli" gorunur. "Kanit yok" != "sahte":
-# yeterli sinyal informatif degilse verdict 'veri_yetersiz' olur (asagi bkz).
-MIN_INFORMATIVE_SIGNALS = 2
+# Verdict verebilmek icin gereken ASGARI informatif (gercek veriye dayanan)
+# sinyal sayisi. geo HER ZAMAN notr (API yok), follower/churn 2+ Spotify
+# snapshot ister (zaman), audio-label baslikta mood etiketi yoksa notr kalir —
+# bu yuzden ILK analizde cogu zaman sadece parca-SEO gercektir. Esik 2 olsaydi
+# ilk analiz hep 'veri_yetersiz' cikardi. 1: tek gercek sinyal bile (renormalize
+# edilmis) bir verdict uretir; guven duzeyi rapordaki data_coverage (ör. 1/5) ile
+# gosterilir. 0 informatif (tum sinyaller notr, ör. editoryal/erisilemez playlist)
+# -> yine 'veri_yetersiz'.
+MIN_INFORMATIVE_SIGNALS = 1
 
 FOLLOWER_JUMP_SCALE = 1.0          # ardisik anlik goruntu arasi %100 sicrama = tam risk
 GEO_CONCENTRATION_FLOOR = 0.4      # bu payin altinda cografi yogunlasma normal sayilir

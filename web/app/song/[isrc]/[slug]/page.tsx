@@ -20,7 +20,6 @@ import {
   type SongPage,
 } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
-import SiteHeader from "@/components/SiteHeader";
 import EmailGate from "@/components/EmailGate";
 import styles from "./page.module.css";
 
@@ -183,7 +182,6 @@ export default function SongSeoPage() {
   if (loading) {
     return (
       <div className={styles.page}>
-        <SiteHeader />
         <main className={styles.body}>
           <div className={styles.loading}>{t.loading}</div>
         </main>
@@ -194,7 +192,6 @@ export default function SongSeoPage() {
   if (!page) {
     return (
       <div className={styles.page}>
-        <SiteHeader />
         <main className={styles.body}>
           <NotBuiltYet isrc={isrc} t={t} />
         </main>
@@ -222,7 +219,6 @@ export default function SongSeoPage() {
 
   return (
     <div className={styles.page}>
-      <SiteHeader />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
