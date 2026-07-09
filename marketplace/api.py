@@ -32,7 +32,13 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3100", "http://127.0.0.1:3100"],
+    # Lokal dev + prod (sozyecho.live). Ek origin gerekirse CORS_EXTRA_ORIGINS
+    # (virgullu) env ile eklenir — kod degistirmeden.
+    allow_origins=[
+        "http://localhost:3100", "http://127.0.0.1:3100",
+        "https://sozyecho.live", "https://www.sozyecho.live",
+        *[o.strip() for o in os.environ.get("CORS_EXTRA_ORIGINS", "").split(",") if o.strip()],
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
