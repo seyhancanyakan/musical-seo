@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { analyzeFraud } from "@/lib/api";
+import { analyzeFraudStream, type FraudStreamEvent } from "@/lib/api";
 import { useLocale, pick } from "@/lib/locale";
 import styles from "./page.module.css";
 
 const DEMO_URL = "https://open.spotify.com/playlist/37i9dQZF1DX...";
 const DEMO_TOKEN = "FRAUD-8F2A";
+
+/** Sunucudaki analyze_playlist(progress=...) asama sirasiyla BIREBIR ayni
+ *  (bkz. marketplace/fraud_forensics.py _emit cagrilari). */
+const STAGE_ORDER = ["resolve", "snapshot", "audio", "seo", "signals"] as const;
+type Stage = (typeof STAGE_ORDER)[number];
 
 const T = {
   tr: {
@@ -40,6 +45,15 @@ const T = {
       </>,
     ],
     errorPrefix: "Analiz başarısız:",
+    stageLabels: {
+      resolve: "Playlist Çözümleniyor",
+      snapshot: "Spotify Anlık Görüntüsü",
+      audio: "Ses Profili Analizi",
+      seo: "Parça SEO Analizi",
+      signals: "Sinyal Değerlendirme",
+    } as Record<Stage, string>,
+    stagePanelTitle: "Analiz sürüyor…",
+    stagePanelNote: "Bu genelde 1-3 dakika sürer — sayfayı kapatma.",
   },
   en: {
     pill: "Forensic Analysis",
@@ -70,6 +84,15 @@ const T = {
       </>,
     ],
     errorPrefix: "Analysis failed:",
+    stageLabels: {
+      resolve: "Resolving Playlist",
+      snapshot: "Spotify Snapshot",
+      audio: "Audio Profile Analysis",
+      seo: "Track SEO Analysis",
+      signals: "Signal Evaluation",
+    } as Record<Stage, string>,
+    stagePanelTitle: "Analysis in progress…",
+    stagePanelNote: "This usually takes 1-3 minutes — don't close the page.",
   },
 };
 
@@ -82,6 +105,41 @@ export default function SahtePlaylistPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Canli analiz VFX durumu — asama sirasiyla isik yakiyor, biten checkmark aliyor.
+  const [activeStageIdx, setActiveStageIdx] = useState(-1);
+  const [doneStages, setDoneStages] = useState<Stage[]>([]);
+  const [stageMsgs, setStageMsgs] = useState<Partial<Record<Stage, string>>>({});
+  const navigatedRef = useRef(false);
+
+  function handleStreamEvent(ev: FraudStreamEvent) {
+    if (ev.stage === "error") {
+      setLoading(false);
+      setError(ev.msg || "—");
+      return;
+    }
+    if (ev.stage === "done") {
+      setDoneStages([...STAGE_ORDER]);
+      const token = ev.data?.report_token;
+      setLoading(false);
+      if (typeof token === "string" && token && !navigatedRef.current) {
+        navigatedRef.current = true;
+        router.push(`/sahte-playlist/rapor/${encodeURIComponent(token)}`);
+      } else if (!token) {
+        setError("—");
+      }
+      return;
+    }
+    const idx = STAGE_ORDER.indexOf(ev.stage as Stage);
+    if (idx === -1) return;
+    setActiveStageIdx(idx);
+    setDoneStages((prev) => {
+      const completed = STAGE_ORDER.slice(0, idx);
+      const next = new Set([...prev, ...completed]);
+      return STAGE_ORDER.filter((s) => next.has(s));
+    });
+    setStageMsgs((prev) => ({ ...prev, [ev.stage]: ev.msg }));
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = url.trim();
@@ -89,13 +147,12 @@ export default function SahtePlaylistPage() {
 
     setLoading(true);
     setError(null);
+    setActiveStageIdx(-1);
+    setDoneStages([]);
+    setStageMsgs({});
+    navigatedRef.current = false;
     try {
-      const { data, error: apiError } = await analyzeFraud(trimmed);
-      if (data?.report_token) {
-        router.push(`/sahte-playlist/rapor/${encodeURIComponent(data.report_token)}`);
-        return;
-      }
-      setError(apiError ?? "—");
+      await analyzeFraudStream(trimmed, handleStreamEvent);
     } finally {
       setLoading(false);
     }
@@ -132,6 +189,40 @@ export default function SahtePlaylistPage() {
                 {t.demoCta}
               </Link>
             </div>
+            {loading && (
+              <div className={styles.stagePanel} aria-live="polite">
+                <div className={styles.stagePanelHead}>
+                  <span className={styles.stagePanelTitle}>{t.stagePanelTitle}</span>
+                  <span className={styles.stagePanelNote}>{t.stagePanelNote}</span>
+                </div>
+                <ul className={styles.stageList}>
+                  {STAGE_ORDER.map((stage, i) => {
+                    const isDone = doneStages.includes(stage);
+                    const isActive = i === activeStageIdx && !isDone;
+                    return (
+                      <li
+                        key={stage}
+                        className={`${styles.stageItem} ${
+                          isActive ? styles.stageItemActive : ""
+                        } ${isDone ? styles.stageItemDone : ""}`}
+                      >
+                        <span className={styles.stageBullet}>
+                          {isDone ? "✓" : i + 1}
+                        </span>
+                        <span className={styles.stageBody}>
+                          <span className={styles.stageLabel}>
+                            {t.stageLabels[stage]}
+                          </span>
+                          {stageMsgs[stage] && (
+                            <span className={styles.stageMsg}>{stageMsgs[stage]}</span>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
             {error && (
               <div className={styles.errorBanner}>
                 {t.errorPrefix} {error}

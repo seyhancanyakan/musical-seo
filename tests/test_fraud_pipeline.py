@@ -337,6 +337,46 @@ def test_snapshot_all_known_playlists_covers_each_distinct_url(fraud_db, monkeyp
     assert count == 0  # fake_snapshot her zaman None doner
 
 
+# --- progress callback (SSE canli akis) --------------------------------------
+
+def test_analyze_playlist_emits_progress_stages_in_order(fraud_db, monkeypatch):
+    """progress=None ile davranis ayni kalirken, callback verilirse
+    resolve->snapshot->audio->seo->signals->done sirasiyla akmali (bkz.
+    api_fraud.analyze_playlist_stream)."""
+    monkeypatch.setattr(fraud_forensics.spotify_client, "get_playlist", lambda pid: None)
+    url = "https://open.spotify.com/playlist/PROGRESS1"
+
+    events: list[dict] = []
+    report = fraud_forensics.analyze_playlist(
+        url, track_scores=[10, 15], progress=events.append
+    )
+
+    stages = [e["stage"] for e in events]
+    assert stages == ["resolve", "snapshot", "audio", "seo", "signals", "done"]
+    assert all(isinstance(e["msg"], str) and e["msg"] for e in events)
+
+    done_event = events[-1]
+    assert done_event["data"]["report_token"] == report["report_token"]
+    assert done_event["data"]["verdict"] == report["verdict"]
+    assert done_event["data"]["total_risk_score"] == report["total_risk_score"]
+
+
+def test_analyze_playlist_progress_callback_failure_never_breaks_analysis(
+    fraud_db, monkeypatch,
+):
+    """_emit guvenceli: progress callback'i patlarsa bile analiz normal
+    tamamlanip raporu dondurmeli (SSE tuketicisi hicbir zaman analizi bozmaz)."""
+    monkeypatch.setattr(fraud_forensics.spotify_client, "get_playlist", lambda pid: None)
+    url = "https://open.spotify.com/playlist/PROGRESSBOOM"
+
+    def boom(event):
+        raise RuntimeError("consumer patladi")
+
+    report = fraud_forensics.analyze_playlist(url, progress=boom)
+
+    assert report["report_token"].startswith("FRAUD-")
+
+
 def test_snapshot_all_known_playlists_survives_individual_failures(fraud_db, monkeypatch):
     fraud_forensics.analyze_playlist("https://deezer.com/playlist/ok")
     fraud_forensics.analyze_playlist("https://deezer.com/playlist/boom")

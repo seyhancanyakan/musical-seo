@@ -1794,6 +1794,68 @@ export const analyzeFraud = (playlistUrl: string) =>
     body: JSON.stringify({ playlist_url: playlistUrl }),
   });
 
+/** SSE canli asama olayi — POST /fraud/analyze/stream. 'done' olayinin
+ *  data alani FraudReport ile ayni sekli tasir (report_token dahil). */
+export type FraudStreamEvent = {
+  stage: "resolve" | "snapshot" | "audio" | "seo" | "signals" | "done" | "error";
+  msg: string;
+  data?: (Partial<FraudReport> & Record<string, unknown>) | null;
+};
+
+/** Adli analizi canli izle (fetch + ReadableStream — EventSource auth header
+ *  tasiyamadigi icin POST kullanilir, bkz. marketplace/api_fraud.py
+ *  analyze_playlist_stream). Kredi yetersizse (HTTP 400, akis hic baslamaz)
+ *  tek bir 'error' olayi yayinlanir. Akis sonlaninca (done/error/baglanti
+ *  kopmasi) Promise resolve olur — hicbir zaman asilmaz kalmaz. */
+export async function analyzeFraudStream(
+  playlistUrl: string,
+  onStage: (ev: FraudStreamEvent) => void
+): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${API}/fraud/analyze/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ playlist_url: playlistUrl }),
+    });
+  } catch {
+    onStage({ stage: "error", msg: "Sunucuya ulaşılamadı", data: null });
+    return;
+  }
+
+  if (!res.ok || !res.body) {
+    const body = await res.json().catch(() => null);
+    const detail =
+      body && typeof body.detail === "string" ? body.detail : `HTTP ${res.status}`;
+    onStage({ stage: "error", msg: detail, data: null });
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const chunks = buffer.split("\n\n");
+      buffer = chunks.pop() ?? "";
+      for (const chunk of chunks) {
+        const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+        if (!line) continue;
+        try {
+          onStage(JSON.parse(line.slice("data: ".length)) as FraudStreamEvent);
+        } catch {
+          // tek bir bozuk olay akisi bozmasin
+        }
+      }
+    }
+  } catch {
+    onStage({ stage: "error", msg: "Bağlantı koptu", data: null });
+  }
+}
+
 /** Paylasilabilir/public rapor — auth gerekmez. */
 export const getFraudReport = (token: string) =>
   j<FraudReport>(`/fraud/report/${encodeURIComponent(token)}`);

@@ -58,6 +58,18 @@ from marketplace import db, spotify_client
 from musical_seo import audio
 from musical_seo import audit as seo_audit
 
+
+def _emit(progress, stage: str, msg: str, **data) -> None:
+    """Ilerleme olayi yayinla (SSE/VFX icin). progress None ise sessiz;
+    callback hatasi analizi asla bozmaz. musical_seo.playlists._emit ile
+    ayni sozlesme (bkz. o dosya)."""
+    if progress is None:
+        return
+    try:
+        progress({"stage": stage, "msg": msg, "data": data or None})
+    except Exception:
+        pass
+
 # --- Agirliklar + esikler ----------------------------------------------------
 
 SIGNAL_WEIGHTS = {
@@ -650,6 +662,7 @@ def analyze_playlist(
     geo_distribution: dict[str, float] | None = None,
     profiles: list | None = None,
     track_scores: list[float] | None = None,
+    progress=None,
 ) -> dict:
     """5 sinyali toplar, agirlikli 0..100 risk skoru + verdict uretir, rapor
     kaydeder ve doner.
@@ -666,14 +679,35 @@ def analyze_playlist(
     Ek anahtar-kelime parametreleri (playlist_title, geo_distribution,
     profiles, track_scores) test/entegrasyon icin veri enjeksiyonu saglar ve
     HER ZAMAN canli Spotify verisinden ONCELIKLIDIR.
+
+    `progress` verilirse (bkz. `_emit`) analiz asamalarinda canli olay yayinlar
+    (resolve/snapshot/audio/seo/signals/done) — api_fraud.py SSE akisi bunu
+    kullanir. progress=None ise davranis/donus degeri BIREBIR ayni kalir.
     """
     if not playlist_url or not playlist_url.strip():
         raise ValueError("Playlist URL bos olamaz")
+
+    _emit(progress, "resolve", "Playlist çözümleniyor…")
 
     try:
         live_playlist = snapshot_playlist(playlist_url)
     except Exception:
         live_playlist = None  # Spotify/ag hatasi analiz akisini asla durdurmasin
+
+    if live_playlist is not None:
+        _emit(
+            progress,
+            "snapshot",
+            f"Spotify anlık görüntüsü alındı ({int(live_playlist.get('followers') or 0)} takipçi)",
+            followers=live_playlist.get("followers"),
+            track_count=live_playlist.get("track_count"),
+        )
+    else:
+        _emit(
+            progress,
+            "snapshot",
+            "Spotify anlık görüntüsü alınamadı — nötr veriyle devam ediliyor",
+        )
 
     inputs = _gather_inputs(playlist_url)
 
@@ -681,14 +715,19 @@ def analyze_playlist(
         if playlist_title is None and live_playlist.get("name"):
             inputs["playlist_title"] = live_playlist["name"]
         live_tracks = live_playlist.get("tracks") or []
+        _emit(progress, "audio", "Ses profilleri çıkarılıyor (örnek parçalar)…")
         if profiles is None:
             live_profiles = _gather_audio_profiles(live_tracks)
             if live_profiles:
                 inputs["profiles"] = live_profiles
+        _emit(progress, "seo", "Parça SEO skorları analiz ediliyor…")
         if track_scores is None:
             live_scores = _gather_track_scores(live_tracks)
             if live_scores:
                 inputs["track_scores"] = live_scores
+    else:
+        _emit(progress, "audio", "Ses profilleri çıkarılıyor (örnek parçalar)…")
+        _emit(progress, "seo", "Parça SEO skorları analiz ediliyor…")
 
     if playlist_title is not None:
         inputs["playlist_title"] = playlist_title
@@ -698,6 +737,8 @@ def analyze_playlist(
         inputs["profiles"] = profiles
     if track_scores is not None:
         inputs["track_scores"] = track_scores
+
+    _emit(progress, "signals", "5 sinyal değerlendiriliyor…")
 
     signals = {
         "follower_anomaly": signal_follower_anomaly(
@@ -747,6 +788,7 @@ def analyze_playlist(
         "data_coverage": coverage,
     }
     _save_report(report, user)
+    _emit(progress, "done", "Analiz tamam", **report)
     return report
 
 
