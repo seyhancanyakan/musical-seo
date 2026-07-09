@@ -182,20 +182,27 @@ export default function FraudReportPage() {
               <div
                 className={styles.gauge}
                 style={{
-                  background: `conic-gradient(var(--red) 0 ${riskScore}%, #e6e6e0 ${riskScore}% 100%)`,
+                  background: `conic-gradient(${verdictInfo.color} 0 ${riskScore}%, #e6e6e0 ${riskScore}% 100%)`,
                 }}
               >
                 <div className={styles.gaugeInner}>
                   <div>
-                    <div className={styles.gaugeScore} style={{ color: "var(--red)" }}>
+                    <div className={styles.gaugeScore} style={{ color: verdictInfo.color }}>
                       {riskScore}
                     </div>
-                    <div className={styles.gaugeOf}>/100 risk</div>
+                    <div className={styles.gaugeOf}>
+                      /100 {locale === "tr" ? "risk" : "risk"}
+                    </div>
                   </div>
                 </div>
               </div>
               <div className={styles.headMeta}>
-                <span className="nb-pill nb-pill--red">{verdictText.pill}</span>
+                <span
+                  className="nb-pill"
+                  style={{ background: verdictInfo.color, color: "#fff" }}
+                >
+                  {verdictText.pill}
+                </span>
                 <h1 className={`nb-h ${styles.trackName}`}>
                   {data.playlist_title || "—"}
                 </h1>

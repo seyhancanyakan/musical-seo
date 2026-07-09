@@ -90,11 +90,18 @@ GEO_CONCENTRATION_FLOOR = 0.4      # bu payin altinda cografi yogunlasma normal 
 GEO_CONCENTRATION_CEILING = 1.0
 CALM_KEYWORDS = {
     "sakin", "chill", "relax", "relaxing", "ambient", "calm", "peaceful",
-    "yumusak", "huzur", "meditation", "sleep",
+    "yumusak", "huzur", "meditation", "sleep", "sleepy", "lofi", "lo-fi",
+    "acoustic", "akustik", "soft", "mellow", "slow", "study", "focus",
+    "rainy", "rain", "night", "quiet", "sad", "melancholy", "melankoli",
+    "huzunlu", "dinlen", "uyku", "yumuşak", "dingin", "spa", "yoga",
 }
 ENERGETIC_KEYWORDS = {
     "parti", "party", "dans", "dance", "energy", "workout", "upbeat",
-    "enerjik", "gym", "motivation",
+    "enerjik", "gym", "motivation", "happy", "feel good", "feelgood",
+    "good vibes", "vibes", "hype", "banger", "bangers", "pump", "running",
+    "cardio", "festival", "rave", "edm", "trap", "mutlu", "nese", "neşe",
+    "coskulu", "coşkulu", "hareketli", "kosu", "koşu", "hit", "hits",
+    "viral", "yaz", "summer", "beach",
 }
 AUDIO_ENERGY_CALM_MAX = 0.6
 AUDIO_ENERGY_ENERGETIC_MIN = 0.4
