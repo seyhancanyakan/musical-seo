@@ -159,3 +159,45 @@ def admin_reindex(page_type: str = "artist", limit: int = 10000,
 def admin_run_alerts(_: None = Depends(_require_admin_key)) -> dict:
     """Retention alert taramasini elle tetikle (cron zaten gunluk calisir)."""
     return alerts.run_daily()
+
+
+# --- Admin: song/playlist kuyruk + seed (Tier 4/5 build pipeline) -------------
+
+class EnqueueSong(BaseModel):
+    query: str  # "Sanatci - Sarki" veya serbest sorgu
+
+
+class EnqueuePlaylist(BaseModel):
+    playlist_url: str
+
+
+@router.post("/seo/enqueue-song")
+def admin_enqueue_song(
+    payload: EnqueueSong, _: None = Depends(_require_admin_key)
+) -> dict:
+    try:
+        return seo_pages.enqueue_song(payload.query)
+    except ValueError as exc:
+        raise _400(exc)
+
+
+@router.post("/seo/enqueue-playlist")
+def admin_enqueue_playlist(
+    payload: EnqueuePlaylist, _: None = Depends(_require_admin_key)
+) -> dict:
+    try:
+        return seo_pages.enqueue_playlist(payload.playlist_url)
+    except ValueError as exc:
+        raise _400(exc)
+
+
+@router.post("/seo/seed-songs")
+def admin_seed_songs(per_artist: int = 3, _: None = Depends(_require_admin_key)) -> dict:
+    """Starter sanatcilarin top parcalarini sarki kuyruguna ekler (Deezer)."""
+    return catalog_scout.seed_songs_from_starter(per_artist=per_artist)
+
+
+@router.post("/seo/seed-playlists")
+def admin_seed_playlists(_: None = Depends(_require_admin_key)) -> dict:
+    """Spotify aramasindan kullanici playlist'lerini kuyruga ekler (creds gerek)."""
+    return catalog_scout.seed_playlists_from_search()

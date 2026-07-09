@@ -12,11 +12,15 @@ vermemek icin).
 
 Thin-content korumasi: audit skor uretemezse veya hicbir platformda kayit
 bulunamazsa (`platform_count == 0`) sayfa YAZILMAZ, kuyruk satiri 'thin'
-olarak isaretlenir (Google thin-content cezasindan kacis).
+olarak isaretlenir (Google thin-content cezasindan kacis). Ayni korumali
+mantik 'song' (Deezer'da hic bulunamadi / ISRC yok) ve 'playlist' (Spotify
+erisilemedi / fraud analizi 'veri_yetersiz' + 0 veri kapsami) turleri icin de
+gecerlidir — bkz. `_build_song_data` / `_build_playlist_data`.
 
 Hata sozlesmesi: is kurali ihlalleri ValueError (aksanli Turkce) — API
-katmani bunu 400'e cevirir. audit.run_audit ag erisimi gerektirebilir; bu
-modul asla onun yuzunden cokmez (try/except ile 'failed' olarak isaretler).
+katmani bunu 400'e cevirir. audit.run_audit / deezer / audio / fraud_forensics
+ag erisimi gerektirebilir; bu modul asla onlarin yuzunden cokmez (try/except
+ile 'failed' olarak isaretler).
 """
 from __future__ import annotations
 
@@ -28,7 +32,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from musical_seo import audit
+import requests
+
+from marketplace import fraud_forensics, spotify_client
+from musical_seo import audio, audit
+from musical_seo.sources import deezer
 
 _DB_PATH = Path(__file__).resolve().parent.parent / "data" / "seo_pages.db"
 
@@ -167,12 +175,11 @@ def slugify(name: str) -> str:
 
 # --- Kuyruk (build_queue) -----------------------------------------------------
 
-def enqueue_artist(artist_name: str, isni: str | None = None, priority: int = 0) -> dict:
-    """Sanatciyi uretim kuyruguna ekler. Ayni sanatci icin bekleyen (pending)
-    kayit varsa yeni satir acmaz, mevcut olani doner (idempotent)."""
-    if not artist_name or not artist_name.strip():
-        raise ValueError("Sanatci adi bos olamaz")
-    name = artist_name.strip()
+def _enqueue(page_type: str, ref: str, priority: int = 0) -> dict:
+    """Ortak idempotent kuyruga-ekleme mantigi (enqueue_artist/song/playlist
+    tarafindan paylasilir). Ayni (page_type, ref) icin bekleyen (pending)
+    kayit varsa yeni satir acmaz, mevcut olani doner (bkz. partial unique
+    index `idx_build_queue_pending_unique`)."""
     now = _now_iso()
     conn = _connect()
     try:
@@ -180,8 +187,8 @@ def enqueue_artist(artist_name: str, isni: str | None = None, priority: int = 0)
             cursor = conn.execute(
                 "INSERT OR IGNORE INTO build_queue "
                 "(page_type, ref, priority, status, created_at) "
-                "VALUES ('artist', ?, ?, 'pending', ?)",
-                (name, priority, now),
+                "VALUES (?, ?, ?, 'pending', ?)",
+                (page_type, ref, priority, now),
             )
             if cursor.rowcount:
                 row = conn.execute(
@@ -190,13 +197,41 @@ def enqueue_artist(artist_name: str, isni: str | None = None, priority: int = 0)
             else:
                 # Zaten bekleyen bir kayit var (UNIQUE ihlali yutuldu) — onu don.
                 row = conn.execute(
-                    "SELECT * FROM build_queue WHERE page_type = 'artist' "
+                    "SELECT * FROM build_queue WHERE page_type = ? "
                     "AND ref = ? AND status = 'pending'",
-                    (name,),
+                    (page_type, ref),
                 ).fetchone()
     finally:
         conn.close()
     return dict(row) if row is not None else {}
+
+
+def enqueue_artist(artist_name: str, isni: str | None = None, priority: int = 0) -> dict:
+    """Sanatciyi uretim kuyruguna ekler. Ayni sanatci icin bekleyen (pending)
+    kayit varsa yeni satir acmaz, mevcut olani doner (idempotent)."""
+    if not artist_name or not artist_name.strip():
+        raise ValueError("Sanatci adi bos olamaz")
+    return _enqueue("artist", artist_name.strip(), priority)
+
+
+def enqueue_song(query: str, isni: str | None = None, priority: int = 0) -> dict:
+    """Sarkiyi uretim kuyruguna ekler. `query` "Sanatci - Sarki" formatinda
+    (tercih edilir, cozumleme daha isabetli olur) veya ham bir arama metni
+    olabilir — bkz. `_build_song_data` / `_split_song_query`. `isni` su an
+    kullanilmiyor (ileride ISNI-tabanli sanatci eslesmesi icin ayrilmis
+    parametre); ref olarak sadece `query` metni saklanir. Ayni sorgu icin
+    bekleyen (pending) kayit varsa yeni satir acmaz (idempotent)."""
+    if not query or not query.strip():
+        raise ValueError("Sarki sorgusu bos olamaz")
+    return _enqueue("song", query.strip(), priority)
+
+
+def enqueue_playlist(playlist_url: str, priority: int = 0) -> dict:
+    """Playlist'i uretim kuyruguna ekler (ref = playlist URL'i). Ayni URL
+    icin bekleyen (pending) kayit varsa yeni satir acmaz (idempotent)."""
+    if not playlist_url or not playlist_url.strip():
+        raise ValueError("Playlist URL bos olamaz")
+    return _enqueue("playlist", playlist_url.strip(), priority)
 
 
 def _top_findings(findings: list) -> list[dict]:
@@ -223,11 +258,11 @@ def _result_to_data(result: Any) -> dict:
 
 
 def _audit_one(page_type: str, ref: str) -> tuple[str, Any]:
-    """Tek bir kuyruk kaydi icin audit calistirir (ThreadPoolExecutor worker'i
-    icinde). Asla istisna firlatmaz — 'artist' disindaki turler ve
-    audit.run_audit hatalari 'failed' olarak donsun ki havuzdaki (pool) tek
-    bir hata butun batch'i cokertmesin. Donus: (outcome, result) — outcome
-    'failed' ise result None'dir, aksi halde audit.run_audit ciktisidir."""
+    """Tek bir 'artist' kuyruk kaydi icin audit calistirir (ThreadPoolExecutor
+    worker'i icinde). Asla istisna firlatmaz — audit.run_audit hatasi
+    'failed' olarak donsun ki havuzdaki (pool) tek bir hata butun batch'i
+    cokertmesin. Donus: (outcome, result) — outcome 'failed' ise result
+    None'dir, aksi halde audit.run_audit ciktisidir."""
     if page_type != "artist":
         return ("failed", None)
     try:
@@ -237,28 +272,247 @@ def _audit_one(page_type: str, ref: str) -> tuple[str, Any]:
     return ("audited", result)
 
 
+# --- 'song' sayfa turu icin ag-yogun toplama ----------------------------------
+# Deezer'in track detay uc noktasi 'preview' (30 sn onizleme) alani tasir ama
+# musical_seo.sources.deezer.TrackInfo bunu tasimiyor (sadece web sayfasi
+# linkini "url" olarak saklıyor) — bu yuzden burada, sadece bu amac icin,
+# dogrudan /track/{id} uc noktasina ozel bir istek atilir.
+_DEEZER_TRACK_URL = "https://api.deezer.com/track/{id}"
+_DEEZER_TRACK_TIMEOUT = 15
+
+# Ses profilinden (brightness + energy) TURETILEN kaba/deterministik tonalite
+# etiketleri — GERCEK perde/chroma analizi DEGIL (musical_seo.audio boyle bir
+# cikti saglamiyor). Bkz. `_heuristic_song_key`.
+_SONG_KEY_LABELS = (
+    "C Major", "G Major", "D Major", "A Major", "E Major", "F Major",
+    "A Minor", "E Minor", "D Minor", "G Minor", "B Minor", "C Minor",
+)
+
+
+def _split_song_query(ref: str) -> tuple[str, str]:
+    """"Sanatci - Sarki" formatini ayristirir (saf fonksiyon). " - " ayraci
+    yoksa tum metin baslik/ham arama sorgusu kabul edilir (deezer.search'e
+    gider), sanatci ipucu bos doner."""
+    if " - " in ref:
+        artist_part, _, title_part = ref.partition(" - ")
+        return artist_part.strip(), title_part.strip()
+    return "", ref.strip()
+
+
+def _deezer_preview_url(deezer_track_id: Any) -> str | None:
+    """Deezer parca ID'sinden 30 sn onizleme URL'ini ceker (audio.analyze_url
+    girdisi). Ag hatasinda, bozuk JSON'da veya alan yoksa None doner —
+    exception firlatmaz."""
+    if deezer_track_id is None:
+        return None
+    try:
+        resp = requests.get(
+            _DEEZER_TRACK_URL.format(id=deezer_track_id), timeout=_DEEZER_TRACK_TIMEOUT
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except (requests.RequestException, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("error"):
+        return None
+    preview = data.get("preview")
+    return preview if isinstance(preview, str) and preview else None
+
+
+def _heuristic_song_key(profile: Any) -> str:
+    """AudioProfile'dan (brightness + energy) TURETILEN kaba/deterministik bir
+    tonalite etiketi. GERCEK perde/chroma analizi DEGILDIR — sabit bir
+    tonalite listesi uzerinde indeksleme yapar (ayni girdi -> ayni etiket).
+    UI'da bir baslangic tahmini olarak sunulur, kesin muzik teorisi iddiasi
+    tasimaz."""
+    idx = int(round(profile.brightness * 5 + profile.energy * 6)) % len(_SONG_KEY_LABELS)
+    return _SONG_KEY_LABELS[idx]
+
+
+def _build_song_data(ref: str) -> tuple[str, dict | None]:
+    """'song' kuyruk kaydi icin ag-yogun toplama (ThreadPoolExecutor worker'i
+    icinde calisir, DB yazimi YAPMAZ). Deezer lookup/search ile parcayi
+    cozer, 30 sn onizlemeden musical_seo.audio ile bpm/heuristic tonalite
+    cikarir, musical_seo.audit.run_audit ile hafif bir SEO skoru dener. Asla
+    exception firlatmaz.
+
+    Donus (outcome, payload):
+      'thin'   -> Deezer'da hic bulunamadi VEYA ISRC yok (kimliksiz sayfa
+                  insa edilemez, thin-content riski)
+      'failed' -> beklenmeyen hata (savunma amacli)
+      'ready'  -> payload = {isrc, slug, artist, title, score, bpm,
+                  song_key, data}; score/bpm/song_key None olabilir (audio/
+                  audit basarisiz olduysa) — score None ise upsert_song_page
+                  kendi thin-guard'ini uygular."""
+    artist_hint, title_hint = _split_song_query(ref)
+    try:
+        track = (
+            deezer.lookup(artist_hint, title_hint)
+            if artist_hint and title_hint
+            else deezer.search(ref)
+        )
+    except Exception:
+        return ("failed", None)
+
+    if track is None or not getattr(track, "found", False):
+        return ("thin", None)
+
+    isrc = track.isrc
+    artist = track.artist or artist_hint
+    title = track.title or title_hint or ref
+    if not isrc or not artist or not title:
+        return ("thin", None)
+
+    try:
+        slug = slugify(f"{artist}-{title}")
+    except ValueError:
+        return ("thin", None)
+
+    bpm = None
+    song_key = None
+    profile = None
+    try:
+        preview_url = _deezer_preview_url((track.extra or {}).get("id"))
+        if preview_url:
+            profile = audio.analyze_url(preview_url)
+        if profile is not None:
+            bpm = profile.bpm
+            song_key = _heuristic_song_key(profile)
+    except Exception:
+        bpm = song_key = profile = None
+
+    score = None
+    try:
+        score = audit.run_audit(f"{artist} - {title}").score
+    except Exception:
+        score = None  # audit basarisiz -> skor yok say (thin-guard upsert_song_page'de)
+
+    data = {
+        "artist": artist,
+        "title": title,
+        "isrc": isrc,
+        "album": track.album,
+        "release_date": track.release_date,
+        "deezer_url": track.url,
+        "audio_profile": (
+            {
+                "bpm": profile.bpm,
+                "energy": profile.energy,
+                "brightness": profile.brightness,
+                "instrumental_score": profile.instrumental_score,
+            }
+            if profile is not None
+            else None
+        ),
+    }
+    return (
+        "ready",
+        {
+            "isrc": isrc, "slug": slug, "artist": artist, "title": title,
+            "score": score, "bpm": bpm, "song_key": song_key, "data": data,
+        },
+    )
+
+
+# --- 'playlist' sayfa turu icin ag-yogun toplama ------------------------------
+
+def _build_playlist_data(ref: str) -> tuple[str, dict | None]:
+    """'playlist' kuyruk kaydi icin ag-yogun toplama (ThreadPoolExecutor
+    worker'i icinde calisir, DB yazimi YAPMAZ). marketplace.fraud_forensics
+    .analyze_playlist (zaten guarded) cagirir. Asla exception firlatmaz.
+
+    Donus (outcome, payload):
+      'thin'   -> Spotify erisilemedi / analiz 'veri_yetersiz' verdict'i +
+                  0 informatif sinyal dondurdu (guvenilir bir fraud sayfasi
+                  insa edilemez, thin-content riski)
+      'failed' -> beklenmeyen hata (savunma amacli)
+      'ready'  -> payload = {platform_playlist_id, slug, title, fraud_score,
+                  verdict, data}"""
+    try:
+        report = fraud_forensics.analyze_playlist(ref)
+    except Exception:
+        return ("failed", None)
+
+    if not isinstance(report, dict):
+        return ("failed", None)
+
+    coverage = report.get("data_coverage") or {}
+    verdict = report.get("verdict")
+    if verdict == "veri_yetersiz" and coverage.get("informative_signals", 0) == 0:
+        return ("thin", None)
+
+    title = report.get("playlist_title") or ref
+    try:
+        slug = slugify(title)
+    except ValueError:
+        return ("thin", None)
+
+    platform_playlist_id = spotify_client.parse_playlist_id(ref) or ref
+
+    return (
+        "ready",
+        {
+            "platform_playlist_id": platform_playlist_id,
+            "slug": slug,
+            "title": title,
+            "fraud_score": report.get("total_risk_score"),
+            "verdict": verdict,
+            "data": report,
+        },
+    )
+
+
+def _process_one(page_type: str, ref: str) -> tuple[str, Any]:
+    """Tek bir kuyruk kaydi icin ag-yogun toplama isini page_type'a gore
+    yonlendirir (ThreadPoolExecutor worker'i icinde calisir, DB yazimi
+    YAPMAZ). Asla exception firlatmaz — bilinmeyen page_type veya alt
+    fonksiyonlarin beklenmedik hatasi 'failed' olarak doner ki havuzdaki tek
+    bir hata butun batch'i cokertmesin."""
+    try:
+        if page_type == "artist":
+            return _audit_one(page_type, ref)
+        if page_type == "song":
+            return _build_song_data(ref)
+        if page_type == "playlist":
+            return _build_playlist_data(ref)
+    except Exception:
+        return ("failed", None)
+    return ("failed", None)
+
+
+_INDEXNOW_PREFIX = {"artist": "/artist/", "song": "/song/", "playlist": "/playlist/"}
+
+
 def build_next_batch(limit: int = 100) -> dict:
     """Kuyruktan en fazla `limit` bekleyen kaydi PRIORITY sirasiyla
-    (priority DESC, id ASC) alir. Audit'ler SEO_BUILD_CONCURRENCY kadar
-    es-zamanli (ThreadPoolExecutor) calistirilir — audit suresinin buyuk
-    kismi ag bekleme oldugu icin bu, gunluk throughput'u sirali calismaya
-    gore carpar (bkz. SEO_BUILD_CONCURRENCY yorumu).
+    (priority DESC, id ASC) alir. Ag-yogun toplama (audit/deezer/audio/
+    fraud_forensics — page_type'a gore, bkz. `_process_one`)
+    SEO_BUILD_CONCURRENCY kadar es-zamanli (ThreadPoolExecutor) calistirilir
+    — surenin buyuk kismi ag bekleme oldugu icin bu, gunluk throughput'u
+    sirali calismaya gore carpar (bkz. SEO_BUILD_CONCURRENCY yorumu).
 
     Yuksek oncelikli kayitlar YINE once islenir: secim SELECT sorgusuyla
     (priority DESC) yapilir ve DB yazimlari thread'lerin tamamlanma sirasina
     degil, orijinal kuyruk id'sine gore uygulanir — thread zamanlamasi
     sonucu etkilemez.
 
-    DB yazimlari (queue durumu + sayfa upsert) es-zamanli audit'ler TAMAMEN
+    DB yazimlari (queue durumu + sayfa upsert) es-zamanli toplama TAMAMEN
     bittikten SONRA, TEK bir sqlite baglantisi uzerinden sirali yapilir.
     SQLite tek yazarli (single-writer) oldugu icin coklu thread'den ayni anda
     yazmaya calismak 'database is locked' hatasina yol acardi.
 
-    'artist' disindaki turler Faz 1'de desteklenmiyor (failed olarak
-    isaretlenir, cokme YOK). audit.run_audit ag hatasi firlatirsa o kayit
-    'failed' olur; havuzdaki diger audit'ler etkilenmez (izole try/except,
-    bkz. _audit_one). Skor yoksa veya hicbir platformda bulunamadiysa
-    (platform_count == 0) satir 'thin' olarak isaretlenir, sayfa YAZILMAZ."""
+    Uc page_type de desteklenir:
+      'artist'   -> audit.run_audit; skor yok veya hicbir platformda
+                    bulunamadiysa (platform_count == 0) 'thin'.
+      'song'     -> Deezer lookup/search + audio + hafif audit skoru (bkz.
+                    `_build_song_data`); Deezer'da bulunamadi/ISRC yok veya
+                    upsert_song_page kendi thin-guard'ini (skor yok)
+                    uygularsa 'thin'.
+      'playlist' -> fraud_forensics.analyze_playlist (bkz.
+                    `_build_playlist_data`); Spotify erisilemedi / analiz
+                    'veri_yetersiz' + 0 veri kapsami donduyse 'thin'.
+    Herhangi bir turde beklenmeyen bir hata (ag/cozumleme) firlatirsa o kayit
+    'failed' olur; havuzdaki diger kayitlar etkilenmez (izole try/except)."""
     if limit <= 0:
         raise ValueError("limit pozitif bir sayi olmali")
 
@@ -269,7 +523,7 @@ def build_next_batch(limit: int = 100) -> dict:
             "ORDER BY priority DESC, id ASC LIMIT ?",
             (limit,),
         ).fetchall()
-        # Baglantiyi hemen kapatiyoruz: es-zamanli audit asamasi boyunca
+        # Baglantiyi hemen kapatiyoruz: es-zamanli toplama asamasi boyunca
         # (network IO, saniyeler surebilir) acik bir sqlite baglantisi
         # tutmuyoruz.
         queue_items = [(row["id"], row["page_type"], row["ref"]) for row in rows]
@@ -279,32 +533,31 @@ def build_next_batch(limit: int = 100) -> dict:
     processed = len(queue_items)
     built = thin = failed = 0
     now = _now_iso()
-    # Bu turda basariyla YAZILAN sanatci sayfalarinin slug'lari — asama 2
+    # Bu turda basariyla YAZILAN sayfalarin slug'lari, turune gore — asama 2
     # sonunda IndexNow'a bildirilecek (bkz. asagidaki hook + marketplace.indexnow).
-    built_slugs: list[str] = []
+    built_slugs: dict[str, list[str]] = {"artist": [], "song": [], "playlist": []}
 
-    # --- Asama 1: audit'leri es-zamanli calistir (DB yazimi YOK) --------------
-    audit_outcomes: dict[int, tuple[str, Any]] = {}
+    # --- Asama 1: toplamayi es-zamanli calistir (DB yazimi YOK) ----------------
+    outcomes: dict[int, tuple[str, Any]] = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=SEO_BUILD_CONCURRENCY) as executor:
         future_to_id = {
-            executor.submit(_audit_one, page_type, ref): queue_id
+            executor.submit(_process_one, page_type, ref): queue_id
             for queue_id, page_type, ref in queue_items
         }
         for future in concurrent.futures.as_completed(future_to_id):
             queue_id = future_to_id[future]
             try:
-                audit_outcomes[queue_id] = future.result()
+                outcomes[queue_id] = future.result()
             except Exception:
-                # _audit_one zaten kendi icinde try/except ile sarili; buraya
+                # _process_one zaten kendi icinde try/except ile sarili; buraya
                 # normal kosullarda dusmez — yine de savunma amacli 'failed'.
-                audit_outcomes[queue_id] = ("failed", None)
+                outcomes[queue_id] = ("failed", None)
 
     # --- Asama 2: TUM DB yazimlarini TEK baglanti + oncelik sirasinda uygula --
     conn = _connect()
     try:
         for queue_id, page_type, ref in queue_items:
-            outcome, result = audit_outcomes.get(queue_id, ("failed", None))
-            artist_name = ref
+            outcome, result = outcomes.get(queue_id, ("failed", None))
 
             if outcome == "failed":
                 with conn:
@@ -315,11 +568,7 @@ def build_next_batch(limit: int = 100) -> dict:
                 failed += 1
                 continue
 
-            sources = getattr(result, "sources", None) or []
-            platform_count = sum(1 for s in sources if getattr(s, "found", False))
-            score = getattr(result, "score", None)
-
-            if score is None or platform_count == 0:
+            if outcome == "thin":
                 with conn:
                     conn.execute(
                         "UPDATE build_queue SET status = 'thin' WHERE id = ?",
@@ -328,50 +577,122 @@ def build_next_batch(limit: int = 100) -> dict:
                 thin += 1
                 continue
 
-            resolved_artist = getattr(result, "resolved_artist", None) or artist_name
-            slug = slugify(resolved_artist)
-            findings_json = json.dumps(
-                _top_findings(getattr(result, "findings", []) or []), ensure_ascii=False
-            )
-            data_json = json.dumps(_result_to_data(result), ensure_ascii=False)
+            if page_type == "artist":
+                # outcome == "audited" -> result AuditResult benzeri bir nesne.
+                sources = getattr(result, "sources", None) or []
+                platform_count = sum(1 for s in sources if getattr(s, "found", False))
+                score = getattr(result, "score", None)
 
-            existing = conn.execute(
-                "SELECT id FROM seo_artist_pages WHERE slug = ?", (slug,)
-            ).fetchone()
+                if score is None or platform_count == 0:
+                    with conn:
+                        conn.execute(
+                            "UPDATE build_queue SET status = 'thin' WHERE id = ?",
+                            (queue_id,),
+                        )
+                    thin += 1
+                    continue
+
+                resolved_artist = getattr(result, "resolved_artist", None) or ref
+                slug = slugify(resolved_artist)
+                findings_json = json.dumps(
+                    _top_findings(getattr(result, "findings", []) or []), ensure_ascii=False
+                )
+                data_json = json.dumps(_result_to_data(result), ensure_ascii=False)
+
+                existing = conn.execute(
+                    "SELECT id FROM seo_artist_pages WHERE slug = ?", (slug,)
+                ).fetchone()
+                with conn:
+                    if existing:
+                        conn.execute(
+                            """
+                            UPDATE seo_artist_pages
+                            SET artist_name = ?, score = ?, platform_count = ?,
+                                findings_json = ?, data_json = ?, last_refreshed_at = ?
+                            WHERE slug = ?
+                            """,
+                            (
+                                resolved_artist, score, platform_count,
+                                findings_json, data_json, now, slug,
+                            ),
+                        )
+                    else:
+                        conn.execute(
+                            """
+                            INSERT INTO seo_artist_pages (
+                                slug, artist_name, isni, score, platform_count,
+                                findings_json, data_json, first_built_at,
+                                last_refreshed_at, indexed
+                            ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, 0)
+                            """,
+                            (
+                                slug, resolved_artist, score, platform_count,
+                                findings_json, data_json, now, now,
+                            ),
+                        )
+                    conn.execute(
+                        "UPDATE build_queue SET status = 'done' WHERE id = ?",
+                        (queue_id,),
+                    )
+                built += 1
+                built_slugs["artist"].append(slug)
+                continue
+
+            if page_type == "song":
+                # outcome == "ready" -> result payload'i _build_song_data'dan.
+                upserted = upsert_song_page(
+                    isrc=result["isrc"], slug=result["slug"], artist=result["artist"],
+                    title=result["title"], score=result["score"], bpm=result["bpm"],
+                    song_key=result["song_key"], data=result["data"],
+                )
+                with conn:
+                    if upserted.get("skipped"):
+                        conn.execute(
+                            "UPDATE build_queue SET status = 'thin' WHERE id = ?",
+                            (queue_id,),
+                        )
+                        thin += 1
+                    else:
+                        conn.execute(
+                            "UPDATE build_queue SET status = 'done' WHERE id = ?",
+                            (queue_id,),
+                        )
+                        built += 1
+                        built_slugs["song"].append(result["slug"])
+                continue
+
+            if page_type == "playlist":
+                # outcome == "ready" -> result payload'i _build_playlist_data'dan.
+                upserted = upsert_playlist_page(
+                    platform_playlist_id=result["platform_playlist_id"],
+                    slug=result["slug"], title=result["title"],
+                    fraud_score=result["fraud_score"], verdict=result["verdict"],
+                    data=result["data"],
+                )
+                with conn:
+                    if upserted.get("skipped"):
+                        conn.execute(
+                            "UPDATE build_queue SET status = 'thin' WHERE id = ?",
+                            (queue_id,),
+                        )
+                        thin += 1
+                    else:
+                        conn.execute(
+                            "UPDATE build_queue SET status = 'done' WHERE id = ?",
+                            (queue_id,),
+                        )
+                        built += 1
+                        built_slugs["playlist"].append(result["slug"])
+                continue
+
+            # Bilinmeyen page_type — savunma amacli (PAGE_TYPES disi bir deger
+            # kuyruga hic girmemis olmali, ama burada asla cokme).
             with conn:
-                if existing:
-                    conn.execute(
-                        """
-                        UPDATE seo_artist_pages
-                        SET artist_name = ?, score = ?, platform_count = ?,
-                            findings_json = ?, data_json = ?, last_refreshed_at = ?
-                        WHERE slug = ?
-                        """,
-                        (
-                            resolved_artist, score, platform_count,
-                            findings_json, data_json, now, slug,
-                        ),
-                    )
-                else:
-                    conn.execute(
-                        """
-                        INSERT INTO seo_artist_pages (
-                            slug, artist_name, isni, score, platform_count,
-                            findings_json, data_json, first_built_at,
-                            last_refreshed_at, indexed
-                        ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, 0)
-                        """,
-                        (
-                            slug, resolved_artist, score, platform_count,
-                            findings_json, data_json, now, now,
-                        ),
-                    )
                 conn.execute(
-                    "UPDATE build_queue SET status = 'done' WHERE id = ?",
+                    "UPDATE build_queue SET status = 'failed' WHERE id = ?",
                     (queue_id,),
                 )
-            built += 1
-            built_slugs.append(slug)
+            failed += 1
     finally:
         conn.close()
 
@@ -381,10 +702,12 @@ def build_next_batch(limit: int = 100) -> dict:
     # etkilemez: indexnow modulunun kendisi zaten ag hatasina karsi guvenli
     # (guarded) ama yine de savunma amacli try/except ile sariyoruz — beklenmedik
     # bir indexnow hatasi build_next_batch'in donus degerini asla bozmasin.
-    if built_slugs:
+    if any(built_slugs.values()):
         try:
             from marketplace import indexnow
-            indexnow.submit_slugs(built_slugs)
+            for ptype, slugs in built_slugs.items():
+                if slugs:
+                    indexnow.submit_slugs(slugs, path_prefix=_INDEXNOW_PREFIX[ptype])
         except Exception:
             pass
 
