@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from marketplace import accounts, api_features, db, growth, premium, service
+from marketplace import accounts, api_features, db, growth, premium, service, tracking
 from musical_seo import audit as seo_audit
 from musical_seo import contacts as seo_contacts
 from musical_seo import db as seo_db
@@ -132,14 +132,29 @@ def _resolve(query: str) -> tuple[str, str]:
 
 
 @app.get("/audit")
-def audit_run(query: str, save: bool = True) -> dict:
-    """SEO karnesi: tam denetim sonucu (frontend dashboard'u besler)."""
+def audit_run(
+    query: str, save: bool = True,
+    authorization: str | None = Header(default=None),
+) -> dict:
+    """SEO karnesi: tam denetim sonucu (frontend dashboard'u besler).
+
+    Giris yapilmissa sarki otomatik takibe alinir (retention): sonraki
+    skor degisiminde alert gonderilir. Anonim istekte takip yok."""
     try:
         result = seo_audit.run_audit(query)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     if save:
         seo_db.save(result)
+    # Opsiyonel otomatik takip: token varsa + gecerliyse.
+    token = (authorization or "").removeprefix("Bearer ").strip()
+    if token:
+        try:
+            user = accounts.user_by_token(token)
+            if user is not None:
+                tracking.track(user["id"], "song", query)
+        except Exception:
+            pass  # takip kritik degil; audit akisini bozmasin
     return result.to_dict()
 
 
@@ -364,6 +379,34 @@ def me(user: dict = Depends(_current_user)) -> dict:
     if user["role"] == "curator":
         result["earnings"] = accounts.earnings_for(user["id"])
     return result
+
+
+# --- Takip listesi (retention: skor degisiminde alert) -----------------------
+
+class TrackReq(BaseModel):
+    kind: str = Field(description="song | artist | playlist")
+    ref: str = Field(min_length=1, description="'Sanatci - Sarki' / sanatci / playlist url")
+    label: str | None = None
+
+
+@app.post("/me/track")
+def my_track(payload: TrackReq, user: dict = Depends(_current_user)) -> dict:
+    """Bir sarki/sanatci/playlist takibe al — gunluk alert taramasi bunu
+    izler (SEO skoru degisince bildirim)."""
+    try:
+        return tracking.track(user["id"], payload.kind, payload.ref, payload.label)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/me/tracked")
+def my_tracked(user: dict = Depends(_current_user)) -> list[dict]:
+    return tracking.tracked_for(user["id"])
+
+
+@app.post("/me/untrack")
+def my_untrack(payload: TrackReq, user: dict = Depends(_current_user)) -> dict:
+    return {"ok": tracking.untrack(user["id"], payload.kind, payload.ref)}
 
 
 @app.post("/admin/credits/grant")

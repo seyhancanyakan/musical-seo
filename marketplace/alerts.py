@@ -9,8 +9,9 @@ Alert turleri:
     cover       - cover_hunter'da yeni 'pending' aday bulundu (hunt basina).
     fraud       - takip edilen playliste dair riskli/cok_riskli/sahte adli
                   rapor (fraud_forensics).
-    score       - SEO skoru degisti (musical_seo.db.history delta) - best-effort,
-                  asagida run_daily() icinde neden HENUZ taranmadigi belgeli.
+    score       - takip edilen bir sarkinin SEO skoru degisti (marketplace.
+                  tracking + musical_seo.db.history delta, SCORE_ALERT_DELTA
+                  esigi) - detay asagida run_daily() icinde.
     competitor  - rakip yeni cikti / daha populer - stub girdili saf fonksiyon,
                   gercek veri kaynagi gelene kadar run_daily bunu CAGIRMAZ.
 
@@ -23,15 +24,28 @@ yine de kalir (sent=0), run_daily hicbir zaman cokmez.
 
 Her kaynak (cover/fraud/score/competitor) run_daily() icinde BAGIMSIZ
 try/except icindedir - bir kaynagin hatasi digerlerini durdurmaz.
+
+Score kaynagi (marketplace.tracking): kullanicilarin takip ettigi sarkilar
+(tracked_items, kind='song') taranir; her biri icin musical_seo.db.history
+uzerinden en guncel skor okunur. Ilk kontrolde (last_score IS NULL) sadece
+baseline kaydedilir, alert URETILMEZ (henuz karsilastirilacak eski deger
+yok). Sonraki kontrollerde skor SCORE_ALERT_DELTA kadar ya da daha fazla
+degistiyse build_score_alert + _record_alert ile bildirim uretilir; alert_log
+idempotentligi icin ref BILEREK f"{ref}:{latest_score}" olarak sabitlenir
+(ayni skora tekrar tekrar rastlanirsa ayni ref -> tekrar bildirim gitmez).
 """
 from __future__ import annotations
 
 import sqlite3
 
-from marketplace import cover_hunter, db, fraud_forensics, growth
+from marketplace import cover_hunter, db, fraud_forensics, growth, tracking
+from musical_seo import db as seo_db
 
 RISKY_FRAUD_VERDICTS = ("riskli", "cok_riskli", "sahte")
 _FRAUD_SCAN_LIMIT = 500
+# SEO skoru en az bu kadar (mutlak deger) degisirse takip eden kullaniciya
+# bildirim gider; daha kucuk oynamalar gurultu sayilir, bildirilmez.
+SCORE_ALERT_DELTA = 3.0
 
 _SCHEMA = [
     """
@@ -211,6 +225,20 @@ def _risky_fraud_reports(limit: int = _FRAUD_SCAN_LIMIT) -> list[tuple[int, int,
     return [(r["id"], r["user_id"], r["playlist_title"] or "", r["verdict"]) for r in rows]
 
 
+def _parse_song_ref(ref: str) -> tuple[str, str] | None:
+    """tracking.track(..., kind='song', ref="Sanatci - Sarki") formatini coz.
+
+    " - " ayiraci yoksa (beklenmeyen/bozuk veri) None doner -- cagiran taraf
+    bu ogeyi atlar, run_daily cokmez."""
+    if " - " not in ref:
+        return None
+    artist, _, title = ref.partition(" - ")
+    artist, title = artist.strip(), title.strip()
+    if not artist or not title:
+        return None
+    return artist, title
+
+
 # --- Gunluk orkestrasyon ------------------------------------------------------
 
 def run_daily() -> dict:
@@ -247,19 +275,42 @@ def run_daily() -> dict:
     except Exception:
         pass
 
-    # --- 3) Score: SEO skoru degisti -----------------------------------------
-    # TODO(best-effort): musical_seo.db.history(artist, title) gecmis skor
-    # verisi sunuyor ve growth.detect_score_drops zaten TEK bir kullanicinin
-    # takip ettigi parcalarda DUSUS'u tespit ediyor. Ama burada TUM
-    # kullanicilar icin toplu tarama yapabilmek icin "hangi kullanici hangi
-    # (artist, title)'i takip ediyor" iliskisini veren bir
-    # accounts.list_users()/kullanici bazli takip listesi marketplace/
-    # accounts.py'da HENUZ yok (submissions.artist_user_id tek basina yeterli
-    # degil - skor artislarini da yakalamak icin tum kullanicilarin butun
-    # gecmis parcalarini taramak gerekir). Uydurma/varsayimsal veri uretmek
-    # yerine burada HICBIR ALERT URETILMIYOR. build_score_alert() yukarida
-    # saf/test edilebilir sekilde HAZIR; ilerideki entegrasyon sadece bu
-    # dongude bir "for user_id in <kullanici+takip listesi>" eklemeli.
+    # --- 3) Score: takip edilen sarkilarin SEO skoru degisti -----------------
+    # marketplace.tracking artik "hangi kullanici hangi (artist, title)'i
+    # takip ediyor" iliskisini veriyor (tracked_items, kind='song'); bu sayede
+    # TUM kullanicilar icin toplu tarama mumkun oldu (onceki TODO buradaydi).
+    try:
+        for item in tracking.all_tracked(kind="song"):
+            parsed = _parse_song_ref(item["ref"])
+            if parsed is None:
+                continue
+            artist, title = parsed
+            history = seo_db.history(artist, title)
+            if not history:
+                continue  # bu sarki icin henuz hic denetim yapilmamis
+            latest_score = float(history[-1]["score"])
+            old_score = item["last_score"]
+
+            if old_score is None:
+                # Ilk kontrol: karsilastirilacak eski deger yok, sadece
+                # baseline kaydedilir -- alert URETILMEZ.
+                tracking.update_score(item["id"], latest_score)
+                continue
+
+            if abs(latest_score - old_score) >= SCORE_ALERT_DELTA:
+                alert = build_score_alert(
+                    item["user_id"], item["ref"], old_score, latest_score
+                )
+                # Idempotentlik: ayni skora tekrar rastlanirsa (run_daily gun
+                # icinde birden fazla calissa bile) ayni ref -> tekrar
+                # bildirim gitmez; skor gercekten degisince yeni ref dogar.
+                alert["ref"] = f"{item['ref']}:{latest_score}"
+                if _record_alert(alert):
+                    _bump("score")
+
+            tracking.update_score(item["id"], latest_score)
+    except Exception:
+        pass  # tek kaynagin hatasi run_daily'yi durdurmasin
 
     # --- 4) Competitor: rakip cikisi/populerlik degisimi ---------------------
     # TODO(best-effort): rakip takibi icin veri kaynagi (rakip sanatci listesi
