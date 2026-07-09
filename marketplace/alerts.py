@@ -38,7 +38,10 @@ from __future__ import annotations
 
 import sqlite3
 
-from marketplace import cover_hunter, db, fraud_forensics, growth, tracking
+from marketplace import (
+    accounts, cover_hunter, db, fraud_forensics, growth, mailer,
+    templates_email, tracking,
+)
 from musical_seo import db as seo_db
 
 RISKY_FRAUD_VERDICTS = ("riskli", "cok_riskli", "sahte")
@@ -133,11 +136,49 @@ def build_competitor_alert(user_id: int, competitor: str, delta_pct: float) -> d
 
 # --- alert_log idempotent kayit + growth notifications push (guarded) -------
 
-def _record_alert(alert: dict) -> bool:
+def _send_alert_email(alert: dict, extra: dict | None = None) -> None:
+    """YENI bir alert icin kullaniciya e-posta gonderir — TAMAMEN guarded,
+    run_daily/_record_alert'i ASLA cokertmez (mailer.send_email zaten
+    kendisi istisna firlatmaz; burada ayrica try/except ile de sarilir).
+
+    Kullanicinin e-postasi yoksa (hesap yok / e-posta bos) sessizce atlanir.
+    alert_type'a gore uygun sablon secilir; 'score' turu icin ek olarak
+    extra={'track','old_score','new_score'} gerekir (yoksa atlanir).
+    dedupe_key = alert['ref'] -> mailer kendi (category, to, gun) bazli
+    dedupe kontrolunu de yapar (ayni gun ayni alert icin iki mail gitmez)."""
+    try:
+        user = accounts.get_user(alert["user_id"])
+        email = (user or {}).get("email")
+        if not email:
+            return
+        name = user.get("name") or ""
+        alert_type = alert["alert_type"]
+
+        if alert_type == "cover":
+            subject, body = templates_email.cover_alert_email(name, alert["message"])
+        elif alert_type == "fraud":
+            subject, body = templates_email.fraud_alert_email(name, alert["message"])
+        elif alert_type == "score" and extra:
+            subject, body = templates_email.score_alert_email(
+                name, extra["track"], extra["old_score"], extra["new_score"],
+            )
+        else:
+            return  # competitor vb. icin henuz sablon/veri yok
+
+        mailer.send_email(
+            email, subject, body, category=alert_type, dedupe_key=alert["ref"],
+        )
+    except Exception:
+        pass  # e-posta gonderimi ASLA alert akisini cokertmez
+
+
+def _record_alert(alert: dict, extra: dict | None = None) -> bool:
     """alert_log'a idempotent kayit dener; zaten varsa (unique index ihlali)
     False doner -- yeni bildirim uretilmedi demektir. Yeni kayitta,
     growth.add_notification uzerinden kullaniciya bildirim de push edilir;
-    bu cagri basarisiz olursa alert_log kaydi yine de kalir (sent=0)."""
+    bu cagri basarisiz olursa alert_log kaydi yine de kalir (sent=0). Ayrica
+    kullaniciya (e-postasi varsa) guarded bir uyari e-postasi da gonderilir
+    (bkz. _send_alert_email) — bu da alert_log kaydini etkilemez."""
     conn = _connect()
     try:
         with conn:
@@ -178,6 +219,8 @@ def _record_alert(alert: dict) -> bool:
             pass
         finally:
             conn.close()
+
+    _send_alert_email(alert, extra)
     return True
 
 
@@ -305,7 +348,12 @@ def run_daily() -> dict:
                 # icinde birden fazla calissa bile) ayni ref -> tekrar
                 # bildirim gitmez; skor gercekten degisince yeni ref dogar.
                 alert["ref"] = f"{item['ref']}:{latest_score}"
-                if _record_alert(alert):
+                extra = {
+                    "track": item["ref"],
+                    "old_score": old_score,
+                    "new_score": latest_score,
+                }
+                if _record_alert(alert, extra=extra):
                     _bump("score")
 
             tracking.update_score(item["id"], latest_score)

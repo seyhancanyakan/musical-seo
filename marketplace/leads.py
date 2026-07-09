@@ -16,7 +16,7 @@ import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
-from marketplace import db
+from marketplace import db, mailer, templates_email
 
 _SCHEMA = [
     """
@@ -85,7 +85,28 @@ def capture_lead(email: str, source: str, context: dict | None = None) -> dict:
         ).fetchone()
     finally:
         conn.close()
-    return _row_to_dict(row)
+
+    lead = _row_to_dict(row)
+    _send_welcome_email(lead)  # sadece GERCEKTEN yeni lead'de (guarded)
+    return lead
+
+
+def _send_welcome_email(lead: dict) -> None:
+    """Yeni e-posta yakalamasinda (dedupe hit degil) karsilama maili gonderir.
+    TAMAMEN guarded: mailer.send_email zaten istisna firlatmaz, burada ayrica
+    try/except ile sarilir — bir mail hatasi capture_lead'i ASLA cokertmez.
+    dedupe_key = email -> mailer kendi (category, to, gun) kontroluyle ayni
+    gun ayni e-postaya iki kez karsilama maili gitmesini de engeller."""
+    try:
+        context = lead.get("context") or {}
+        name = context.get("name") or ""
+        subject, body = templates_email.welcome_email(name)
+        mailer.send_email(
+            lead["email"], subject, body,
+            category="welcome", dedupe_key=lead["email"],
+        )
+    except Exception:
+        pass
 
 
 def leads_count() -> int:

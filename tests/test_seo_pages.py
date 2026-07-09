@@ -226,3 +226,46 @@ def test_recent_leads_orders_desc(leads_db):
     recent = leads.recent_leads(limit=10)
     assert len(recent) == 2
     assert recent[0]["email"] == "b@example.com"
+
+
+def test_capture_lead_sends_welcome_email_on_genuinely_new_capture(
+    leads_db, monkeypatch,
+):
+    sent_calls = []
+    monkeypatch.setattr(
+        leads.mailer, "send_email",
+        lambda *a, **k: sent_calls.append((a, k)) or {"ok": True},
+    )
+
+    leads.capture_lead("new@example.com", "artist-page")
+
+    assert len(sent_calls) == 1
+    args, kwargs = sent_calls[0]
+    assert args[0] == "new@example.com"
+    assert kwargs.get("category") == "welcome"
+
+
+def test_capture_lead_dedupe_hit_does_not_send_second_welcome_email(
+    leads_db, monkeypatch,
+):
+    sent_calls = []
+    monkeypatch.setattr(
+        leads.mailer, "send_email",
+        lambda *a, **k: sent_calls.append((a, k)) or {"ok": True},
+    )
+
+    leads.capture_lead("dupe2@example.com", "song-page")
+    leads.capture_lead("dupe2@example.com", "song-page")  # 24s icinde dedupe
+
+    assert len(sent_calls) == 1  # sadece ilk (genuinely new) capture'da mail
+
+
+def test_capture_lead_email_failure_does_not_break_capture(leads_db, monkeypatch):
+    def _boom(*a, **k):
+        raise RuntimeError("mail servisi coktu")
+
+    monkeypatch.setattr(leads.mailer, "send_email", _boom)
+
+    lead = leads.capture_lead("boom@example.com", "artist-page")
+
+    assert lead["email"] == "boom@example.com"  # capture basarili kaldi

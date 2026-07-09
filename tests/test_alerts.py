@@ -423,6 +423,92 @@ def test_run_daily_score_scan_ignores_non_song_tracked_kinds(
     assert result == {"generated": 0, "by_type": {}}
 
 
+# --- mailer entegrasyonu (guarded e-posta gonderimi) -------------------------
+
+def test_record_alert_sends_email_when_user_has_email(alerts_db, monkeypatch):
+    monkeypatch.setattr(
+        alerts.accounts, "get_user",
+        lambda uid: {"id": uid, "email": "artist@example.com", "name": "Artist"},
+    )
+    sent_calls = []
+    monkeypatch.setattr(
+        alerts.mailer, "send_email",
+        lambda *a, **k: sent_calls.append((a, k)) or {"ok": True},
+    )
+
+    hunt_id = _seed_cover_hunt(user_id=81)
+    _add_pending_candidate(hunt_id, "https://youtube.com/watch?v=z1")
+
+    alerts.run_daily()
+
+    assert len(sent_calls) == 1
+    args, kwargs = sent_calls[0]
+    assert args[0] == "artist@example.com"
+    assert kwargs.get("category") == "cover"
+    assert kwargs.get("dedupe_key")
+
+
+def test_record_alert_skips_email_when_user_has_no_account(alerts_db, monkeypatch):
+    monkeypatch.setattr(alerts.accounts, "get_user", lambda uid: None)
+    sent_calls = []
+    monkeypatch.setattr(
+        alerts.mailer, "send_email",
+        lambda *a, **k: sent_calls.append((a, k)) or {"ok": True},
+    )
+
+    hunt_id = _seed_cover_hunt(user_id=82)
+    _add_pending_candidate(hunt_id, "https://youtube.com/watch?v=z2")
+
+    alerts.run_daily()
+
+    assert sent_calls == []
+
+
+def test_record_alert_email_failure_does_not_break_run_daily(alerts_db, monkeypatch):
+    monkeypatch.setattr(
+        alerts.accounts, "get_user",
+        lambda uid: {"id": uid, "email": "artist@example.com", "name": "Artist"},
+    )
+
+    def _boom(*a, **k):
+        raise RuntimeError("mail servisi coktu")
+
+    monkeypatch.setattr(alerts.mailer, "send_email", _boom)
+
+    hunt_id = _seed_cover_hunt(user_id=83)
+    _add_pending_candidate(hunt_id, "https://youtube.com/watch?v=z3")
+
+    result = alerts.run_daily()
+
+    assert result["generated"] == 1  # mail hatasi alert kaydini etkilemez
+
+
+def test_run_daily_score_alert_email_receives_track_and_scores(
+    alerts_db, fake_score_history, monkeypatch,
+):
+    monkeypatch.setattr(
+        alerts.accounts, "get_user",
+        lambda uid: {"id": uid, "email": "artist@example.com", "name": "Artist"},
+    )
+    captured = {}
+
+    def fake_score_template(name, track, old, new):
+        captured["args"] = (name, track, old, new)
+        return ("Konu", "<p>govde</p>")
+
+    monkeypatch.setattr(alerts.templates_email, "score_alert_email", fake_score_template)
+    monkeypatch.setattr(alerts.mailer, "send_email", lambda *a, **k: {"ok": True})
+
+    tracking.track(91, "song", "Artist - Song")
+    fake_score_history[("artist", "song")] = [50.0]
+    alerts.run_daily()  # baseline, henuz alert yok
+
+    fake_score_history[("artist", "song")] = [50.0, 60.0]
+    alerts.run_daily()
+
+    assert captured["args"] == ("Artist", "Artist - Song", 50.0, 60.0)
+
+
 # --- import sanity ------------------------------------------------------------
 
 def test_module_imports_without_network():
