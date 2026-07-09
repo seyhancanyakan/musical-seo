@@ -205,6 +205,20 @@ def admin_run_alerts(_: None = Depends(_require_admin_key)) -> dict:
     return alerts.run_daily()
 
 
+@router.post("/audit/refresh-tracked")
+def admin_refresh_tracked(_: None = Depends(_require_admin_key)) -> dict:
+    """Takipli sarkilari ARKA PLANDA yeniden denetle -> SEO skoru zaman-serisi
+    (snapshots.db) birikir (attribution + skor alert'leri icin). Cron zaten
+    gunluk calisir; bu manuel tetikleyici (thread ile non-blocking)."""
+    import threading
+    from marketplace import audit_refresh
+    threading.Thread(
+        target=audit_refresh.refresh_tracked_audits, daemon=True,
+    ).start()
+    return {"started": True,
+            "note": "Takipli sarkilar arka planda yeniden denetleniyor"}
+
+
 # --- Admin: song/playlist kuyruk + seed (Tier 4/5 build pipeline) -------------
 
 class EnqueueSong(BaseModel):

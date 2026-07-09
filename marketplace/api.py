@@ -717,6 +717,24 @@ def _alerts_cron() -> None:
 threading.Thread(target=_alerts_cron, daemon=True).start()
 
 
+def _audit_refresh_cron() -> None:
+    # Takipli sarkilari gunluk yeniden denetle -> SEO skoru zaman-serisi
+    # (snapshots.db) birikir -> attribution (ROI atif) + skor-degisim alert'leri
+    # gercek veriyle calisir (bkz. audit_refresh.py). Alert taramasindan ONCE
+    # skorlar tazelensin diye alerts cron'undan ayri, kendi 24s dongusunde.
+    import time as _time
+    from marketplace import audit_refresh
+    while True:
+        _time.sleep(24 * 60 * 60)  # gunde 1 kez
+        try:
+            audit_refresh.refresh_tracked_audits()
+        except Exception:
+            pass  # cron tek hatayla olmesin
+
+
+threading.Thread(target=_audit_refresh_cron, daemon=True).start()
+
+
 def _fraud_snapshot_cron() -> None:
     # Sahte Playlist Dedektoru zaman-serisi biriktirme: fraud_reports'ta
     # gorulen her DISTINCT playlist icin gunde 1 kez Spotify'dan taze bir
