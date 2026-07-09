@@ -666,3 +666,21 @@ def _alerts_cron() -> None:
 
 
 threading.Thread(target=_alerts_cron, daemon=True).start()
+
+
+def _fraud_snapshot_cron() -> None:
+    # Sahte Playlist Dedektoru zaman-serisi biriktirme: fraud_reports'ta
+    # gorulen her DISTINCT playlist icin gunde 1 kez Spotify'dan taze bir
+    # anlik goruntu alir (follower_anomaly/track_churn sinyalleri 2+ olcume
+    # ihtiyac duyar — bu cron olmadan sadece tekrar analiz istegiyle birikir).
+    import time as _time
+    from marketplace import fraud_forensics
+    while True:
+        _time.sleep(24 * 60 * 60)  # gunde 1 kez
+        try:
+            fraud_forensics.snapshot_all_known_playlists()
+        except Exception:
+            pass  # cron tek hatayla olmesin
+
+
+threading.Thread(target=_fraud_snapshot_cron, daemon=True).start()

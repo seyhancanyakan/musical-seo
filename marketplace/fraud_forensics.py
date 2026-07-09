@@ -1,27 +1,48 @@
 """Sahte Playlist Dedektoru — playlist yerlesimi oncesi adli (forensic) analiz.
 
 Amac: sanatcinin "kredi harcayip sahte/bot playliste mi ekleniyorum" riskini
-yerlesim ONCESINDE gormesi. Bes bagimsiz sinyal (0..1) agirlikli toplanip
-0..100 risk skoruna cevrilir:
+yerlesim ONCESINDE gormesi. Bes bagimsiz sinyal (0..1) tanimlanir, ancak
+SADECE GERCEK VERIYE DAYANAN (informatif) sinyaller agirlikli ortalamaya
+katilir — kalan agirliklar 1'e RENORMALIZE edilir (asagida "Veri kapsami"):
 
-    follower_anomaly     (0.30) — takipci sayisinda anormal sicrama
+    follower_anomaly     (0.30) — takipci sayisinda anormal sicrama [GERCEK:
+                                  Spotify snapshot zaman-serisi, 2+ olcum gerekir]
     track_churn          (0.20) — parca listesinin kisa surede asiri degismesi
-    geo_cluster          (0.15) — dinleyici/takipci cografyasinin sirasiz yogunlasmasi
+                                  [GERCEK: Spotify snapshot zaman-serisi]
+    geo_cluster          (0.15) — dinleyici/takipci cografyasinin sirasiz
+                                  yogunlasmasi [VERI YOK: Spotify Web API
+                                  dinleyici konumu vermiyor — HER ZAMAN notr,
+                                  agirlikli skora KATILMAZ]
     audio_label_mismatch (0.20) — playlist etiketi (ör. "sakin") ile gercek ses
                                   profili (enerji/BPM) arasindaki uyumsuzluk
+                                  [GERCEK: playlist parca ornegi -> Deezer
+                                  onizleme -> musical_seo.audio]
     track_seo_poverty    (0.15) — parca havuzunun SEO/kalite skorlarinin dusuklugu
+                                  [GERCEK: playlist parca ornegi -> musical_seo.audit]
 
 Her sinyal fonksiyonu SAF'a yakindir: veri disaridan (parametre) verilir,
 verilmezse yerel fraud_snapshots tablosundan okumaya calisir; hicbir kaynak
 yoksa asla patlamaz — NOTR (0.5) skor + aciklayici detay doner. Boylece
-network olmadan da unit test edilebilir ve entegrasyon gelene kadar sistem
-"veri yok" durumunda asiri iddiali bir yargida bulunmaz.
+network olmadan da unit test edilebilir ve gercek veri kaynagi (Spotify/
+Deezer/audit) erisilemedigi durumda sistem asiri iddiali bir yargida
+bulunmaz.
+
+Veri kapsami / renormalizasyon: geo_cluster icin gercek bir veri kaynagi
+yok (Spotify Web API dinleyici cografyasi paylasmiyor) — bu sinyal HER ZAMAN
+notr (0.5) doner ve agirlikli risk skoruna dahil EDILMEZ. Diger 4 sinyalden
+hangileri o an informatif ise (gercek veriye dayaniyorsa) SADECE onlarin
+agirliklari toplamda 1 olacak sekilde yeniden olceklenir (bkz.
+`_weighted_risk_score`); boylece eksik geo sinyali skoru yapay olarak 50'ye
+cekmez. Hicbir sinyal informatif degilse (ör. Spotify hic erisilemedi) eski
+davranis korunur (tum sinyaller notr -> skor 50, verdict 'veri_yetersiz').
 
 Tablolar (marketplace.db):
     fraud_reports:   uretilen her adli analiz raporu (token ile paylasilabilir).
     fraud_snapshots: playlist icin zaman ici toplanan (takipci/parca/parca id
                      listesi) anlik goruntuler — follower_anomaly ve
                      track_churn sinyallerinin yerel veri kaynagi.
+                     `snapshot_playlist` her analyze_playlist cagrisinda
+                     (ve gunluk cron'da) Spotify'dan taze bir satir ekler.
 
 Is kurali ihlalleri ValueError (Turkce) — API katmani 400'e cevirir.
 """
@@ -31,7 +52,11 @@ import json
 import secrets
 import sqlite3
 
-from marketplace import db
+import requests
+
+from marketplace import db, spotify_client
+from musical_seo import audio
+from musical_seo import audit as seo_audit
 
 # --- Agirliklar + esikler ----------------------------------------------------
 
@@ -70,6 +95,18 @@ ENERGETIC_KEYWORDS = {
 AUDIO_ENERGY_CALM_MAX = 0.6
 AUDIO_ENERGY_ENERGETIC_MIN = 0.4
 POVERTY_SCORE_THRESHOLD = 40.0    # bu skorun altindaki parca "SEO fakiri" sayilir
+
+# Playlist'ten audio_label_mismatch + track_seo_poverty icin ornekleme sinirin
+# — Deezer onizleme indirme + librosa analizi + audit.run_audit agir/yavas
+# oldugundan playlist basina en fazla bu kadar parca islenir.
+SAMPLE_TRACK_LIMIT = 8
+
+# Deezer'da 30 sn onizleme aramak icin (audio_label_mismatch girdisi).
+# musical_seo.sources.deezer.TrackInfo onizleme URL'ini tasimiyor (sadece
+# metadata) — bu yuzden marketplace.cover_hunter'daki ayni desenle dogrudan
+# arama uc noktasina gidilir.
+_DEEZER_SEARCH_URL = "https://api.deezer.com/search"
+_DEEZER_TIMEOUT = 15
 
 _SCHEMA = [
     """
@@ -133,6 +170,30 @@ def save_snapshot(
             return int(cur.lastrowid)
     finally:
         conn.close()
+
+
+def snapshot_playlist(playlist_url: str) -> dict | None:
+    """Spotify'dan (Client Credentials) playlist'i ceker ve fraud_snapshots'a
+    taze bir satir yazar — zaman-serisi biriktirme boylece ilerler (her
+    analyze_playlist cagrisi + gunluk cron bir satir ekler).
+
+    Spotify musait degilse (kimlik bilgisi yok, URL bir Spotify playlist
+    URL'i degil, ag hatasi, kota asimi, 404/editoryal liste) None doner;
+    hicbir zaman exception firlatmaz — cagiran taraf (analyze_playlist) bunu
+    "veri yok" olarak ele alir. Donen dict, spotify_client.get_playlist ile
+    ayni sozlesme: {name, followers, track_count, tracks}."""
+    playlist_id = spotify_client.parse_playlist_id(playlist_url)
+    if not playlist_id:
+        return None
+    playlist = spotify_client.get_playlist(playlist_id)
+    if playlist is None:
+        return None
+
+    track_ids = [t["id"] for t in (playlist.get("tracks") or []) if t.get("id")]
+    save_snapshot(
+        playlist_url, playlist.get("followers"), playlist.get("track_count"), track_ids,
+    )
+    return playlist
 
 
 def _fetch_snapshots(playlist_url: str) -> list[dict]:
@@ -350,13 +411,87 @@ def signal_track_seo_poverty(playlist_url: str, track_scores: list[float] | None
     }
 
 
+# --- Playlist ornekleminden gercek veri cikarma (audio + parca SEO) ---------
+# snapshot_playlist Spotify'dan taze bir parca listesi getirdiginde,
+# analyze_playlist bu yardimcilarla audio_label_mismatch ve
+# track_seo_poverty icin GERCEK girdi uretir (aciykca profiles/track_scores
+# verilmediginde). Her adim guvenceli: tek bir parcanin Deezer/audit
+# basarisiz olmasi ornegin tamamini bozmaz, sadece o parca atlanir.
+
+def _sample_tracks(tracks: list[dict] | None) -> list[dict]:
+    """Ad + en az bir sanatcisi olan parcalardan ilk SAMPLE_TRACK_LIMIT
+    tanesini secer (agir analiz/audit cagrilarini sinirlamak icin)."""
+    usable = [t for t in (tracks or []) if t.get("name") and t.get("artists")]
+    return usable[:SAMPLE_TRACK_LIMIT]
+
+
+def _track_audio_profile(artist: str, title: str) -> "audio.AudioProfile | None":
+    """Deezer'da parcayi arar, 30 sn onizlemeyi ceker, musical_seo.audio ile
+    ses profili cikarir. librosa kurulu degilse, Deezer'da sonuc yoksa ya da
+    herhangi bir adim basarisiz olursa None doner — asla patlamaz."""
+    if not audio.available():
+        return None
+    try:
+        response = requests.get(
+            _DEEZER_SEARCH_URL, params={"q": f"{artist} {title}", "limit": 1},
+            timeout=_DEEZER_TIMEOUT,
+        )
+        response.raise_for_status()
+        results = (response.json() or {}).get("data") or []
+    except (requests.RequestException, ValueError):
+        return None
+    if not results:
+        return None
+    preview_url = results[0].get("preview")
+    if not preview_url:
+        return None
+    return audio.analyze_url(preview_url)
+
+
+def _gather_audio_profiles(tracks: list[dict] | None) -> list:
+    """Playlist ornegindeki parcalar icin ses profili listesi (mumkun
+    oldugu kadar) — signal_audio_label_mismatch girdisi. Hicbir parca
+    cozumlenemezse [] doner (sinyal notr kalir, cokme yok)."""
+    profiles = []
+    for track in _sample_tracks(tracks):
+        artist = (track.get("artists") or [None])[0]
+        title = track.get("name")
+        if not artist or not title:
+            continue
+        try:
+            profile = _track_audio_profile(artist, title)
+        except Exception:
+            profile = None
+        if profile is not None:
+            profiles.append(profile)
+    return profiles
+
+
+def _gather_track_scores(tracks: list[dict] | None) -> list[float]:
+    """Playlist ornegindeki parcalar icin musical_seo.audit SEO/kalite
+    skorlari — signal_track_seo_poverty girdisi. audit.run_audit sarki
+    bulunamazsa ValueError firlatir; burada yutulur (parca atlanir)."""
+    scores: list[float] = []
+    for track in _sample_tracks(tracks):
+        artist = (track.get("artists") or [None])[0]
+        title = track.get("name")
+        if not artist or not title:
+            continue
+        try:
+            result = seo_audit.run_audit(f"{artist} - {title}")
+            scores.append(float(result.score))
+        except Exception:
+            continue
+    return scores
+
+
 # --- Notr veri toplama (test/gelecek entegrasyon icin izole nokta) ----------
 
 def _gather_inputs(playlist_url: str) -> dict:
     """Su an icin tek yerel/ag-siz veri kaynagi: fraud_snapshots. Diger
-    sinyaller (geo/audio/seo) icin gercek zamanli entegrasyon henuz yok; test
-    veya ileri entegrasyonlar bu fonksiyonu monkeypatch'leyerek veya
-    analyze_playlist'e dogrudan parametre gecerek veri saglayabilir."""
+    sinyaller (geo/audio/seo) icin varsayilan notr; analyze_playlist bunlari
+    snapshot_playlist ile gelen canli playlist ornegiyle (veya test/entegrasyon
+    icin dogrudan parametreyle) doldurur."""
     return {
         "snapshots": _fetch_snapshots(playlist_url),
         "playlist_title": "",
@@ -373,7 +508,63 @@ def _verdict_for(total_risk_score: float) -> str:
     return VERDICT_FALLBACK
 
 
-def _recommendation_for(verdict: str, signals: dict[str, dict]) -> str:
+def _is_informative(score: float) -> bool:
+    """Sinyal notr fallback (0.5) DISINDA bir deger dondurduyse gercek
+    veriye dayaniyor demektir. MIN_INFORMATIVE_SIGNALS esigi ve agirlik
+    renormalizasyonu ayni bu heuristigi kullanir."""
+    return abs(score - 0.5) > 1e-9
+
+
+def _weighted_risk_score(signals: dict[str, dict]) -> tuple[float, list[str]]:
+    """0..100 agirlikli risk skoru + informatif (gercek veriye dayanan)
+    sinyal adlari.
+
+    RENORMALIZASYON: notr (veri yok) sinyaller (ör. geo_cluster her zaman,
+    veya henuz yeterli snapshot'i olmayan follower_anomaly/track_churn)
+    agirlikli ortalamadan TAMAMEN CIKARILIR; kalan informatif sinyallerin
+    agirliklari toplamda 1 olacak sekilde yeniden olceklenir. Boylece ör.
+    sadece geo eksikken skor, geo'nun sabit 0.5*0.15'i yuzunden yapay olarak
+    50'ye cekilmez — kalan 4 sinyal 0.85 toplam agirlik yerine 1.0'a
+    olceklenmis halleriyle skoru belirler.
+
+    Hicbir sinyal informatif degilse (ör. Spotify/Deezer/audit hicbirine
+    erisilemedi) renormalizasyon tanimsizdir; bu durumda eski davranisa
+    (tum sinyaller * ham agirlik) donulur — zaten tum sinyaller notr
+    oldugundan bu her zaman 50.0 verir ve MIN_INFORMATIVE_SIGNALS kontrolu
+    verdict'i 'veri_yetersiz' yapar (skor deger degil, sadece bilgi)."""
+    informative = [name for name, s in signals.items() if _is_informative(s["score"])]
+    if not informative:
+        raw_score = sum(
+            signals[name]["score"] * weight * 100
+            for name, weight in SIGNAL_WEIGHTS.items()
+        )
+        return round(raw_score, 1), informative
+
+    weight_sum = sum(SIGNAL_WEIGHTS[name] for name in informative)
+    renormalized_score = sum(
+        signals[name]["score"] * SIGNAL_WEIGHTS[name] for name in informative
+    ) / weight_sum * 100
+    return round(renormalized_score, 1), informative
+
+
+def _data_coverage(signals: dict[str, dict]) -> dict:
+    """Kac sinyalin gercek veriye dayandigini raporlar — skorun ne kadar
+    'grounded' oldugunu UI/kullaniciya gostermek icin. geo_cluster gercek
+    veri kaynagi olmadigindan neredeyse her zaman notr sayilir (0/5 yerine
+    en fazla 4/5 gorulmesi beklenir)."""
+    informative_names = [name for name, s in signals.items() if _is_informative(s["score"])]
+    total = len(SIGNAL_WEIGHTS)
+    return {
+        "informative_signals": len(informative_names),
+        "total_signals": total,
+        "ratio": round(len(informative_names) / total, 2) if total else 0.0,
+        "informative_signal_names": informative_names,
+    }
+
+
+def _recommendation_for(
+    verdict: str, signals: dict[str, dict], coverage: dict | None = None,
+) -> str:
     risky = [name for name, s in signals.items() if s["score"] >= 0.6]
     if verdict == "guvenli":
         base = "Belirgin sahtecilik sinyali yok; yerlesim icin guvenli gorunuyor."
@@ -385,6 +576,12 @@ def _recommendation_for(verdict: str, signals: dict[str, dict]) -> str:
         base = "Guclu sahtecilik izleri: bu playliste yerlesim onerilmiyor."
     if risky:
         base += " Riskli sinyaller: " + ", ".join(risky) + "."
+    if coverage is not None:
+        base += (
+            f" (Veri kapsami: {coverage['informative_signals']}/"
+            f"{coverage['total_signals']} sinyal gercek veriye dayaniyor; "
+            "skor bu sinyallerin agirlikli renormalizasyonuyla hesaplandi.)"
+        )
     return base
 
 
@@ -415,6 +612,7 @@ def _save_report(report: dict, user: dict | None) -> None:
 
 
 def _row_to_report(row: dict) -> dict:
+    signals = json.loads(row["signal_breakdown"])
     return {
         "id": row["id"],
         "created_at": row["created_at"],
@@ -422,9 +620,12 @@ def _row_to_report(row: dict) -> dict:
         "playlist_title": row["playlist_title"],
         "total_risk_score": row["total_risk_score"],
         "verdict": row["verdict"],
-        "signals": json.loads(row["signal_breakdown"]),
+        "signals": signals,
         "recommendation": row["recommendation"],
         "report_token": row["report_token"],
+        # Kaydedilmedi (eski satirlarla geriye uyum) — saklanan sinyallerden
+        # yeniden hesaplanir, boylece gecmis raporlar da veri kapsamini gosterir.
+        "data_coverage": _data_coverage(signals),
     }
 
 
@@ -440,15 +641,44 @@ def analyze_playlist(
     track_scores: list[float] | None = None,
 ) -> dict:
     """5 sinyali toplar, agirlikli 0..100 risk skoru + verdict uretir, rapor
-    kaydeder ve doner. Ek anahtar-kelime parametreleri (playlist_title,
-    geo_distribution, profiles, track_scores) test/entegrasyon icin veri
-    enjeksiyonu sağlar; hicbiri verilmezse _gather_inputs'un yerel
-    fraud_snapshots'tan cikardigi veriyle (veya notr fallback'lerle) calisir.
+    kaydeder ve doner.
+
+    ONCE (guarded) snapshot_playlist(playlist_url) cagrilir: playlist bir
+    Spotify playlist URL'i ise ve kimlik bilgisi musaitse taze bir
+    fraud_snapshots satiri eklenir VE playlist'in guncel parca listesi
+    audio_label_mismatch / track_seo_poverty icin GERCEK girdi uretmekte
+    kullanilir (playlist_title/profiles/track_scores acikca verilmediyse).
+    Spotify musait degilse (kimlik yok, URL Spotify degil, ag hatasi) bu
+    adim sessizce atlanir — analiz eskisi gibi notr fallback'lerle devam
+    eder, asla patlamaz.
+
+    Ek anahtar-kelime parametreleri (playlist_title, geo_distribution,
+    profiles, track_scores) test/entegrasyon icin veri enjeksiyonu saglar ve
+    HER ZAMAN canli Spotify verisinden ONCELIKLIDIR.
     """
     if not playlist_url or not playlist_url.strip():
         raise ValueError("Playlist URL bos olamaz")
 
+    try:
+        live_playlist = snapshot_playlist(playlist_url)
+    except Exception:
+        live_playlist = None  # Spotify/ag hatasi analiz akisini asla durdurmasin
+
     inputs = _gather_inputs(playlist_url)
+
+    if live_playlist is not None:
+        if playlist_title is None and live_playlist.get("name"):
+            inputs["playlist_title"] = live_playlist["name"]
+        live_tracks = live_playlist.get("tracks") or []
+        if profiles is None:
+            live_profiles = _gather_audio_profiles(live_tracks)
+            if live_profiles:
+                inputs["profiles"] = live_profiles
+        if track_scores is None:
+            live_scores = _gather_track_scores(live_tracks)
+            if live_scores:
+                inputs["track_scores"] = live_scores
+
     if playlist_title is not None:
         inputs["playlist_title"] = playlist_title
     if geo_distribution is not None:
@@ -474,29 +704,25 @@ def analyze_playlist(
         ),
     }
 
-    total_risk_score = round(
-        sum(
-            signals[name]["score"] * weight * 100
-            for name, weight in SIGNAL_WEIGHTS.items()
-        ),
-        1,
-    )
-    # Veri kapsami: notr (0.5) fallback donen sinyaller "veri yok" demektir.
+    total_risk_score, informative_names = _weighted_risk_score(signals)
+    coverage = _data_coverage(signals)
+
     # Yeterli informatif sinyal yoksa risk skoru anlamsiz -> "sahte" gostermeyelim.
-    informative = sum(
-        1 for s in signals.values() if abs(s["score"] - 0.5) > 1e-9
-    )
-    if informative < MIN_INFORMATIVE_SIGNALS:
+    # "Kanit yok" != "sahte".
+    if len(informative_names) < MIN_INFORMATIVE_SIGNALS:
         verdict = "veri_yetersiz"
         recommendation = (
             "Yeterli veri yok — bu skor GUVENILIR DEGIL ve 'sahte' anlamina "
-            "GELMEZ. Playlist zaman-serisi, cografi dagilim, audio profili ve "
-            "parca SEO kaynaklari henuz baglanmadigi icin sinyaller notr dondu. "
-            "Guvenilir bir risk analizi icin bu kaynaklarin entegrasyonu gerekir."
+            "GELMEZ. Playlist zaman-serisi (2+ Spotify anlik goruntusu), "
+            "audio profili ve parca SEO kaynaklari henuz yeterli veri "
+            "uretmedigi icin sinyaller notr dondu. Guvenilir bir risk "
+            "analizi icin tekrar analiz et (zaman serisi birikir) veya "
+            "playlist'in Spotify'da erisilebilir oldugunu dogrula. "
+            f"(Veri kapsami: {coverage['informative_signals']}/{coverage['total_signals']}.)"
         )
     else:
         verdict = _verdict_for(total_risk_score)
-        recommendation = _recommendation_for(verdict, signals)
+        recommendation = _recommendation_for(verdict, signals, coverage)
     report_token = f"FRAUD-{secrets.token_hex(3).upper()}"
 
     report = {
@@ -507,6 +733,7 @@ def analyze_playlist(
         "signals": signals,
         "recommendation": recommendation,
         "report_token": report_token,
+        "data_coverage": coverage,
     }
     _save_report(report, user)
     return report
@@ -532,3 +759,34 @@ def reports_for_user(user_id: int) -> list[dict]:
         return [_row_to_report(dict(r)) for r in rows]
     finally:
         conn.close()
+
+
+# --- Gunluk zaman-serisi biriktirme (cron) ------------------------------------
+
+def _distinct_playlist_urls() -> list[str]:
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT playlist_url FROM fraud_reports"
+        ).fetchall()
+    finally:
+        conn.close()
+    return [r["playlist_url"] for r in rows]
+
+
+def snapshot_all_known_playlists() -> int:
+    """fraud_reports'ta gorulen her DISTINCT playlist icin taze bir anlik
+    goruntu alir — follower_anomaly/track_churn'un zaman-serisi ihtiyaci
+    boylece gunden gune birikir (bkz. marketplace.api._fraud_snapshot_cron).
+
+    Her playlist bagimsiz guvenceli: biri (ag hatasi, Spotify disi URL, kota
+    asimi) basarisiz olursa digerleri etkilenmez. Basariyla anlik goruntusu
+    alinan playlist sayisini doner (test/gozlem icin)."""
+    count = 0
+    for url in _distinct_playlist_urls():
+        try:
+            if snapshot_playlist(url) is not None:
+                count += 1
+        except Exception:
+            continue
+    return count
