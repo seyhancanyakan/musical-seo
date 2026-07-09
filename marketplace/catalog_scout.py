@@ -191,6 +191,59 @@ def seed_turkish(base_priority: int = 2000) -> dict:
     return seed_from_list(TURKISH_TOP_ARTISTS, base_priority)
 
 
+_MB_ARTIST_URL = "https://musicbrainz.org/ws/2/artist"
+_MB_HEADERS = {"User-Agent": "SozyEcho/1.0 ( https://sozyecho.live )"}
+
+
+def seed_turkish_from_musicbrainz(
+    max_artists: int = 5000, base_priority: int = 1800,
+) -> dict:
+    """MusicBrainz'den ulke=TR sanatcilarini sayfalayarak ceker ve build
+    kuyruguna ekler — KUCUKLU BUYUKLU tum Turk sanatcilari. Elle secili
+    TURKISH_TOP_ARTISTS (oncelik 2000) once, bunlar (1800) hemen ardindan,
+    global starter (1000) sonra uretilir.
+
+    MusicBrainz rate-limit'i 1 istek/sn -> sayfalar arasi ~1.1 sn beklenir
+    (uzun surer, arka plan is parcaciginda calistirilmali). Guarded: ag/kota
+    hatasinda o ana kadar kuyruklananla doner, asla patlamaz.
+    """
+    import time as _time
+
+    queued = 0
+    offset = 0
+    seen: set[str] = set()
+    while queued < max_artists:
+        try:
+            resp = requests.get(
+                _MB_ARTIST_URL,
+                params={"query": "country:TR", "fmt": "json",
+                        "limit": 100, "offset": offset},
+                headers=_MB_HEADERS, timeout=20,
+            )
+            if resp.status_code != 200:
+                break
+            artists = resp.json().get("artists", [])
+            if not artists:
+                break
+            for art in artists:
+                name = (art.get("name") or "").strip()
+                key = name.lower()
+                if name and key not in seen:
+                    seen.add(key)
+                    try:
+                        seo_pages.enqueue_artist(name, priority=base_priority)
+                        queued += 1
+                    except Exception:
+                        pass
+                if queued >= max_artists:
+                    break
+            offset += 100
+            _time.sleep(1.1)  # MusicBrainz rate-limit (1 istek/sn)
+        except Exception:
+            break
+    return {"queued": queued, "scanned_offset": offset}
+
+
 # --- 'song' seed: STARTER_TOP_ARTISTS'in Deezer top parcalari ----------------
 
 def _deezer_top_tracks(artist_name: str, limit: int) -> list[str]:

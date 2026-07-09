@@ -130,6 +130,22 @@ def admin_seed_turkish(_: None = Depends(_require_admin_key)) -> dict:
     return catalog_scout.seed_turkish()
 
 
+@router.post("/seo/seed-turkish-all")
+def admin_seed_turkish_all(
+    max: int = 5000, _: None = Depends(_require_admin_key)
+) -> dict:
+    """MusicBrainz'den KUCUKLU BUYUKLU tum Turk (country=TR) sanatcilarini
+    ARKA PLANDA kuyruga ekler (rate-limit 1/sn oldugu icin uzun surer, thread
+    ile non-blocking). Ilerlemeyi /seo/queue-stats ile izle."""
+    import threading
+    threading.Thread(
+        target=catalog_scout.seed_turkish_from_musicbrainz,
+        kwargs={"max_artists": max}, daemon=True,
+    ).start()
+    return {"started": True, "max": max,
+            "note": "MusicBrainz TR sanatcilari arka planda kuyruga ekleniyor"}
+
+
 @router.get("/seo/queue-stats")
 def admin_queue_stats(_: None = Depends(_require_admin_key)) -> dict:
     """Kuyrugun durum bazinda ozeti (pending/done/thin/failed) — operator
