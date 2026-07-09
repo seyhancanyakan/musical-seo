@@ -153,6 +153,44 @@ def seed_starter(base_priority: int = 1000) -> dict:
     return seed_from_list(STARTER_TOP_ARTISTS, base_priority)
 
 
+# Turk pazari onceligi: TR sanatci sayfalari dusuk rekabet + yuksek yerel arama
+# hacmi -> seed_turkish EN YUKSEK oncelikle (2000) kuyruga eklenir, cron once
+# bunlari uretir. (Populerlik + tur cesitliligi: pop/rock/rap/arabesk/sanat.)
+TURKISH_TOP_ARTISTS: list[str] = [
+    "Tarkan", "Sezen Aksu", "Sıla", "Mabel Matiz", "Ezhel", "Sagopa Kajmer",
+    "Ceza", "Gülşen", "Hadise", "Murda", "Mero", "Reynmen", "Aleyna Tilki",
+    "Edis", "Simge", "Demet Akalın", "Hande Yener", "Serdar Ortaç",
+    "Kenan Doğulu", "Mustafa Sandal", "Teoman", "Şebnem Ferah", "maNga",
+    "Duman", "Mor ve Ötesi", "Athena", "Model", "Gripin", "Pinhani",
+    "Emre Aydın", "Nilüfer", "Sertab Erener", "Levent Yüksel", "Zeki Müren",
+    "Orhan Gencebay", "İbrahim Tatlıses", "Ferdi Tayfur", "Müslüm Gürses",
+    "Bülent Ersoy", "Sibel Can", "Ebru Gündeş", "Ajda Pekkan", "Yıldız Tilbe",
+    "Bengü", "Melike Şahin", "Norm Ender", "Ben Fero", "Lvbel C5", "Uzi",
+    "Blok3", "Heijan", "Muti", "Gazapizm", "Şanışer", "Sansar Salvo",
+    "Khontkar", "Motive", "Zeynep Bastık", "Ece Seçkin", "İrem Derici",
+    "Merve Özbey", "Ebru Yaşar", "Funda Arar", "Yalın", "Buray", "Emre Altuğ",
+    "Gökhan Türkmen", "Göksel", "Candan Erçetin", "Cem Adrian", "Yaşar",
+    "Volkan Konak", "Haluk Levent", "Kıraç", "Cem Karaca", "Barış Manço",
+    "Erkin Koray", "Moğollar", "Fikret Kızılok", "Nazan Öncel",
+    "Nil Karaibrahimgil", "Şevval Sam", "Fatih Erkoç", "Hakan Peker",
+    "Manuş Baba", "Aydın Kurtoğlu", "Feride Hilal Akın",
+    "Semicenk", "Berkay", "Bora Duran", "Kubilay Aka",
+    "Oğuzhan Koç", "Mustafa Ceceli", "İzel", "Yüksek Sadakat", "Kurban",
+    "Zakkum", "Kolpa", "Feridun Düzağaç", "Redd", "Pentagram",
+    "Replikas", "Adamlar", "Son Feci Bisiklet", "Büyük Ev Ablukada",
+    "Gaye Su Akyol", "Baba Zula", "Altın Gün", "Jehan Barbur", "İlyas Yalçıntaş",
+    "Tuğçe Kandemir", "Sefo", "Ashafar", "Batın",
+    "Anıl Piyancı", "Server Uraz", "Patron", "Rota", "Velet",
+]
+
+
+def seed_turkish(base_priority: int = 2000) -> dict:
+    """Turk sanatci listesini (TURKISH_TOP_ARTISTS) STARTER'dan da YUKSEK
+    oncelikle kuyruga ekler — cron ONCE Turk sayfalarini uretsin (TR pazar
+    onceligi)."""
+    return seed_from_list(TURKISH_TOP_ARTISTS, base_priority)
+
+
 # --- 'song' seed: STARTER_TOP_ARTISTS'in Deezer top parcalari ----------------
 
 def _deezer_top_tracks(artist_name: str, limit: int) -> list[str]:

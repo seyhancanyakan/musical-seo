@@ -182,7 +182,7 @@ function AccountNav() {
         <span aria-hidden>👤</span>
         {me.name}
       </Link>
-      <span className="nb-pill nb-pill--green" title={t.credits}>
+      <span className="nb-pill nb-pill--neon" title={t.credits}>
         ◆ {me.credits} {t.credits}
       </span>
       <button type="button" onClick={logout} className="nb-btn nb-btn--outline">

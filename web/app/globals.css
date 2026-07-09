@@ -68,6 +68,7 @@ h1, h2, h3, .nb-h {
 }
 .nb-pill--blue { background: var(--blue); color: #fff; }
 .nb-pill--green { background: var(--green); }
+.nb-pill--neon { background: var(--neon); color: var(--ink); }
 .nb-pill--red { background: var(--red); color: #fff; }
 .nb-pill--purple { background: var(--purple); color: #fff; }
 

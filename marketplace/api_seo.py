@@ -123,6 +123,13 @@ def admin_seed_starter(_: None = Depends(_require_admin_key)) -> dict:
     return catalog_scout.seed_starter()
 
 
+@router.post("/seo/seed-turkish")
+def admin_seed_turkish(_: None = Depends(_require_admin_key)) -> dict:
+    """Turk sanatci listesini EN YUKSEK oncelikle (2000) kuyruga ekler — cron
+    once Turk sanatci sayfalarini uretsin (TR pazar onceligi)."""
+    return catalog_scout.seed_turkish()
+
+
 @router.get("/seo/queue-stats")
 def admin_queue_stats(_: None = Depends(_require_admin_key)) -> dict:
     """Kuyrugun durum bazinda ozeti (pending/done/thin/failed) — operator
