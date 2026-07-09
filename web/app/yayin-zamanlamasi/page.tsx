@@ -31,13 +31,13 @@ const T = {
     priceBig: "Hazırlık · Rekabet · Rakip · Gün",
     priceList: [
       <>
-        <b>audit.py</b> hazırlık skoru
+        <b>Hazırlık skoru</b> — metadata & dijital varlık
       </>,
       <>
-        <b>autocomplete</b> keyword rekabeti
+        <b>Anahtar kelime rekabeti</b> — dolu mu boş mu
       </>,
       <>
-        <b>musicbrainz</b> rakip release taraması
+        <b>Rakip çıkışlar</b> — aynı hafta taraması
       </>,
     ],
     errorPrefix: "Analiz başarısız:",
@@ -61,13 +61,13 @@ const T = {
     priceBig: "Readiness · Competition · Rivals · Day",
     priceList: [
       <>
-        <b>audit.py</b> readiness score
+        <b>Readiness score</b> — metadata & assets
       </>,
       <>
-        <b>autocomplete</b> keyword competition
+        <b>Keyword competition</b> — crowded or open
       </>,
       <>
-        <b>musicbrainz</b> competing release scan
+        <b>Rival releases</b> — same-week scan
       </>,
     ],
     errorPrefix: "Analysis failed:",

@@ -33,13 +33,13 @@ const T = {
     priceBig: "Skor + Yerleşim + Radyo",
     priceList: [
       <>
-        <b>snapshots.db</b> — günlük SEO skoru
+        <b>Günlük SEO skoru geçmişi</b>
       </>,
       <>
-        <b>submissions</b> — kanıtlı yerleşim
+        <b>Doğrulanmış yerleşimler</b>
       </>,
       <>
-        <b>fp_detections</b> — parmak izli radyo çalınma
+        <b>Parmak izli radyo çalınma tespiti</b>
       </>,
     ],
     errorPrefix: "Oluşturma başarısız:",
@@ -64,13 +64,13 @@ const T = {
     priceBig: "Score + Placement + Radio",
     priceList: [
       <>
-        <b>snapshots.db</b> — daily SEO score
+        <b>Daily SEO score history</b>
       </>,
       <>
-        <b>submissions</b> — verified placements
+        <b>Verified placements</b>
       </>,
       <>
-        <b>fp_detections</b> — fingerprinted radio airplay
+        <b>Fingerprinted radio airplay</b>
       </>,
     ],
     errorPrefix: "Build failed:",
