@@ -1,0 +1,354 @@
+/* Admin SEO dashboard — neo-brutal (admin/page.module.css ile ayni dil) */
+
+.topbar {
+  border-bottom: 3px solid var(--ink);
+  background: #fff;
+}
+
+.topbarInner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 40px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.logo {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: var(--blue);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 5px 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: rotate(-1deg);
+}
+
+.backLink {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.backLink:hover {
+  border-bottom-color: var(--ink);
+}
+
+.userChip {
+  background: var(--ink);
+  color: #fff;
+  border: 3px solid var(--ink);
+  padding: 8px 16px;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 4px 4px 0 var(--ink);
+  margin-left: auto;
+}
+
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 40px;
+}
+
+.pageTitle {
+  font-size: 30px;
+  margin-bottom: 24px;
+}
+
+.apiBanner {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 16px 22px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.apiBanner strong {
+  color: var(--red);
+  text-transform: uppercase;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+}
+
+/* --- Istatistik kartlari ---------------------------------------------------- */
+
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 900px) {
+  .statRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.statCard {
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  padding: 16px 18px;
+}
+
+.statCardDone { border-left: 8px solid var(--green); }
+.statCardPending { border-left: 8px solid #cfcfcf; }
+.statCardThin { border-left: 8px solid #ffb020; }
+.statCardFailed { border-left: 8px solid var(--red); }
+
+.statLabel {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.statValue {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+/* --- Kontroller: page_type / status / arama --------------------------------- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 9px 14px;
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.filterBtn:hover {
+  box-shadow: 7px 7px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.filterActive {
+  background: var(--blue);
+  color: #fff;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 220px;
+}
+
+/* --- Aksiyon paneli (kuyruk isle + seed) ------------------------------------ */
+
+.actionPanel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  background: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.buildGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.limitInput {
+  width: 88px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  padding: 10px 10px;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.resultChip {
+  font-size: 12px;
+  font-weight: 800;
+  background: #eef2ff;
+  border: 2px solid var(--ink);
+  padding: 6px 10px;
+}
+
+.loading,
+.empty {
+  font-weight: 700;
+  padding: 20px 0;
+}
+
+/* --- Tablo ------------------------------------------------------------------ */
+
+.tableWrap {
+  border: 3px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: #fff;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table thead {
+  background: var(--ink);
+  color: #fff;
+}
+
+.table th {
+  text-align: left;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 14px 16px;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 16px;
+  border-top: 3px solid var(--ink);
+  vertical-align: middle;
+}
+
+.table tbody tr:hover {
+  background: #f4f6ff;
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.name {
+  font-weight: 900;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+}
+
+.sub {
+  font-size: 12px;
+  color: #555;
+  font-weight: 700;
+}
+
+.dash {
+  color: #999;
+  font-weight: 700;
+}
+
+.badge {
+  display: inline-block;
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 6px 12px;
+  border: 3px solid var(--ink);
+  white-space: nowrap;
+}
+
+.badgeDone {
+  background: var(--green);
+}
+
+.badgePending {
+  background: #e6e6e6;
+  color: var(--ink);
+}
+
+.badgeThin {
+  background: #ffb020;
+  color: var(--ink);
+}
+
+.badgeFailed {
+  background: var(--red);
+  color: #fff;
+}
+
+.link {
+  color: var(--blue);
+  font-weight: 800;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.link:hover {
+  border-bottom-color: var(--blue);
+}
+
+.act {
+  font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 11px;
+  padding: 8px 12px;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.act:hover:not(:disabled) {
+  box-shadow: 6px 6px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.act:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actView {
+  background: var(--green);
+}
+
+/* --- Sayfalama --------------------------------------------------------------- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.pageInfo {
+  font-size: 13px;
+  font-weight: 800;
+  color: #555;
+}

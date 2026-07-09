@@ -141,6 +141,63 @@ def test_build_next_batch_findings_top3(seo_db, monkeypatch):
     assert len(page["findings_json"]) == 3
 
 
+# --- list_pages (admin dashboard) -----------------------------------------
+
+def test_list_pages_shows_pending_and_built(seo_db, monkeypatch):
+    # _fake_result her zaman resolved_artist="Test Sanatci" doner; ref'in
+    # slugify'i ile eslessin diye ayni adi kuyruga ekliyoruz (bkz.
+    # _lookup_built_page docstring — ref != resolved_artist ise satir
+    # gecici olarak 'built degil' gorunur, bu test o yolu degil, mutlu yolu
+    # dogruluyor).
+    seo_pages.enqueue_artist("Test Sanatci")
+    seo_pages.enqueue_artist("Bekleyen Sanatci")
+    monkeypatch.setattr(seo_pages.audit, "run_audit", lambda q: _fake_result())
+    seo_pages.build_next_batch(limit=1)  # sadece "Test Sanatci" islenir (id sirasi)
+
+    items = seo_pages.list_pages("artist")
+    assert len(items) == 2
+    by_ref = {item["ref"]: item for item in items}
+    assert by_ref["Test Sanatci"]["status"] == "done"
+    assert by_ref["Test Sanatci"]["slug"] == "test-sanatci"
+    assert by_ref["Test Sanatci"]["score"] == 80
+    assert by_ref["Bekleyen Sanatci"]["status"] == "pending"
+    assert by_ref["Bekleyen Sanatci"]["slug"] is None
+
+
+def test_list_pages_filters_by_status(seo_db, monkeypatch):
+    seo_pages.enqueue_artist("Drake")
+    monkeypatch.setattr(seo_pages.audit, "run_audit", lambda q: _fake_result())
+    seo_pages.build_next_batch()
+
+    assert len(seo_pages.list_pages("artist", status="done")) == 1
+    assert len(seo_pages.list_pages("artist", status="pending")) == 0
+
+
+def test_list_pages_search_filters_ref(seo_db):
+    seo_pages.enqueue_artist("Drake")
+    seo_pages.enqueue_artist("Adele")
+    results = seo_pages.list_pages("artist", search="dra")
+    assert len(results) == 1
+    assert results[0]["ref"] == "Drake"
+
+
+def test_list_pages_invalid_page_type_raises(seo_db):
+    with pytest.raises(ValueError):
+        seo_pages.list_pages("invalid")
+
+
+def test_list_pages_invalid_status_raises(seo_db):
+    with pytest.raises(ValueError):
+        seo_pages.list_pages("artist", status="invalid")
+
+
+def test_list_pages_count_matches_filters(seo_db):
+    seo_pages.enqueue_artist("Drake")
+    seo_pages.enqueue_artist("Adele")
+    assert seo_pages.list_pages_count("artist") == 2
+    assert seo_pages.list_pages_count("artist", search="dra") == 1
+
+
 # --- get_*_page roundtrip ------------------------------------------------
 
 def test_get_artist_page_missing_returns_none(seo_db):

@@ -1193,6 +1193,71 @@ export const adminLabels = (status?: string) =>
     headers: adminHeaders(),
   });
 
+/* --- Admin: Programatik SEO dashboard (kuyruk + uretilmis sayfalar) ----------- */
+
+export type SeoPageType = "artist" | "song" | "playlist";
+export type SeoQueueStatus = "pending" | "done" | "thin" | "failed";
+
+/** /seo/pages tek satiri: kuyruk alanlari + (uretilmisse) sayfa alanlari. */
+export type SeoPageRow = {
+  id: number;
+  page_type: SeoPageType;
+  ref: string;
+  priority: number;
+  status: SeoQueueStatus;
+  created_at: string;
+  slug: string | null;
+  score: number | null;
+  platform_count: number | null;
+  last_refreshed_at: string | null;
+};
+
+export type SeoQueueStats = Record<SeoQueueStatus, number>;
+
+export type SeoPagesResponse = {
+  items: SeoPageRow[];
+  total: number;
+  stats: SeoQueueStats;
+};
+
+/** Admin SEO dashboard'unun ana veri cagrisi — kuyruk + uretilmis sayfalari
+ *  birlikte doner (bkz. marketplace/api_seo.py GET /seo/pages). */
+export const getSeoPages = (params: {
+  pageType: SeoPageType;
+  status?: SeoQueueStatus | "";
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) => {
+  const q = new URLSearchParams();
+  q.set("page_type", params.pageType);
+  if (params.status) q.set("status", params.status);
+  if (params.search?.trim()) q.set("search", params.search.trim());
+  q.set("limit", String(params.limit ?? 50));
+  q.set("offset", String(params.offset ?? 0));
+  return j<SeoPagesResponse>(`/seo/pages?${q.toString()}`, { headers: adminHeaders() });
+};
+
+/** Kuyruktan en fazla `limit` bekleyen kaydi isler (audit/deezer/fraud —
+ *  page_type'a gore). Sonuc: {processed, built, thin, failed}. */
+export const buildSeoBatch = (limit = 20) =>
+  j<{ processed: number; built: number; thin: number; failed: number }>(
+    `/seo/build?limit=${limit}`,
+    { method: "POST", headers: adminHeaders() }
+  );
+
+export const seedTurkishArtists = () =>
+  j<{ enqueued?: number } & Record<string, unknown>>(`/seo/seed-turkish`, {
+    method: "POST",
+    headers: adminHeaders(),
+  });
+
+export const seedTurkishArtistsAll = (max = 5000) =>
+  j<{ started: boolean; max: number; note: string }>(
+    `/seo/seed-turkish-all?max=${max}`,
+    { method: "POST", headers: adminHeaders() }
+  );
+
 export const approveLabel = (id: number) =>
   j<LabelLead>(`/admin/labels/${id}/approve`, {
     method: "POST",

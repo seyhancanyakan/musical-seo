@@ -731,6 +731,152 @@ def queue_stats() -> dict:
     return counts
 
 
+# --- Operator gorunumu: kuyruk + uretilmis sayfa (admin dashboard) ------------
+
+def _list_pages_where(
+    page_type: str, status: str | None, search: str | None
+) -> tuple[str, list[Any]]:
+    """list_pages/list_pages_count arasinda paylasilan WHERE + parametre
+    olusturucu (DRY). page_type/status gecerliligi cagiran tarafindan
+    dogrulanmis olmali (bu fonksiyon sadece SQL parcasi kurar)."""
+    clauses = ["page_type = ?"]
+    params: list[Any] = [page_type]
+    if status:
+        clauses.append("status = ?")
+        params.append(status)
+    if search and search.strip():
+        clauses.append("ref LIKE ?")
+        params.append(f"%{search.strip()}%")
+    return " AND ".join(clauses), params
+
+
+def _lookup_built_page(conn: sqlite3.Connection, page_type: str, ref: str) -> dict | None:
+    """Bir build_queue kaydinin (page_type, ref) karsiligi olarak ZATEN
+    uretilmis (seo_*_pages) bir sayfa var mi kontrol eder. Esleme slug/kimlik
+    uzerinden yapilir — build_next_batch'in o sayfa turu icin URETTIGI slug/
+    kimlik ile AYNI hesaplama burada tekrarlanir:
+      'artist'   -> slug = slugify(ref) (build_next_batch resolved_artist
+                    kullanir ama enqueue_artist ref=artist_name oldugu ve
+                    audit genelde ayni adi cozdugu icin pratikte eslesir;
+                    coz(ulem)eme farkliysa satir 'built degil' gorunur —
+                    bir sonraki build ciktisinda ref guncellenene kadar
+                    normal, kritik degil).
+      'song'     -> slug = slugify(f"{artist}-{title}") (_split_song_query
+                    ile ayni ayristirma); artist/title ayristirilamazsa None.
+      'playlist' -> platform_playlist_id = spotify_client.parse_playlist_id(ref)
+                    veya ref'in kendisi (build_next_batch ile ayni fallback).
+
+    Donen dict'teki 'slug' alani her zaman o sayfa turunun PUBLIC route
+    parametresidir (web/app/{artist,song,playlist} klasor yapisiyla birebir):
+    artist icin gercek slug, song icin ISRC ([isrc] route), playlist icin
+    platform_playlist_id ([pid] route) — cagiran taraf (list_pages / admin
+    dashboard) tek bir alan adiyla dogru linki kurabilsin diye.
+
+    Bulunamazsa veya slug uretilemezse (ValueError) None doner — asla firlatmaz."""
+    try:
+        if page_type == "artist":
+            slug = slugify(ref)
+            row = conn.execute(
+                "SELECT slug, score, platform_count, last_refreshed_at "
+                "FROM seo_artist_pages WHERE slug = ?",
+                (slug,),
+            ).fetchone()
+        elif page_type == "song":
+            artist_hint, title_hint = _split_song_query(ref)
+            if not artist_hint or not title_hint:
+                return None
+            slug = slugify(f"{artist_hint}-{title_hint}")
+            row = conn.execute(
+                "SELECT isrc AS slug, score, NULL AS platform_count, last_refreshed_at "
+                "FROM seo_song_pages WHERE slug = ?",
+                (slug,),
+            ).fetchone()
+        elif page_type == "playlist":
+            pid = spotify_client.parse_playlist_id(ref) or ref
+            row = conn.execute(
+                "SELECT platform_playlist_id AS slug, fraud_score AS score, "
+                "NULL AS platform_count, last_refreshed_at FROM seo_playlist_pages "
+                "WHERE platform_playlist_id = ?",
+                (pid,),
+            ).fetchone()
+        else:
+            return None
+    except ValueError:
+        return None
+    return dict(row) if row is not None else None
+
+
+def list_pages(
+    page_type: str = "artist",
+    status: str | None = None,
+    search: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[dict]:
+    """Operator dashboard'u icin kuyruk + uretilmis sayfa verisini BIRLESTIRIR
+    (bkz. /seo/pages admin uc noktasi, marketplace/api_seo.py). build_queue
+    satirlarini page_type/status/search'e gore filtreler, priority DESC +
+    created_at ASC sirasiyla sayfalar (build_next_batch'in ISLEME sirasiyla
+    AYNI — operator bir sonraki neyin uretilecegini gorsun diye), sonra HER
+    satir icin `_lookup_built_page` ile eslenik uretilmis sayfa var mi bakar.
+
+    Donen her dict: id, page_type, ref, priority, status, created_at (kuyruk
+    alanlari) + slug, score, platform_count, last_refreshed_at (uretilmemisse
+    hepsi None)."""
+    if page_type not in PAGE_TYPES:
+        raise ValueError(f"Gecersiz sayfa turu: {page_type} (gecerli: {', '.join(PAGE_TYPES)})")
+    if status is not None and status not in QUEUE_STATUSES:
+        raise ValueError(f"Gecersiz durum: {status} (gecerli: {', '.join(QUEUE_STATUSES)})")
+    if limit <= 0:
+        raise ValueError("limit pozitif bir sayi olmali")
+    if offset < 0:
+        raise ValueError("offset negatif olamaz")
+
+    where, params = _list_pages_where(page_type, status, search)
+    conn = _connect()
+    try:
+        rows = conn.execute(
+            f"SELECT id, page_type, ref, priority, status, created_at "
+            f"FROM build_queue WHERE {where} "
+            "ORDER BY priority DESC, created_at ASC LIMIT ? OFFSET ?",
+            (*params, limit, offset),
+        ).fetchall()
+
+        items: list[dict] = []
+        for row in rows:
+            item = dict(row)
+            built = _lookup_built_page(conn, page_type, row["ref"])
+            item["slug"] = built.get("slug") if built else None
+            item["score"] = built.get("score") if built else None
+            item["platform_count"] = built.get("platform_count") if built else None
+            item["last_refreshed_at"] = built.get("last_refreshed_at") if built else None
+            items.append(item)
+    finally:
+        conn.close()
+    return items
+
+
+def list_pages_count(
+    page_type: str = "artist", status: str | None = None, search: str | None = None
+) -> int:
+    """`list_pages` ile AYNI filtreleri uygulayip toplam satir sayisini doner
+    (sayfalama/pagination icin — bkz. /seo/pages)."""
+    if page_type not in PAGE_TYPES:
+        raise ValueError(f"Gecersiz sayfa turu: {page_type} (gecerli: {', '.join(PAGE_TYPES)})")
+    if status is not None and status not in QUEUE_STATUSES:
+        raise ValueError(f"Gecersiz durum: {status} (gecerli: {', '.join(QUEUE_STATUSES)})")
+
+    where, params = _list_pages_where(page_type, status, search)
+    conn = _connect()
+    try:
+        row = conn.execute(
+            f"SELECT COUNT(*) AS c FROM build_queue WHERE {where}", params
+        ).fetchone()
+    finally:
+        conn.close()
+    return row["c"] if row is not None else 0
+
+
 # --- Okuma (Next.js ISR data fetch) -------------------------------------------
 
 def _parse_json_fields(row: dict, fields: tuple[str, ...]) -> dict:

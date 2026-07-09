@@ -153,6 +153,27 @@ def admin_queue_stats(_: None = Depends(_require_admin_key)) -> dict:
     return seo_pages.queue_stats()
 
 
+@router.get("/seo/pages")
+def admin_list_pages(
+    page_type: str = "artist",
+    status: str | None = None,
+    search: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    _: None = Depends(_require_admin_key),
+) -> dict:
+    """Admin SEO dashboard'u icin ana veri uc noktasi: kuyruktaki VE
+    uretilmis sanatci/sarki/playlist sayfalarini tek listede birlestirir —
+    operator hangi sayfalarin canli oldugunu gorsun, sayfaya tiklayip
+    gitsin, kuyrugu buradan islesin."""
+    try:
+        items = seo_pages.list_pages(page_type, status, search, limit, offset)
+        total = seo_pages.list_pages_count(page_type, status, search)
+    except ValueError as exc:
+        raise _400(exc)
+    return {"items": items, "total": total, "stats": seo_pages.queue_stats()}
+
+
 # --- Admin: IndexNow + retention alerts --------------------------------------
 
 @router.get("/seo/indexnow-key")

@@ -373,6 +373,9 @@ export default function AdminPage() {
               {t.tabs[key]}
             </button>
           ))}
+          <Link href="/admin/seo" className={styles.tabBtn}>
+            SEO Sayfaları ↗
+          </Link>
         </div>
 
         {tab === "curators" && (
