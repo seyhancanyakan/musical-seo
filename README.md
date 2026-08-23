@@ -17,15 +17,35 @@ zaman serisi biriktirir.
 ## Kurulum
 
 ```
-pip install -r requirements.txt
-copy .env.example .env   # anahtarlar opsiyonel
+pip install musical-seo
 ```
+
+Ses profili ve marketplace API'si opsiyonel ek paketlerde:
+
+```
+pip install "musical-seo[audio]"   # Deezer onizleme analizi (librosa)
+pip install "musical-seo[api]"     # curator marketplace HTTP API'si
+pip install "musical-seo[audio,api]"
+```
+
+Kaynaktan (gelistirme):
+
+```
+git clone https://github.com/seyhancanyakan/musical-seo.git
+cd musical-seo
+pip install -e ".[audio,api,dev]"
+cp .env.example .env   # Windows: copy .env.example .env — anahtarlar opsiyonel
+```
+
+Kurulumdan sonra `musical-seo` komutu kullanilabilir; depo icinden
+`python cli.py ...` de calismaya devam eder.
 
 ## Kullanim
 
 ```
 # Denetim + HTML karne (reports/ altina)
-python cli.py audit "Duman - Senden Daha Guzel"
+musical-seo audit "Duman - Senden Daha Guzel"
+python cli.py audit "Duman - Senden Daha Guzel"   # depo icinden ayni sey
 python cli.py audit https://open.spotify.com/track/XXXX --out rapor.html
 
 # JSON cikti
@@ -80,3 +100,7 @@ critical -40, warn -20, info -5.
 ```
 pytest
 ```
+
+## Lisans
+
+MIT — bkz. [LICENSE](LICENSE).

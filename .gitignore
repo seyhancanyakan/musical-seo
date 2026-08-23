@@ -14,3 +14,8 @@ web/tsconfig.tsbuildinfo
 .gstack/
 data/youtube_quota.json
 web/.next_old_bak/
+
+# Python paketleme ciktilari
+build/
+dist/
+*.egg-info/
